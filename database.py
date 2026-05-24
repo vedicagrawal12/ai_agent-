@@ -85,6 +85,7 @@ class Database:
 
         conn.commit()
         conn.close()
+        self.cleanup_old_data()
 
     def save_leads(self, leads: List[Lead]) -> int:
         """
@@ -256,3 +257,86 @@ class Database:
         cursor.execute("DELETE FROM leads WHERE id = ?", (lead_id,))
         conn.commit()
         conn.close()
+
+    def cleanup_old_data(self):
+        """
+        Automatically cleans up old data on startup:
+        - Keeps all contacted leads (outreach log protection)
+        - Deletes uncontacted leads older than 14 days
+        - Deletes IGNORE priority leads (have websites) older than 7 days
+        - Deletes search history older than 30 days
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            # 1. Delete uncontacted leads older than 14 days
+            cursor.execute("""
+                DELETE FROM leads 
+                WHERE contacted = 0 
+                AND created_at < datetime('now', '-14 days')
+            """)
+            uncontacted_deleted = cursor.rowcount
+
+            # 2. Delete IGNORE leads (which have websites) older than 7 days
+            cursor.execute("""
+                DELETE FROM leads 
+                WHERE priority = 'IGNORE' 
+                AND created_at < datetime('now', '-7 days')
+            """)
+            ignored_deleted = cursor.rowcount
+
+            # 3. Delete search history older than 30 days
+            cursor.execute("""
+                DELETE FROM search_history 
+                WHERE searched_at < datetime('now', '-30 days')
+            """)
+            history_deleted = cursor.rowcount
+
+            conn.commit()
+            if uncontacted_deleted or ignored_deleted or history_deleted:
+                print(f"[Smart Cleanup] Auto-cleaned old database entries:")
+                print(f"  - Deleted {uncontacted_deleted} uncontacted leads (>14 days)")
+                print(f"  - Deleted {ignored_deleted} ignored website leads (>7 days)")
+                print(f"  - Deleted {history_deleted} old search history entries (>30 days)")
+        except Exception as e:
+            print(f"[Smart Cleanup] Error cleaning up old data: {e}")
+        finally:
+            conn.close()
+
+    def clear_uncontacted_data(self) -> dict:
+        """
+        Manually clears all uncontacted leads and ignored leads, keeping only contacted ones.
+        Also clears all search history.
+        
+        Returns:
+            Dict with success flag and count of deleted rows.
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            # Get counts first for reporting
+            cursor.execute("SELECT COUNT(*) FROM leads WHERE contacted = 0")
+            uncontacted_count = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM search_history")
+            history_count = cursor.fetchone()[0]
+            
+            # Delete uncontacted leads
+            cursor.execute("DELETE FROM leads WHERE contacted = 0")
+            
+            # Delete search history
+            cursor.execute("DELETE FROM search_history")
+            
+            conn.commit()
+            return {
+                "success": True,
+                "leads_deleted": uncontacted_count,
+                "history_deleted": history_count
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+        finally:
+            conn.close()

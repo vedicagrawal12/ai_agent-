@@ -77,6 +77,12 @@ const API = {
         });
     },
 
+    async clearDb() {
+        return this.request('/api/config/clear-db', {
+            method: 'POST'
+        });
+    },
+
     async getTemplates() {
         return this.request('/api/whatsapp/templates');
     },
@@ -470,6 +476,11 @@ const App = {
             this.saveApiKey();
         });
 
+        // Clear Database
+        document.getElementById('clearDbBtn')?.addEventListener('click', () => {
+            this.clearDatabase();
+        });
+
         // Export Excel
         document.getElementById('exportExcelBtn').addEventListener('click', () => {
             this.exportExcel();
@@ -564,6 +575,34 @@ const App = {
             UI.closeModal('settingsModal');
             await this.checkConfig();
             UI.showToast('API key saved successfully!', 'success');
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    async clearDatabase() {
+        if (!confirm("Kya aap sach mein database clean karna chahte hain?\n\n(Isse sirf uncontacted leads aur search history clear hogi, aapka contacted leads record safe rahega.)")) {
+            return;
+        }
+
+        try {
+            UI.showLoading('Cleaning database...');
+            const data = await API.clearDb();
+            if (data.success) {
+                UI.showToast(`Database cleaned! Deleted ${data.leads_deleted} leads and search history.`, 'success');
+                UI.closeModal('settingsModal');
+                
+                // Refresh table if active
+                if (AppState.leads.length > 0) {
+                    AppState.leads = [];
+                    AppState.allResults = [];
+                    UI.renderLeads([]);
+                }
+            } else {
+                UI.showToast('Clean failed: ' + (data.error || 'Unknown error'), 'error');
+            }
         } catch (error) {
             UI.showToast(error.message, 'error');
         } finally {

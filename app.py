@@ -403,6 +403,18 @@ def get_history():
     return jsonify({"success": True, "history": history})
 
 
+@app.route("/api/config/clear-db", methods=["POST"])
+def clear_db():
+    """
+    Manually clear all uncontacted leads and search history.
+    """
+    result = db.clear_uncontacted_data()
+    if result.get("success"):
+        return jsonify(result)
+    else:
+        return jsonify({"error": result.get("error")}), 500
+
+
 # ============================================================
 # Run the application
 # ============================================================
