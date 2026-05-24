@@ -85,6 +85,7 @@ def search_businesses():
     hide_saved = data.get("hide_saved", False)
     deep_scan = data.get("deep_scan", False)
     zones = data.get("zones", [])
+    start_offset = data.get("start_offset", 0)
     
     if not query:
         return jsonify({"error": "Please enter a business type/keyword"}), 400
@@ -123,11 +124,11 @@ def search_businesses():
                 if not zone:
                     continue
                 # Search using zone name combined with city
-                zone_leads = collector.search(query, f"{zone}, {city}", leads_per_zone, exclude_place_ids)
+                zone_leads = collector.search(query, f"{zone}, {city}", leads_per_zone, exclude_place_ids, start_offset)
                 all_leads.extend(zone_leads)
         else:
             # Standard single-city search
-            all_leads = collector.search(query, city, max_results, exclude_place_ids)
+            all_leads = collector.search(query, city, max_results, exclude_place_ids, start_offset)
         
         # Clean the data (standardize, assign priority, and DEDUPLICATE combined leads)
         all_leads = DataCleaner.clean_leads(all_leads)
@@ -145,9 +146,50 @@ def search_businesses():
         search_query_log = f"{query} (Deep Scan)" if deep_scan else query
         db.save_search(search_query_log, city, len(all_leads), len(filtered_leads))
         
+        # Fetch the saved leads from DB to get database IDs and social links
+        import sqlite3
+        db_leads_dict = {}
+        try:
+            conn = sqlite3.connect(db.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            place_ids = [l.place_id for l in all_leads if l.place_id]
+            if place_ids:
+                placeholders = ",".join("?" for _ in place_ids)
+                cursor.execute(f"SELECT * FROM leads WHERE place_id IN ({placeholders})", place_ids)
+                db_leads_dict = {row['place_id']: dict(row) for row in cursor.fetchall()}
+            conn.close()
+        except Exception as db_err:
+            print(f"Error fetching database IDs for search response: {db_err}")
+
         # Build response
-        leads_data = [lead.to_dict() for lead in filtered_leads]
-        all_data = [lead.to_dict() for lead in all_leads]
+        leads_data = []
+        for lead in filtered_leads:
+            lead_dict = lead.to_dict()
+            db_lead = db_leads_dict.get(lead.place_id)
+            if db_lead:
+                lead_dict['id'] = db_lead['id']
+                lead_dict['instagram'] = db_lead['instagram'] or ''
+                lead_dict['facebook'] = db_lead['facebook'] or ''
+            else:
+                lead_dict['id'] = None
+                lead_dict['instagram'] = ''
+                lead_dict['facebook'] = ''
+            leads_data.append(lead_dict)
+
+        all_data = []
+        for lead in all_leads:
+            lead_dict = lead.to_dict()
+            db_lead = db_leads_dict.get(lead.place_id)
+            if db_lead:
+                lead_dict['id'] = db_lead['id']
+                lead_dict['instagram'] = db_lead['instagram'] or ''
+                lead_dict['facebook'] = db_lead['facebook'] or ''
+            else:
+                lead_dict['id'] = None
+                lead_dict['instagram'] = ''
+                lead_dict['facebook'] = ''
+            all_data.append(lead_dict)
         
         # Calculate stats
         stats = {
@@ -401,6 +443,74 @@ def get_history():
     """Get search history."""
     history = db.get_search_history()
     return jsonify({"success": True, "history": history})
+
+
+@app.route("/api/leads/<int:lead_id>/scan-socials", methods=["POST"])
+def scan_lead_socials(lead_id):
+    """
+    Scan Google for Instagram and Facebook profiles of a lead on-demand.
+    """
+    lead = db.get_lead_by_id(lead_id)
+    if not lead:
+        return jsonify({"error": "Lead not found"}), 404
+        
+    api_key = API_KEY_STORE.get("serpapi", "")
+    if not api_key:
+        return jsonify({"error": "SerpApi key not configured"}), 401
+        
+    instagram_link = ""
+    facebook_link = ""
+    
+    # 1. Search Instagram
+    try:
+        from serpapi import GoogleSearch
+        ig_query = f'site:instagram.com "{lead.get("name")}" {lead.get("city")}'
+        params = {
+            "engine": "google",
+            "q": ig_query,
+            "api_key": api_key,
+            "num": 3 # Fetch top 3 results
+        }
+        search = GoogleSearch(params)
+        results = search.get_dict()
+        organic = results.get("organic_results", [])
+        for item in organic:
+            link = item.get("link", "")
+            if "instagram.com/" in link and not any(x in link for x in ["/p/", "/tags/", "/explore/", "/reel/", "/directory/"]):
+                instagram_link = link
+                break
+    except Exception as e:
+        print(f"Error scanning Instagram for lead {lead_id}: {e}")
+        
+    # 2. Search Facebook
+    try:
+        from serpapi import GoogleSearch
+        fb_query = f'site:facebook.com "{lead.get("name")}" {lead.get("city")}'
+        params = {
+            "engine": "google",
+            "q": fb_query,
+            "api_key": api_key,
+            "num": 3
+        }
+        search = GoogleSearch(params)
+        results = search.get_dict()
+        organic = results.get("organic_results", [])
+        for item in organic:
+            link = item.get("link", "")
+            if "facebook.com/" in link and not any(x in link for x in ["/sharer/", "/policies/", "/groups/", "/events/", "/post/"]):
+                facebook_link = link
+                break
+    except Exception as e:
+        print(f"Error scanning Facebook for lead {lead_id}: {e}")
+        
+    # Update lead in database
+    db.update_lead_socials(lead_id, instagram_link, facebook_link)
+    
+    return jsonify({
+        "success": True,
+        "instagram": instagram_link,
+        "facebook": facebook_link
+    })
 
 
 @app.route("/api/config/clear-db", methods=["POST"])

@@ -19,6 +19,8 @@ const AppState = {
     currentWhatsAppLead: null,
     isLoading: false,
     hasApiKey: false,
+    currentOffset: 0,
+    activeSearchParams: null
 };
 
 // ============================================================
@@ -51,7 +53,7 @@ const API = {
         }
     },
 
-    async search(query, city, maxResults = 20, includeWithWebsite = false, hideSaved = false, deepScan = false, zones = []) {
+    async search(query, city, maxResults = 20, includeWithWebsite = false, hideSaved = false, deepScan = false, zones = [], startOffset = 0) {
         return this.request('/api/search', {
             method: 'POST',
             body: JSON.stringify({ 
@@ -61,7 +63,8 @@ const API = {
                 include_with_website: includeWithWebsite,
                 hide_saved: hideSaved,
                 deep_scan: deepScan,
-                zones: zones
+                zones: zones,
+                start_offset: startOffset
             }),
         });
     },
@@ -159,6 +162,8 @@ const UI = {
             leadsTableBody: document.getElementById('leadsTableBody'),
             emptyState: document.getElementById('emptyState'),
             tableContainer: document.getElementById('tableContainer'),
+            loadMoreContainer: document.getElementById('loadMoreContainer'),
+            loadMoreBtn: document.getElementById('loadMoreBtn'),
             
             loadingOverlay: document.getElementById('loadingOverlay'),
             loadingText: document.getElementById('loadingText'),
@@ -235,6 +240,7 @@ const UI = {
         if (leads.length === 0) {
             this.el.emptyState.style.display = 'block';
             this.el.tableContainer.style.display = 'none';
+            if (this.el.loadMoreContainer) this.el.loadMoreContainer.style.display = 'none';
             return;
         }
         
@@ -242,6 +248,18 @@ const UI = {
         this.el.tableContainer.style.display = 'block';
         
         this.el.leadsTableBody.innerHTML = leads.map((lead, i) => this.createLeadRow(lead, i)).join('');
+        
+        // Show/hide Load More button based on if we fetched any results
+        if (this.el.loadMoreContainer) {
+            const maxResults = AppState.activeSearchParams ? AppState.activeSearchParams.maxResults : 20;
+            // If the active list is a multiple of maxResults (or close), there could be more
+            // If it's 0 or we fetched a small page, hide it.
+            if (leads.length > 0 && leads.length % maxResults === 0) {
+                this.el.loadMoreContainer.style.display = 'block';
+            } else {
+                this.el.loadMoreContainer.style.display = 'none';
+            }
+        }
     },
 
     createLeadRow(lead, index) {
@@ -264,6 +282,23 @@ const UI = {
             ? `https://www.google.com/maps/search/?api=1&query=${mapsQuery}&query_place_id=${lead.place_id}`
             : `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
         
+        let socialsDisplay = '';
+        if (lead.instagram || lead.facebook) {
+            if (lead.instagram) {
+                socialsDisplay += `<button class="row-btn instagram" data-tooltip="Instagram DM & Auto-Copy" onclick="App.openInstagram(${index})" style="background: var(--gradient-primary); color: white; border: none; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; margin-right: 4px; cursor: pointer;">📸 DM</button>`;
+            }
+            if (lead.facebook) {
+                socialsDisplay += `<a href="${lead.facebook}" target="_blank" class="row-btn facebook" data-tooltip="Facebook Profile" style="background: var(--accent-blue); color: white; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 23px;">📘 Page</a>`;
+            }
+        } else {
+            const scanId = lead.id || '';
+            if (scanId) {
+                socialsDisplay = `<button class="row-btn" id="scanSocialBtn-${index}" onclick="App.scanSocials(${scanId}, ${index})" style="font-size: 0.75rem; padding: 3px 6px; background: rgba(0,212,255,0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 4px; cursor: pointer;">🔍 Scan Socials</button>`;
+            } else {
+                socialsDisplay = `<span style="color: var(--text-muted); font-size: 0.8rem;">Save first to Scan</span>`;
+            }
+        }
+
         return `
             <tr>
                 <td>
@@ -284,6 +319,7 @@ const UI = {
                 </td>
                 <td>${lead.reviews || 0}</td>
                 <td><span class="priority-badge ${priorityClass}">${priorityEmoji} ${lead.priority}</span></td>
+                <td>${socialsDisplay}</td>
                 <td>
                     <div class="row-actions">
                         <a href="${mapsLink}" target="_blank" class="row-btn" data-tooltip="View on Google Maps">📍</a>
@@ -486,6 +522,11 @@ const App = {
             this.exportExcel();
         });
 
+        // Load More Pagination
+        document.getElementById('loadMoreBtn')?.addEventListener('click', () => {
+            this.loadMoreLeads();
+        });
+
         // Table sorting
         document.querySelectorAll('.leads-table th[data-sort]').forEach(th => {
             th.addEventListener('click', () => {
@@ -610,6 +651,98 @@ const App = {
         }
     },
 
+    async scanSocials(leadId, index) {
+        const btn = document.getElementById(`scanSocialBtn-${index}`);
+        if (btn) {
+            btn.innerHTML = '⏳ Scanning...';
+            btn.disabled = true;
+        }
+
+        try {
+            const data = await API.request(`/api/leads/${leadId}/scan-socials`, {
+                method: 'POST'
+            });
+
+            if (data.success) {
+                // Update AppState lead data
+                AppState.leads[index].instagram = data.instagram || '';
+                AppState.leads[index].facebook = data.facebook || '';
+                
+                // Also update allResults if matching
+                const placeId = AppState.leads[index].place_id;
+                const matchedAll = AppState.allResults.find(l => l.place_id === placeId);
+                if (matchedAll) {
+                    matchedAll.instagram = data.instagram || '';
+                    matchedAll.facebook = data.facebook || '';
+                }
+
+                if (data.instagram || data.facebook) {
+                    let msg = 'Found:';
+                    if (data.instagram) msg += ' 📸 Instagram';
+                    if (data.facebook) msg += ' 📘 Facebook';
+                    UI.showToast(msg, 'success');
+                } else {
+                    UI.showToast('No social profiles found for this business on Google.', 'info');
+                }
+
+                // Re-render leads to show new buttons
+                UI.renderLeads(AppState.leads);
+            }
+        } catch (error) {
+            UI.showToast('Scan failed: ' + error.message, 'error');
+            if (btn) {
+                btn.innerHTML = '🔍 Scan Socials';
+                btn.disabled = false;
+            }
+        }
+    },
+
+    async openInstagram(index) {
+        const lead = AppState.leads[index];
+        if (!lead || !lead.instagram) {
+            UI.showToast('No Instagram profile link available', 'error');
+            return;
+        }
+
+        // Build pitch message using current selected WhatsApp template
+        const template = AppState.selectedTemplate === 'custom' ? 'website_pitch' : AppState.selectedTemplate;
+        const templateData = AppState.whatsappTemplates[template];
+        let message = templateData ? templateData.message : 'Hello {business_name}!';
+
+        // Replace template variables
+        message = message
+            .replace(/\{business_name\}/g, lead.name || 'there')
+            .replace(/\{city\}/g, lead.city || 'your city')
+            .replace(/\{category\}/g, lead.category || 'business')
+            .replace(/\{rating\}/g, lead.rating || 'great')
+            .replace(/\{reviews\}/g, lead.reviews || 'many')
+            .replace(/\{address\}/g, lead.address || '')
+            .replace(/\{phone\}/g, lead.phone || '');
+
+        try {
+            // Copy pitch to clipboard
+            await navigator.clipboard.writeText(message);
+            UI.showToast('📋 Pitch copied to clipboard! Opening Instagram...', 'success');
+        } catch (clipErr) {
+            // Fallback copy
+            const textArea = document.createElement('textarea');
+            textArea.value = message;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            UI.showToast('📋 Pitch copied to clipboard! Opening Instagram...', 'success');
+        }
+
+        // Open Instagram profile in a new tab
+        setTimeout(() => {
+            // Open direct message window if possible, else open profile
+            // Instagram profile link looks like: https://www.instagram.com/username/
+            // Direct message is opened in /direct/inbox/ or direct message url
+            window.open(lead.instagram, '_blank');
+        }, 800);
+    },
+
     // ---- Search ----
     async handleSearch() {
         const query = UI.el.queryInput.value.trim();
@@ -643,7 +776,19 @@ const App = {
 
             UI.showLoading(`Searching for "${query}" in ${city}...`);
             
-            const data = await API.search(query, city, maxResults, includeWithWebsite, hideSaved, deepScan, zones);
+            // Save search params for pagination
+            AppState.activeSearchParams = {
+                query,
+                city,
+                maxResults,
+                includeWithWebsite,
+                hideSaved,
+                deepScan,
+                zones
+            };
+            AppState.currentOffset = 0; // Reset offset
+
+            const data = await API.search(query, city, maxResults, includeWithWebsite, hideSaved, deepScan, zones, 0);
             
             AppState.leads = data.leads;
             AppState.allResults = data.all_results;
@@ -664,6 +809,68 @@ const App = {
             UI.showToast(error.message, 'error');
         } finally {
             UI.hideLoading();
+        }
+    },
+
+    async loadMoreLeads() {
+        const params = AppState.activeSearchParams;
+        if (!params) return;
+
+        try {
+            // Disable Load More button during request
+            if (UI.el.loadMoreBtn) {
+                UI.el.loadMoreBtn.disabled = true;
+                UI.el.loadMoreBtn.innerHTML = '⏳ Loading Next Page...';
+            }
+
+            // Increment currentOffset by the max results we requested previously
+            AppState.currentOffset += params.maxResults;
+
+            UI.showLoading(`Loading page offset starting at ${AppState.currentOffset}...`);
+
+            const data = await API.search(
+                params.query,
+                params.city,
+                params.maxResults,
+                params.includeWithWebsite,
+                params.hideSaved,
+                params.deepScan,
+                params.zones,
+                AppState.currentOffset
+            );
+
+            if (data.leads && data.leads.length > 0) {
+                // Append new leads
+                AppState.leads = AppState.leads.concat(data.leads);
+                AppState.allResults = AppState.allResults.concat(data.all_results);
+                
+                // Update stats (combine or overwrite)
+                AppState.stats = data.stats;
+                UI.updateStats(data.stats);
+                
+                // Re-render
+                UI.renderLeads(AppState.leads);
+                
+                UI.showToast(`Loaded ${data.stats.leads_count} more leads! Total leads in view: ${AppState.leads.length}`, 'success');
+            } else {
+                UI.showToast('No more new leads found on the next pages.', 'info');
+                if (UI.el.loadMoreContainer) {
+                    UI.el.loadMoreContainer.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+            // Re-enable
+            if (UI.el.loadMoreBtn) {
+                UI.el.loadMoreBtn.disabled = false;
+                UI.el.loadMoreBtn.innerHTML = '⏭️ Load Next Page (Get More Leads)';
+            }
+        } finally {
+            UI.hideLoading();
+            if (UI.el.loadMoreBtn) {
+                UI.el.loadMoreBtn.disabled = false;
+                UI.el.loadMoreBtn.innerHTML = '⏭️ Load Next Page (Get More Leads)';
+            }
         }
     },
 

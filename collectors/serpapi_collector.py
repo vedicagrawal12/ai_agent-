@@ -11,7 +11,7 @@ class SerpApiCollector(BaseCollector):
     def platform_name(self) -> str:
         return "SerpApi Google Maps"
 
-    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None) -> List[Lead]:
+    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None, start_offset: int = 0) -> List[Lead]:
         """
         Searches Google Maps using SerpApi.
         """
@@ -23,7 +23,7 @@ class SerpApiCollector(BaseCollector):
         search_query = f"{query} in {city}"
         
         leads = []
-        start = 0
+        start = start_offset
         
         # Max pagination safety limit to prevent infinite loop / consuming too many credits
         # 100 limit is standard for google_maps (5 pages)

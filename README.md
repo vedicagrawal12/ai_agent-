@@ -1,73 +1,161 @@
 # LeadHunter AI - Lead Generation Agent 🎯
 
-Yeh ek advanced **AI Lead Generation Agent** hai jo automatically un local businesses ko dhoondhta hai jinki koi website (online presence) nahi hai. Is tool ka main maksad un businesses ki details nikalna aur unhe website development ya digital marketing ki services offer karne mein madad karna hai.
+Yeh ek advanced aur modern **AI Lead Generation Agent** hai jo automatically un local businesses ko dhoondhta hai jinki koi website (online presence) nahi hai. Is tool ka main maksad un businesses ki details nikalna aur unhe website development, SEO, ya digital marketing ki services pitch karke new clients acquire karne mein madad karna hai.
+
+Iska dynamic web dashboard modern UI, high-performance database management, and direct outreach mechanisms ke saath aata hai taaki aapka outreach workflow 10x fast ho sake.
 
 ---
 
-## 🌟 Yeh Agent Kya Kya Kar Sakta Hai? (Features)
+## 🌟 Supercharged Features (Agent Kya-Kya Kar Sakta Hai?)
 
-1. **Smart Local Search:**
-   - Aap kisi bhi business type (jaise: Gym, Cafe, Salon) aur city (jaise: Bhopal, Delhi) ka naam daalkar search kar sakte hain.
-   - Agent automatically saari details nikalega: Business Name, Phone Number, Address, Website, Rating, aur Reviews.
+1. **Smart Local Search (Google Maps Powered):**
+   - Kisi bhi business type (e.g. Gym, Cafe, Salon, Boutique) aur city (e.g. Bhopal, Delhi, Mumbai) ka naam daalkar highly accurate Google Maps data extract karein.
+   - Agent automatically saari key details nikalega: Business Name, Phone Number, Address, Website, Rating, aur Reviews.
 
-2. **Intelligent Lead Filtering & Scoring:**
-   - Agent automatically un businesses ko **IGNORE** kar deta hai jinki pehle se website hai (Website evidence column mein dynamic red/green badges dikhte hain).
-   - Jinki website nahi hai, unhe unke Google Reviews ke hisaab se **Priority Score** deta hai:
-     - 🔴 **HIGH Priority:** Jinke paas website nahi hai aur reviews bhi kam hain (<50). Ye sabse acche clients hain.
-     - 🟡 **MEDIUM Priority:** Reviews theek hain (50-200) par website nahi hai.
-     - 🟢 **LOW Priority:** Bohot zyada reviews hain (>200) par website nahi hai.
+2. **Intelligent Lead Filtering & Priority Scoring:**
+   - **Ignore Existing Websites:** Jin businesses ki website pehle se active hai, unhe automatically identify karke IGNORE kar diya jata hai.
+   - **Smart Scoring Badges:** Baaki bache leads ko unke review volumes ke mutabik outreach priority rank karta hai:
+     - 🔴 **HIGH Priority:** No Website + Low Reviews (<50). Yeh clients convert hone ke sabse aasaan aur perfect targets hain.
+     - 🟡 **MEDIUM Priority:** No Website + Moderate Reviews (50-200). Achi reputation hai par online presence ki kami hai.
+     - 🟢 **LOW Priority:** No Website + High Reviews (>200). Bare businesses jo website build karne ke liye easily budget pay kar sakte hain.
 
-3. **WhatsApp Outreach (Auto-Messaging):**
-   - Agent ke paas pehle se bane hue WhatsApp Message templates hain (jaise: Website Pitch).
-   - Agent message ko **Personalize** karta hai (message mein automatically business ka naam, uski city, aur reviews daal deta hai).
-   - Upgraded WhatsApp API connection click karne par bina kisi popup blocker ke WhatsApp Web ya App open kar deta hai.
+3. **Instagram & Facebook Social Scanner (On-Demand):**
+   - SerpApi organic search engine ka use karke ek click mein specific business ke active **Instagram** aur **Facebook** profiles ko Google par scan karein.
+   - Precision filters use hote hain taaki tags, reels, posts, ya sharing links ko filter out karke direct profiles hi milein.
 
-4. **Data Cleaning & Management:**
-   - Phone numbers ko automatically sahi WhatsApp format (jaise +91...) mein convert karta hai.
-   - Duplicate businesses ko automatically hata deta hai taaki aapko clean data mile.
-   - Har lead ko apne SQLite Database mein hamesha ke liye save karta hai.
+4. **Instagram DM Link & Pitch Auto-Copy (100% Safe):**
+   - Instagram profiles load hone par outreach risk-free aur continuous ho jata hai!
+   - Instagram DM button click karne par personalized outreach pitch automatically aapke system clipboard par copy ho jati hai aur unka profile browser window mein launch ho jata hai.
+   - **Safety First:** Zero API bans! Kisi auto-bot APIs ka use nahi kiya gaya hai jo aapke Instagram accounts block kar sakein.
 
-5. **One-Click Excel Export:**
-   - Aap poore data ko ek click mein properly formatted **Excel (.xlsx)** file mein download kar sakte hain, jisme columns ki width auto-adjusted hoti hai taaki phone numbers cut ya deform na hon.
+5. **WhatsApp Outreach (Auto-Messaging & Verification):**
+   - Sahi country codes (+91 for India) aur formatting automatically adjust karta hai.
+   - Built-in dynamic and customized outreach templates jo automatically client name, category, and specific reviews count insert kar dete hain.
+   - Upgraded WhatsApp API connection bina popup blockers ke WhatsApp Web ya Desktop App seamless tarike se open karta hai.
 
-6. **Deep Scan (Multi-Zone Search):**
-   - Pure shehar ke alag-alag zones/areas ko ek saath scan karne ka dynamic feature. City name enter karne par popular zones (jaise MP Nagar, Kolar in Bhopal) automatically suggest ho jaate hain.
+6. **Next-Page Pagination (Load More Leads):**
+   - Index-offset pagination system built directly in backend endpoints and frontend control state.
+   - Aap dynamic "Load More" search features ke zariye target count badha kar page-by-page infinite leads scan kar sakte hain. Saari leads single page par accumulate hoti hain, jisse huge export lists fetch karna smooth ho jata hai.
 
-7. **Fresh Leads Filter (No Repeats):**
-   - Database se matching leads check karke duplicate results ko filter karta hai, aur automatic page-by-page fetch tab tak karta hai jab tak required count ke barabar bilkul naye aur unseen leads na mil jayein. Same responses repeat nahi hote.
+7. **Smart Database Auto-Cleanup (Startup Optimizer):**
+   - Startup par background automatic clean-up routine chalta hai jo database storage optimize rakhta hai:
+     - **Logs Protection:** Jin leads ko aapne contact kar liya hai, unhe hamesha secure rakha jata hai.
+     - **Old Uncontacted Leads:** 14 din se purane uncontacted leads automatically delete ho jate hain.
+     - **Old Ignored Leads:** Jinki website pehle se hai aur wo IGNORE state mein hain, unhe 7 din mein clear karta hai.
+     - **Search History:** 30 din se purane search queries aur parameters list flush ho jate hain.
+
+8. **Manual Database Clean-up (Settings Option):**
+   - Settings menu dashboard par single-click manual clear system hai jo database se sabhi uncontacted records aur search histories ko instantly delete kar deta hai, keeping only your high-value contacted clients safe.
+
+9. **Deep Scan Multi-Zone Suggestions (10+ Indian Cities):**
+   - India ke major sheharo (Delhi, Mumbai, Bengaluru, Pune, Hyderabad, Chennai, Kolkata, Ahmedabad, Jaipur, Bhopal) ke popular high-potential commercial zones and sub-localities auto-suggest ho jati hain.
+   - Shehar bhar ke micro-areas ko individually aur detailed scan karne ke liye deep scan support active hai.
+
+10. **One-Click Excel Export (Premium Format):**
+    - Sahi formatted `.xlsx` (Excel) download.
+    - Columns ki sizes auto-adjusted hoti hain taaki mobile numbers text format mein deform ya cut na ho. Priority status, scores, aur page tracking Excel sheets mein complete data capture karte hain.
+
+11. **Premium Modern Dark UI (Wow Aesthetics):**
+    - High-quality visual glassmorphism, responsive components, smooth cyan-to-violet colors gradients, soft card entry animations, aur clean interactive visual feedback features design kiye gaye hain.
+
+---
+
+## 🔌 Tech Stack & Integrations
+
+- **Backend:** Python + Flask (Robust API routing, server management, custom utility architectures)
+- **Frontend:** Responsive HTML5, Vanilla CSS3 (Glassmorphism design language, transitions & micro-animations), Modern Javascript (Dynamic dashboard DOM handling, async fetch control)
+- **Database:** SQLite3 (Highly responsive local data storing with dynamic schema migrations)
+- **APIs:**
+  - **SerpApi (Google Maps Engine):** Exact local businesses lists search ke liye.
+  - **SerpApi (Organic Engine):** On-demand social scanner features ke liye.
 
 ---
 
-## 🔌 Kaun-Kaun si API Use Hui Hai?
+## 📂 Project Directory Structure
 
-Is project mein main data extraction ke liye **SerpApi (Google Maps Engine)** ka use hua hai:
-
-- **SerpApi:** Yeh ek powerful API hai jo bilkul exact Google Maps ka data nikal kar deti hai. 
-  - **Fayda:** Isme free tier (100 searches/month) milta hai aur Google Cloud ki tarah credit card verify karne ka koi jhanjhat nahi hai.
-- **Python / Flask (Backend):** Backend mein data fetch karne, filter karne, aur serve karne ke liye.
-- **SQLite:** Data ko locally save karne ke liye (bin kisi external database API ke).
-
-*(Note: Iska architecture "Extensible" banaya gaya hai. Pehle isme direct Google Places API (New) use hui thi, jise baad mein SerpApi se switch kiya gaya).*
+```
+ai_agent/
+├── app.py                     # Main Flask routing, configuration, and endpoint definitions
+├── database.py                # Database controllers, stats calculator, auto & manual cleanups
+├── requirements.txt           # Python environment packages specification
+├── .env                       # API Configuration parameters (Secret)
+├── .env.example               # Template file for secret configurations
+├── .gitignore                 # Excluded directories and .env files registry
+├── README.md                  # Detailed Hinglish guidelines & overview
+│
+├── collectors/                # Core Data Extraction logic
+│   ├── base_collector.py      # Abstract blueprint base model for future platforms integration
+│   └── serpapi_collector.py   # SerpApi engine implementation for Google Maps searches
+│
+├── utils/                     # Smart text processing utility systems
+│   ├── data_cleaner.py        # Duplicate remover, contact info cleaner, and scoring calculator
+│   └── whatsapp.py            # Phone prependers and dynamic templates writer
+│
+├── templates/                 # UI View System
+│   └── index.html             # High-end desktop user-dashboard template
+│
+└── static/                    # Dynamic Design and Dashboard controller files
+    ├── css/
+    │   └── style.css          # Core CSS styling system, glassmorphism layouts, and animations
+    └── js/
+        └── app.js             # State managers, outreach launchers, dynamic pagination, and API fetches
+```
 
 ---
 
-## 🚀 Room for Improvement (Future Scope)
+## 🚀 Setup & Installation (Hinglish Guide)
 
-Kyunki iska code ek 'BaseCollector' architecture par bana hai, isme aage chal kar kaafi naye aur powerful features add kiye ja sakte hain:
+Follow steps to set up this premium lead finder tool in your local workspace:
 
-1. **Naye Platforms ka Integration:**
-   - **Instagram / Facebook Collector:** Agent Instagram se un local businesses ko nikal sakta hai jo active toh hain, par unke bio mein website ka link nahi hai.
-   - **JustDial / Sulekha Collector:** Indian market ke aur zyada deep data ke liye.
+### 1. Repository Clone or Directory Navigation
+Sabse pehle project directory ko command line par open karein:
+```bash
+cd "c:\Users\Sahil\Desktop\ai agents"
+```
 
-2. **AI Message Writer (ChatGPT/Claude Integration):**
-   - Abhi messages templates ke zariye ban rahe hain. Aage chal kar hum AI ka use karke har dukan ke reviews padh kar ek bilkul unique message likhwa sakte hain (e.g., *"Maine dekha ki aapki rating 4.8 hai par website na hone se aap customers kho rahe hain..."*).
+### 2. Install Python Dependencies
+Requirements list me add kiye gaye packages ko install karein (requires Python 3.8+):
+```bash
+pip install -r requirements.txt
+```
 
-3. **Automated Follow-ups & Emails:**
-   - WhatsApp ke alawa, agar agent ko business ka email mile, toh wo khud ek cold-email draft karke bhej sake.
-   - Jin logo ko message bhej diya, unhe 3 din baad ek automated reminder message bhej sake.
+### 3. API Key setup in Environment
+`env` configuration ke liye workspace mein `.env` file banayein ya `.env.example` ko copy karke save karein. 
+Isme apni SerpApi key input karein:
+```env
+SERPAPI_KEY=your_serpapi_private_key_here
+```
+*(Note: Aap direct dashboard par run-time me settings button click karke bhi dynamic key update kar sakte hain jo automatically `.env` par persist ho jaati hai).*
 
-4. **Bulk WhatsApp Sender:**
-   - Abhi hume ek-ek karke message bhejna padta hai. Future mein WhatsApp Business API ya kisi automation tool (jaise Selenium) se hum poori list ko ek saath message bhej sakte hain.
+### 4. Run the Application
+Start the Flask dev server:
+```bash
+python app.py
+```
+Iske baad server running message dikhega and you can open:
+👉 **[http://localhost:5000](http://localhost:5000)** inside your browser!
 
 ---
-*Created as a powerful, modular tool for local business outreach.*
+
+## 🚀 Room for Upgradation & Improvement (Future Scope)
+
+Is agent ka code highly extensible abstract structures ke saath likha gaya hai. Future updates mein in features ko successfully add kiya ja sakta hai:
+
+1. **AI Message Writer (ChatGPT/Claude API Integration):**
+   - Abhi personalizations simple string substitutions use karti hain.
+   - Future upgrade me, hum AI use karke client ke top reviews, specific issues, aur locality read kar payenge taaki bilkul unique outreach proposal create kiya ja sake.
+
+2. **Full-Scale Lead Scrapers Extensions:**
+   - `BaseCollector` framework ka reuse karke JustDial, Sulekha, YellowPages, aur Yelp ke liye native collectors dynamic bindings direct write ki ja sakti hain.
+
+3. **Automated Continuous Email Cold-Outreach:**
+   - Scan profiles me business email identify karke single click dynamic email auto-sender with standard SPF/DKIM verification tools deploy ho sakte hain.
+
+4. **Multi-Channel CRM Pipeline:**
+   - Leads list ko "Contacted", "Interested", "Converted", "No-Response" boards me visualize karne ke liye dynamic Kanban system view dashboard add karna.
+
+5. **Outreach Scheduler & Analytics:**
+   - Leads ko target scheduling intervals par auto WhatsApp Web messages automate karne ke liye integration mechanisms with background processes (like Celery/Redis).
+
+---
+*Developed with love for high-speed local business outreach and digital growth.* 🎯

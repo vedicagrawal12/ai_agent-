@@ -54,10 +54,23 @@ class Database:
                 contacted INTEGER DEFAULT 0,
                 contact_date TEXT DEFAULT '',
                 notes TEXT DEFAULT '',
+                instagram TEXT DEFAULT '',
+                facebook TEXT DEFAULT '',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # Add columns dynamically for backward compatibility with existing databases
+        try:
+            cursor.execute("PRAGMA table_info(leads)")
+            columns = [info[1] for info in cursor.fetchall()]
+            if 'instagram' not in columns:
+                cursor.execute("ALTER TABLE leads ADD COLUMN instagram TEXT DEFAULT ''")
+            if 'facebook' not in columns:
+                cursor.execute("ALTER TABLE leads ADD COLUMN facebook TEXT DEFAULT ''")
+        except Exception as alter_err:
+            print(f"Error altering table for social columns: {alter_err}")
 
         # Search history table
         cursor.execute("""
@@ -338,5 +351,39 @@ class Database:
                 "success": False,
                 "error": str(e)
             }
+        finally:
+            conn.close()
+
+    def update_lead_socials(self, lead_id: int, instagram: str, facebook: str) -> bool:
+        """Update Instagram and Facebook links for a lead."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE leads
+                SET instagram = ?,
+                    facebook = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (instagram, facebook, lead_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating socials for lead {lead_id}: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def get_lead_by_id(self, lead_id: int) -> Optional[Dict]:
+        """Fetch a single lead by its database ID."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM leads WHERE id = ?", (lead_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        except Exception as e:
+            print(f"Error fetching lead by ID {lead_id}: {e}")
+            return None
         finally:
             conn.close()

@@ -31,6 +31,8 @@ class Lead:
     whatsapp_number: str = ""
     place_id: str = ""
     source: str = "google_maps"  # Track which platform the lead came from
+    instagram: str = ""
+    facebook: str = ""
 
     def to_dict(self):
         return asdict(self)
@@ -52,7 +54,7 @@ class BaseCollector(ABC):
     """
 
     @abstractmethod
-    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None) -> List[Lead]:
+    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None, start_offset: int = 0) -> List[Lead]:
         """
         Search for businesses on the platform.
         
@@ -61,6 +63,7 @@ class BaseCollector(ABC):
             city: City name (e.g., "bhopal", "delhi")
             max_results: Maximum number of results to return
             exclude_place_ids: Optional set of place IDs to exclude from search results
+            start_offset: Starting offset (pagination start index) for the search
             
         Returns:
             List of Lead objects with business details
