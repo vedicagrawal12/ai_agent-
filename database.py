@@ -1,0 +1,258 @@
+"""
+Database Manager — SQLite storage for leads and search history.
+
+Stores collected leads persistently so you can:
+- Track which leads you've already contacted
+- View past search results
+- Export historical data
+- Avoid re-collecting the same leads
+"""
+
+import sqlite3
+import json
+import os
+from datetime import datetime
+from typing import List, Optional, Dict
+from collectors.base_collector import Lead
+
+
+class Database:
+    """SQLite database manager for lead storage."""
+
+    def __init__(self, db_path: str = "leads.db"):
+        """Initialize database connection and create tables if needed."""
+        self.db_path = db_path
+        self._init_db()
+
+    def _get_connection(self) -> sqlite3.Connection:
+        """Get a database connection with row factory."""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def _init_db(self):
+        """Create database tables if they don't exist."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # Leads table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS leads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                place_id TEXT UNIQUE,
+                name TEXT NOT NULL,
+                phone TEXT DEFAULT '',
+                address TEXT DEFAULT '',
+                website TEXT DEFAULT '',
+                rating REAL DEFAULT 0.0,
+                reviews INTEGER DEFAULT 0,
+                category TEXT DEFAULT '',
+                city TEXT DEFAULT '',
+                priority TEXT DEFAULT 'LOW',
+                whatsapp_number TEXT DEFAULT '',
+                source TEXT DEFAULT 'google_maps',
+                contacted INTEGER DEFAULT 0,
+                contact_date TEXT DEFAULT '',
+                notes TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Search history table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS search_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                query TEXT NOT NULL,
+                city TEXT NOT NULL,
+                results_count INTEGER DEFAULT 0,
+                leads_count INTEGER DEFAULT 0,
+                searched_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # WhatsApp message log
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS message_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                lead_id INTEGER,
+                template_used TEXT DEFAULT '',
+                message_sent TEXT DEFAULT '',
+                sent_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (lead_id) REFERENCES leads(id)
+            )
+        """)
+
+        conn.commit()
+        conn.close()
+
+    def save_leads(self, leads: List[Lead]) -> int:
+        """
+        Save leads to the database, updating existing ones.
+        
+        Returns the number of new leads saved.
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        new_count = 0
+
+        for lead in leads:
+            try:
+                cursor.execute("""
+                    INSERT INTO leads (place_id, name, phone, address, website, rating, 
+                                      reviews, category, city, priority, whatsapp_number, source)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(place_id) DO UPDATE SET
+                        name = excluded.name,
+                        phone = excluded.phone,
+                        address = excluded.address,
+                        website = excluded.website,
+                        rating = excluded.rating,
+                        reviews = excluded.reviews,
+                        category = excluded.category,
+                        city = excluded.city,
+                        priority = excluded.priority,
+                        whatsapp_number = excluded.whatsapp_number,
+                        updated_at = CURRENT_TIMESTAMP
+                """, (
+                    lead.place_id, lead.name, lead.phone, lead.address,
+                    lead.website, lead.rating, lead.reviews, lead.category,
+                    lead.city, lead.priority, lead.whatsapp_number, lead.source
+                ))
+                
+                if cursor.rowcount > 0:
+                    new_count += 1
+            except Exception as e:
+                print(f"Error saving lead {lead.name}: {e}")
+                continue
+
+        conn.commit()
+        conn.close()
+        return new_count
+
+    def save_search(self, query: str, city: str, results_count: int, leads_count: int):
+        """Log a search to the history."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO search_history (query, city, results_count, leads_count)
+            VALUES (?, ?, ?, ?)
+        """, (query, city, results_count, leads_count))
+        conn.commit()
+        conn.close()
+
+    def get_all_leads(self, priority_filter: str = None, city_filter: str = None) -> List[Dict]:
+        """
+        Get all leads from the database with optional filters.
+        
+        Args:
+            priority_filter: Filter by priority (HIGH, MEDIUM, LOW)
+            city_filter: Filter by city name
+            
+        Returns:
+            List of lead dictionaries
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        query = "SELECT * FROM leads WHERE priority != 'IGNORE'"
+        params = []
+
+        if priority_filter:
+            query += " AND priority = ?"
+            params.append(priority_filter)
+        
+        if city_filter:
+            query += " AND LOWER(city) LIKE ?"
+            params.append(f"%{city_filter.lower()}%")
+
+        query += " ORDER BY CASE priority WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END"
+
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [dict(row) for row in rows]
+
+    def get_search_history(self, limit: int = 20) -> List[Dict]:
+        """Get recent search history."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM search_history 
+            ORDER BY searched_at DESC 
+            LIMIT ?
+        """, (limit,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    def mark_contacted(self, lead_id: int, notes: str = ""):
+        """Mark a lead as contacted."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE leads 
+            SET contacted = 1, 
+                contact_date = ?, 
+                notes = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (datetime.now().isoformat(), notes, lead_id))
+        conn.commit()
+        conn.close()
+
+    def log_message(self, lead_id: int, template: str, message: str):
+        """Log a WhatsApp message sent to a lead."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO message_log (lead_id, template_used, message_sent)
+            VALUES (?, ?, ?)
+        """, (lead_id, template, message))
+        conn.commit()
+        conn.close()
+
+    def get_stats(self) -> Dict:
+        """Get dashboard statistics."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        stats = {}
+        
+        # Total leads
+        cursor.execute("SELECT COUNT(*) FROM leads WHERE priority != 'IGNORE'")
+        stats["total_leads"] = cursor.fetchone()[0]
+
+        # By priority
+        cursor.execute("SELECT COUNT(*) FROM leads WHERE priority = 'HIGH'")
+        stats["high_priority"] = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM leads WHERE priority = 'MEDIUM'")
+        stats["medium_priority"] = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM leads WHERE priority = 'LOW'")
+        stats["low_priority"] = cursor.fetchone()[0]
+
+        # Contacted
+        cursor.execute("SELECT COUNT(*) FROM leads WHERE contacted = 1")
+        stats["contacted"] = cursor.fetchone()[0]
+
+        # Total searches
+        cursor.execute("SELECT COUNT(*) FROM search_history")
+        stats["total_searches"] = cursor.fetchone()[0]
+
+        # Cities covered
+        cursor.execute("SELECT COUNT(DISTINCT city) FROM leads WHERE priority != 'IGNORE'")
+        stats["cities_covered"] = cursor.fetchone()[0]
+
+        conn.close()
+        return stats
+
+    def delete_lead(self, lead_id: int):
+        """Delete a lead by ID."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM leads WHERE id = ?", (lead_id,))
+        conn.commit()
+        conn.close()

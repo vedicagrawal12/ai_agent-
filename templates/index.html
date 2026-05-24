@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Lead Generation Agent — Find local businesses on Google Maps that need websites and online presence.">
+    <title>LeadHunter AI — Lead Generation Agent</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+</head>
+<body>
+    <div class="app-container">
+        <!-- ======== Header ======== -->
+        <header class="app-header">
+            <div class="app-logo">
+                <div class="app-logo-icon">🎯</div>
+                <div class="app-logo-text">
+                    <h1>LeadHunter AI</h1>
+                    <p>Find businesses that need your services</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span id="apiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
+                <button id="historyBtn" class="btn btn-ghost btn-icon" data-tooltip="Search History">📜</button>
+                <button id="settingsBtn" class="btn btn-secondary btn-icon" data-tooltip="Settings">⚙️</button>
+            </div>
+        </header>
+
+        <!-- ======== Search Section ======== -->
+        <section class="search-section">
+            <h2 class="search-title">🔍 Search Local Businesses</h2>
+            <p class="search-subtitle">Enter a business type and city to find businesses without websites — your next potential clients.</p>
+            
+            <form id="searchForm" class="search-form">
+                <div class="form-group">
+                    <label class="form-label" for="queryInput">Business Type</label>
+                    <input type="text" id="queryInput" class="form-input" placeholder="e.g. gym, salon, restaurant, cafe..." autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="cityInput">City</label>
+                    <input type="text" id="cityInput" class="form-input" placeholder="e.g. Bhopal, Delhi, Mumbai..." autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="maxResults">Results</label>
+                    <select id="maxResults" class="form-select">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" id="searchBtn" class="btn btn-primary btn-lg">
+                        🚀 Search
+                    </button>
+                </div>
+            </form>
+
+            <div style="margin-top: 16px;">
+                <label class="toggle-container">
+                    <div class="toggle">
+                        <input type="checkbox" id="includeWebsite">
+                        <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label">Show businesses with websites (for comparison)</span>
+                </label>
+            </div>
+        </section>
+
+        <!-- ======== Stats Bar ======== -->
+        <div id="statsBar" class="stats-bar" style="display: none;">
+            <div class="stat-card cyan">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value" id="statTotalFound">0</div>
+                <div class="stat-label">Total Found</div>
+            </div>
+            <div class="stat-card violet">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value" id="statLeadsCount">0</div>
+                <div class="stat-label">Leads (No Website)</div>
+            </div>
+            <div class="stat-card red">
+                <div class="stat-icon">🔴</div>
+                <div class="stat-value" id="statHighPriority">0</div>
+                <div class="stat-label">High Priority</div>
+            </div>
+            <div class="stat-card amber">
+                <div class="stat-icon">🟡</div>
+                <div class="stat-value" id="statMediumPriority">0</div>
+                <div class="stat-label">Medium Priority</div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-icon">📞</div>
+                <div class="stat-value" id="statWithPhone">0</div>
+                <div class="stat-label">With Phone</div>
+            </div>
+            <div class="stat-card blue">
+                <div class="stat-icon">💬</div>
+                <div class="stat-value" id="statWithWhatsApp">0</div>
+                <div class="stat-label">WhatsApp Ready</div>
+            </div>
+        </div>
+
+        <!-- ======== Results Section ======== -->
+        <section id="resultsSection" class="results-section" style="display: none;">
+            <div class="results-header">
+                <h2 class="results-title" id="resultsTitle">Results</h2>
+                <div class="results-actions">
+                    <button id="exportCsvBtn" class="btn btn-success btn-sm">📥 Export CSV</button>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">🔍</div>
+                <div class="empty-state-title">No leads found</div>
+                <div class="empty-state-text">All businesses in this search have websites. Try a different keyword or city.</div>
+            </div>
+
+            <!-- Table -->
+            <div id="tableContainer" class="table-container" style="display: none;">
+                <div class="table-scroll">
+                    <table class="leads-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Business Name</th>
+                                <th data-sort="phone">Phone</th>
+                                <th data-sort="address">Address</th>
+                                <th data-sort="city">City</th>
+                                <th data-sort="rating">Rating</th>
+                                <th data-sort="reviews">Reviews</th>
+                                <th data-sort="priority">Priority</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leadsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ======== Loading Overlay ======== -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Searching Google Maps...</div>
+    </div>
+
+    <!-- ======== Toast Container ======== -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- ======== Settings Modal ======== -->
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">⚙️ Settings</h3>
+                <button class="modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <div class="settings-group">
+                        <div class="settings-group-title">🔑 SerpApi Key (No Credit Card Required)</div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+                            Required to search Google Maps. Get your free key from 
+                            <a href="https://serpapi.com" target="_blank" style="color: var(--accent-cyan);">serpapi.com</a>.
+                            You get 100 free searches per month!
+                        </p>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="password" id="apiKeyInput" class="form-input" placeholder="Paste your SerpApi key here..." style="flex: 1;">
+                            <button id="saveApiKeyBtn" class="btn btn-primary">Save</button>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <span id="apiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <div class="settings-group-title">💡 How to get an API Key</div>
+                        <ol style="font-size: 0.85rem; color: var(--text-secondary); padding-left: 20px; line-height: 2;">
+                            <li>Go to <a href="https://serpapi.com" target="_blank" style="color: var(--accent-cyan);">SerpApi.com</a></li>
+                            <li>Sign up with your email (Takes 1 minute)</li>
+                            <li>Go to your Dashboard to copy the API Key</li>
+                            <li>Paste the key above</li>
+                        </ol>
+                        <p style="font-size: 0.8rem; color: var(--accent-amber); margin-top: 8px;">
+                            💰 Best alternative to Google Maps API. No billing setup needed!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== WhatsApp Modal ======== -->
+    <div id="whatsappModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">💬 Send WhatsApp Message</h3>
+                <button class="modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-input); border-radius: var(--radius-md);">
+                    <div style="font-weight: 700; font-size: 1rem;" id="whatsappBusinessName">Business Name</div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">📱 <span id="whatsappPhoneNumber">Phone</span></div>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label class="form-label">Choose a Template</label>
+                </div>
+                
+                <div id="templateOptions" class="template-selector">
+                    <!-- Templates loaded dynamically -->
+                </div>
+
+                <div id="customMessageArea" style="display: none; margin-top: 16px;">
+                    <label class="form-label">Your Custom Message</label>
+                    <textarea id="customMessageInput" class="form-textarea" 
+                        placeholder="Type your message here... Use {business_name}, {city}, {category}, {rating}, {reviews} for personalization."></textarea>
+                </div>
+
+                <div style="margin-top: 16px;">
+                    <label class="form-label">Message Preview</label>
+                    <div id="messagePreview" class="message-preview">
+                        Select a template to preview the message...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close">Cancel</button>
+                <button id="sendWhatsAppBtn" class="btn btn-whatsapp">
+                    💬 Open WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== History Modal ======== -->
+    <div id="historyModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">📜 Search History</h3>
+                <button class="modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="historyList" class="history-list">
+                    <div class="empty-state" style="padding: 32px;">
+                        <div class="empty-state-icon">📜</div>
+                        <div class="empty-state-title">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,748 @@
+/**
+ * AI Lead Generation Agent — Frontend Application
+ * 
+ * Handles search, results display, WhatsApp messaging,
+ * CSV export, settings, and all UI interactions.
+ */
+
+// ============================================================
+// State Management
+// ============================================================
+const AppState = {
+    leads: [],
+    allResults: [],
+    stats: {},
+    sortColumn: null,
+    sortDirection: 'asc',
+    selectedTemplate: 'website_pitch',
+    whatsappTemplates: {},
+    currentWhatsAppLead: null,
+    isLoading: false,
+    hasApiKey: false,
+};
+
+// ============================================================
+// API Client
+// ============================================================
+const API = {
+    baseUrl: '',
+
+    async request(endpoint, options = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+        const config = {
+            headers: { 'Content-Type': 'application/json' },
+            ...options,
+        };
+
+        try {
+            const response = await fetch(url, config);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || `Request failed with status ${response.status}`);
+            }
+            
+            return data;
+        } catch (error) {
+            if (error.message.includes('Failed to fetch')) {
+                throw new Error('Cannot connect to server. Is the Flask app running?');
+            }
+            throw error;
+        }
+    },
+
+    async search(query, city, maxResults = 20, includeWithWebsite = false) {
+        return this.request('/api/search', {
+            method: 'POST',
+            body: JSON.stringify({ query, city, max_results: maxResults, include_with_website: includeWithWebsite }),
+        });
+    },
+
+    async getConfig() {
+        return this.request('/api/config');
+    },
+
+    async saveConfig(apiKey) {
+        return this.request('/api/config', {
+            method: 'POST',
+            body: JSON.stringify({ api_key: apiKey }),
+        });
+    },
+
+    async getTemplates() {
+        return this.request('/api/whatsapp/templates');
+    },
+
+    async generateWhatsAppLink(phone, template, lead, customMessage = '') {
+        return this.request('/api/whatsapp/generate', {
+            method: 'POST',
+            body: JSON.stringify({ phone, template, lead, custom_message: customMessage }),
+        });
+    },
+
+    async exportCSV(leads) {
+        const response = await fetch('/api/export/csv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ leads }),
+        });
+        
+        if (!response.ok) {
+            throw new Error('Export failed');
+        }
+        
+        const blob = await response.blob();
+        return blob;
+    },
+
+    async getStats() {
+        return this.request('/api/stats');
+    },
+
+    async getHistory() {
+        return this.request('/api/history');
+    },
+
+    async getSavedLeads(priority = null, city = null) {
+        const params = new URLSearchParams();
+        if (priority) params.append('priority', priority);
+        if (city) params.append('city', city);
+        return this.request(`/api/leads?${params.toString()}`);
+    }
+};
+
+// ============================================================
+// UI Components
+// ============================================================
+const UI = {
+    // Elements cache
+    el: {},
+
+    init() {
+        // Cache DOM elements
+        this.el = {
+            searchForm: document.getElementById('searchForm'),
+            queryInput: document.getElementById('queryInput'),
+            cityInput: document.getElementById('cityInput'),
+            maxResultsSelect: document.getElementById('maxResults'),
+            searchBtn: document.getElementById('searchBtn'),
+            includeWebsiteToggle: document.getElementById('includeWebsite'),
+            
+            statsBar: document.getElementById('statsBar'),
+            statTotalFound: document.getElementById('statTotalFound'),
+            statLeadsCount: document.getElementById('statLeadsCount'),
+            statHighPriority: document.getElementById('statHighPriority'),
+            statMediumPriority: document.getElementById('statMediumPriority'),
+            statWithPhone: document.getElementById('statWithPhone'),
+            statWithWhatsApp: document.getElementById('statWithWhatsApp'),
+            
+            resultsSection: document.getElementById('resultsSection'),
+            resultsTitle: document.getElementById('resultsTitle'),
+            leadsTableBody: document.getElementById('leadsTableBody'),
+            emptyState: document.getElementById('emptyState'),
+            tableContainer: document.getElementById('tableContainer'),
+            
+            loadingOverlay: document.getElementById('loadingOverlay'),
+            loadingText: document.getElementById('loadingText'),
+            
+            settingsModal: document.getElementById('settingsModal'),
+            apiKeyInput: document.getElementById('apiKeyInput'),
+            apiKeyStatus: document.getElementById('apiKeyStatus'),
+            
+            whatsappModal: document.getElementById('whatsappModal'),
+            templateOptions: document.getElementById('templateOptions'),
+            messagePreview: document.getElementById('messagePreview'),
+            customMessageArea: document.getElementById('customMessageArea'),
+            customMessageInput: document.getElementById('customMessageInput'),
+            sendWhatsAppBtn: document.getElementById('sendWhatsAppBtn'),
+            
+            toastContainer: document.getElementById('toastContainer'),
+        };
+    },
+
+    // ---- Loading ----
+    showLoading(message = 'Searching Google Maps...') {
+        AppState.isLoading = true;
+        this.el.loadingOverlay.classList.add('active');
+        this.el.loadingText.textContent = message;
+        this.el.searchBtn.disabled = true;
+    },
+
+    hideLoading() {
+        AppState.isLoading = false;
+        this.el.loadingOverlay.classList.remove('active');
+        this.el.searchBtn.disabled = false;
+    },
+
+    // ---- Stats ----
+    updateStats(stats) {
+        this.el.statsBar.style.display = 'grid';
+        this.el.statsBar.classList.add('fade-in');
+        
+        this.animateNumber(this.el.statTotalFound, stats.total_found || 0);
+        this.animateNumber(this.el.statLeadsCount, stats.leads_count || 0);
+        this.animateNumber(this.el.statHighPriority, stats.high_priority || 0);
+        this.animateNumber(this.el.statMediumPriority, stats.medium_priority || 0);
+        this.animateNumber(this.el.statWithPhone, stats.with_phone || 0);
+        this.animateNumber(this.el.statWithWhatsApp, stats.with_whatsapp || 0);
+    },
+
+    animateNumber(element, target) {
+        const duration = 600;
+        const start = parseInt(element.textContent) || 0;
+        const diff = target - start;
+        const startTime = performance.now();
+
+        function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+            element.textContent = Math.round(start + diff * eased);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    },
+
+    // ---- Results Table ----
+    renderLeads(leads) {
+        AppState.leads = leads;
+        
+        this.el.resultsSection.style.display = 'block';
+        this.el.resultsSection.classList.add('slide-up');
+        
+        if (leads.length === 0) {
+            this.el.emptyState.style.display = 'block';
+            this.el.tableContainer.style.display = 'none';
+            return;
+        }
+        
+        this.el.emptyState.style.display = 'none';
+        this.el.tableContainer.style.display = 'block';
+        
+        this.el.leadsTableBody.innerHTML = leads.map((lead, i) => this.createLeadRow(lead, i)).join('');
+    },
+
+    createLeadRow(lead, index) {
+        const priorityClass = `priority-${lead.priority.toLowerCase()}`;
+        const priorityEmoji = { HIGH: '🔴', MEDIUM: '🟡', LOW: '🟢', IGNORE: '⚪' }[lead.priority] || '';
+        const stars = this.renderStars(lead.rating);
+        const phoneDisplay = lead.phone || '<span style="color: var(--text-muted)">N/A</span>';
+        const whatsappBtn = lead.whatsapp_number 
+            ? `<button class="row-btn whatsapp" data-tooltip="Send WhatsApp" onclick="App.openWhatsApp(${index})">💬</button>`
+            : '';
+        
+        return `
+            <tr>
+                <td>
+                    <div style="font-weight: 600;">${this.escapeHtml(lead.name)}</div>
+                    <div class="category-pill" style="margin-top: 4px;">${this.escapeHtml(lead.category || 'Business')}</div>
+                </td>
+                <td class="phone-cell">${phoneDisplay}</td>
+                <td>
+                    <div class="truncate-address" data-tooltip="${this.escapeHtml(lead.address)}">${this.escapeHtml(lead.address || 'N/A')}</div>
+                </td>
+                <td>${this.escapeHtml(lead.city || 'N/A')}</td>
+                <td>
+                    <div class="rating">
+                        <span class="rating-stars">${stars}</span>
+                        <span>${lead.rating || 'N/A'}</span>
+                    </div>
+                </td>
+                <td>${lead.reviews || 0}</td>
+                <td><span class="priority-badge ${priorityClass}">${priorityEmoji} ${lead.priority}</span></td>
+                <td>
+                    <div class="row-actions">
+                        ${whatsappBtn}
+                        <button class="row-btn" data-tooltip="Copy Phone" onclick="App.copyPhone(${index})">📋</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    },
+
+    renderStars(rating) {
+        if (!rating) return '';
+        const full = Math.floor(rating);
+        const half = rating % 1 >= 0.5 ? 1 : 0;
+        const empty = 5 - full - half;
+        return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+    },
+
+    // ---- Sorting ----
+    sortLeads(column) {
+        if (AppState.sortColumn === column) {
+            AppState.sortDirection = AppState.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            AppState.sortColumn = column;
+            AppState.sortDirection = 'asc';
+        }
+        
+        const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2, IGNORE: 3 };
+        
+        AppState.leads.sort((a, b) => {
+            let valA = a[column];
+            let valB = b[column];
+            
+            if (column === 'priority') {
+                valA = priorityOrder[valA] || 3;
+                valB = priorityOrder[valB] || 3;
+            }
+            
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+            
+            if (valA < valB) return AppState.sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return AppState.sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        // Update header classes
+        document.querySelectorAll('.leads-table th').forEach(th => {
+            th.classList.remove('sorted-asc', 'sorted-desc');
+        });
+        
+        const clickedTh = document.querySelector(`.leads-table th[data-sort="${column}"]`);
+        if (clickedTh) {
+            clickedTh.classList.add(`sorted-${AppState.sortDirection}`);
+        }
+        
+        this.renderLeads(AppState.leads);
+    },
+
+    // ---- Toasts ----
+    showToast(message, type = 'info') {
+        const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+        
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type]}</span>
+            <span class="toast-message">${message}</span>
+        `;
+        
+        this.el.toastContainer.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('toast-exit');
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    },
+
+    // ---- Modals ----
+    openModal(modalId) {
+        document.getElementById(modalId).classList.add('active');
+    },
+
+    closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    },
+
+    // ---- Helpers ----
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+};
+
+// ============================================================
+// Application Controller
+// ============================================================
+const App = {
+    async init() {
+        UI.init();
+        this.bindEvents();
+        await this.checkConfig();
+        await this.loadTemplates();
+    },
+
+    bindEvents() {
+        // Search form
+        UI.el.searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleSearch();
+        });
+
+        // Settings modal
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            UI.openModal('settingsModal');
+        });
+
+        document.getElementById('historyBtn').addEventListener('click', async () => {
+            await this.loadHistory();
+            UI.openModal('historyModal');
+        });
+
+        // Close modals
+        document.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = btn.closest('.modal-overlay');
+                modal.classList.remove('active');
+            });
+        });
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.classList.remove('active');
+            });
+        });
+
+        // Save API key
+        document.getElementById('saveApiKeyBtn').addEventListener('click', () => {
+            this.saveApiKey();
+        });
+
+        // Export CSV
+        document.getElementById('exportCsvBtn').addEventListener('click', () => {
+            this.exportCSV();
+        });
+
+        // Table sorting
+        document.querySelectorAll('.leads-table th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                UI.sortLeads(th.dataset.sort);
+            });
+        });
+
+        // WhatsApp template selection
+        document.getElementById('templateOptions')?.addEventListener('change', (e) => {
+            if (e.target.name === 'template') {
+                AppState.selectedTemplate = e.target.value;
+                this.updateMessagePreview();
+                
+                // Show/hide custom message area
+                const customArea = document.getElementById('customMessageArea');
+                customArea.style.display = e.target.value === 'custom' ? 'block' : 'none';
+            }
+        });
+
+        // Custom message input
+        document.getElementById('customMessageInput')?.addEventListener('input', () => {
+            this.updateMessagePreview();
+        });
+
+        // Send WhatsApp button
+        document.getElementById('sendWhatsAppBtn')?.addEventListener('click', () => {
+            this.sendWhatsApp();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+            }
+            // Ctrl+K to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                UI.el.queryInput.focus();
+            }
+        });
+    },
+
+    // ---- Config ----
+    async checkConfig() {
+        try {
+            const data = await API.getConfig();
+            AppState.hasApiKey = data.has_api_key;
+            
+            const statusEl = UI.el.apiKeyStatus;
+            if (data.has_api_key) {
+                statusEl.className = 'api-key-status active';
+                statusEl.textContent = '✓ Connected';
+            } else {
+                statusEl.className = 'api-key-status inactive';
+                statusEl.textContent = '✗ Not Set';
+            }
+        } catch (error) {
+            console.error('Config check failed:', error);
+        }
+    },
+
+    async saveApiKey() {
+        const apiKey = UI.el.apiKeyInput.value.trim();
+        if (!apiKey) {
+            UI.showToast('Please enter an API key', 'error');
+            return;
+        }
+
+        try {
+            UI.showLoading('Validating API key...');
+            await API.saveConfig(apiKey);
+            AppState.hasApiKey = true;
+            UI.el.apiKeyInput.value = '';
+            UI.closeModal('settingsModal');
+            await this.checkConfig();
+            UI.showToast('API key saved successfully!', 'success');
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    // ---- Search ----
+    async handleSearch() {
+        const query = UI.el.queryInput.value.trim();
+        const city = UI.el.cityInput.value.trim();
+        const maxResults = parseInt(UI.el.maxResultsSelect.value) || 20;
+        const includeWithWebsite = UI.el.includeWebsiteToggle?.checked || false;
+
+        if (!query) {
+            UI.showToast('Please enter a business type (e.g., gym, salon)', 'error');
+            UI.el.queryInput.focus();
+            return;
+        }
+
+        if (!city) {
+            UI.showToast('Please enter a city name (e.g., Bhopal, Delhi)', 'error');
+            UI.el.cityInput.focus();
+            return;
+        }
+
+        if (!AppState.hasApiKey) {
+            UI.showToast('Please configure your Google Places API key first', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        try {
+            UI.showLoading(`Searching for "${query}" in ${city}...`);
+            
+            const data = await API.search(query, city, maxResults, includeWithWebsite);
+            
+            AppState.leads = data.leads;
+            AppState.allResults = data.all_results;
+            AppState.stats = data.stats;
+            
+            UI.updateStats(data.stats);
+            UI.renderLeads(data.leads);
+            
+            UI.el.resultsTitle.textContent = `Results for "${data.query}"`;
+            
+            // Scroll to results
+            setTimeout(() => {
+                UI.el.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+            
+            UI.showToast(`Found ${data.stats.leads_count} leads out of ${data.stats.total_found} businesses`, 'success');
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    // ---- WhatsApp ----
+    async loadTemplates() {
+        try {
+            const data = await API.getTemplates();
+            AppState.whatsappTemplates = data.templates;
+            this.renderTemplateOptions();
+        } catch (error) {
+            console.error('Failed to load templates:', error);
+        }
+    },
+
+    renderTemplateOptions() {
+        const container = UI.el.templateOptions;
+        if (!container) return;
+        
+        container.innerHTML = Object.entries(AppState.whatsappTemplates)
+            .filter(([key]) => key !== 'custom')
+            .map(([key, template], i) => `
+                <label class="template-option ${i === 0 ? 'selected' : ''}">
+                    <input type="radio" name="template" value="${key}" ${i === 0 ? 'checked' : ''}>
+                    <div>
+                        <div class="template-name">${template.name}</div>
+                    </div>
+                </label>
+            `).join('') + `
+                <label class="template-option">
+                    <input type="radio" name="template" value="custom">
+                    <div>
+                        <div class="template-name">✏️ Custom Message</div>
+                    </div>
+                </label>
+            `;
+
+        // Add click handlers for visual selection
+        container.querySelectorAll('.template-option').forEach(option => {
+            option.addEventListener('click', () => {
+                container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+            });
+        });
+    },
+
+    openWhatsApp(index) {
+        const lead = AppState.leads[index];
+        if (!lead || !lead.whatsapp_number) {
+            UI.showToast('No WhatsApp number available for this business', 'error');
+            return;
+        }
+        
+        AppState.currentWhatsAppLead = lead;
+        
+        // Update modal header with business name
+        document.getElementById('whatsappBusinessName').textContent = lead.name;
+        document.getElementById('whatsappPhoneNumber').textContent = lead.phone || lead.whatsapp_number;
+        
+        this.updateMessagePreview();
+        UI.openModal('whatsappModal');
+    },
+
+    updateMessagePreview() {
+        const lead = AppState.currentWhatsAppLead;
+        if (!lead) return;
+        
+        const template = AppState.selectedTemplate;
+        let message = '';
+        
+        if (template === 'custom') {
+            message = document.getElementById('customMessageInput')?.value || '';
+        } else {
+            const templateData = AppState.whatsappTemplates[template];
+            if (templateData) {
+                message = templateData.message;
+            }
+        }
+        
+        // Replace template variables
+        message = message
+            .replace(/\{business_name\}/g, lead.name || 'there')
+            .replace(/\{city\}/g, lead.city || 'your city')
+            .replace(/\{category\}/g, lead.category || 'business')
+            .replace(/\{rating\}/g, lead.rating || 'great')
+            .replace(/\{reviews\}/g, lead.reviews || 'many')
+            .replace(/\{address\}/g, lead.address || '')
+            .replace(/\{phone\}/g, lead.phone || '');
+        
+        const preview = document.getElementById('messagePreview');
+        if (preview) {
+            preview.textContent = message || 'Type your message above...';
+        }
+    },
+
+    async sendWhatsApp() {
+        const lead = AppState.currentWhatsAppLead;
+        if (!lead) return;
+        
+        try {
+            const customMessage = document.getElementById('customMessageInput')?.value || '';
+            
+            const data = await API.generateWhatsAppLink(
+                lead.whatsapp_number,
+                AppState.selectedTemplate,
+                lead,
+                customMessage
+            );
+            
+            if (data.whatsapp_link) {
+                window.open(data.whatsapp_link, '_blank');
+                UI.closeModal('whatsappModal');
+                UI.showToast(`WhatsApp opened for ${lead.name}`, 'success');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        }
+    },
+
+    // ---- Copy Phone ----
+    copyPhone(index) {
+        const lead = AppState.leads[index];
+        if (!lead || !lead.phone) {
+            UI.showToast('No phone number available', 'error');
+            return;
+        }
+        
+        navigator.clipboard.writeText(lead.phone).then(() => {
+            UI.showToast(`Copied: ${lead.phone}`, 'success');
+        }).catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = lead.phone;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            UI.showToast(`Copied: ${lead.phone}`, 'success');
+        });
+    },
+
+    // ---- Export ----
+    async exportCSV() {
+        if (AppState.leads.length === 0) {
+            UI.showToast('No leads to export', 'error');
+            return;
+        }
+        
+        try {
+            const blob = await API.exportCSV(AppState.leads);
+            
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `leads_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            
+            UI.showToast(`Exported ${AppState.leads.length} leads to CSV`, 'success');
+        } catch (error) {
+            UI.showToast('Export failed: ' + error.message, 'error');
+        }
+    },
+
+    // ---- History ----
+    async loadHistory() {
+        try {
+            const data = await API.getHistory();
+            const container = document.getElementById('historyList');
+            
+            if (data.history && data.history.length > 0) {
+                container.innerHTML = data.history.map(item => `
+                    <div class="history-item" onclick="App.rerunSearch('${item.query}', '${item.city}')">
+                        <div>
+                            <div class="history-query">🔍 ${item.query} in ${item.city}</div>
+                        </div>
+                        <div class="history-meta">
+                            <span>📊 ${item.results_count} found</span>
+                            <span>🎯 ${item.leads_count} leads</span>
+                            <span>📅 ${new Date(item.searched_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = `
+                    <div class="empty-state" style="padding: 32px;">
+                        <div class="empty-state-icon">📜</div>
+                        <div class="empty-state-title">No search history yet</div>
+                        <div class="empty-state-text">Your searches will appear here</div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Failed to load history:', error);
+        }
+    },
+
+    rerunSearch(query, city) {
+        UI.el.queryInput.value = query;
+        UI.el.cityInput.value = city;
+        UI.closeModal('historyModal');
+        this.handleSearch();
+    }
+};
+
+// ============================================================
+// Initialize on DOM ready
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+});
