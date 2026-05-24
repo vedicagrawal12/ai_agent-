@@ -45,6 +45,8 @@
                     <select id="maxResults" class="form-select">
                         <option value="10">10</option>
                         <option value="20" selected>20</option>
+                        <option value="40">40</option>
+                        <option value="60">60</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -55,7 +57,7 @@
                 </div>
             </form>
 
-            <div style="margin-top: 16px;">
+            <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 24px;">
                 <label class="toggle-container">
                     <div class="toggle">
                         <input type="checkbox" id="includeWebsite">
@@ -63,6 +65,36 @@
                     </div>
                     <span class="toggle-label">Show businesses with websites (for comparison)</span>
                 </label>
+
+                <label class="toggle-container">
+                    <div class="toggle">
+                        <input type="checkbox" id="hideSavedLeads">
+                        <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label">Hide already saved/contacted leads (Fresh Leads Only)</span>
+                </label>
+
+                <label class="toggle-container">
+                    <div class="toggle">
+                        <input type="checkbox" id="deepScan">
+                        <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label">Deep Scan (Multi-Zone Search)</span>
+                </label>
+            </div>
+
+            <!-- Deep Scan Fields (Initially Hidden) -->
+            <div id="deepScanContainer" style="display: none; margin-top: 16px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                <div class="form-group" style="margin-bottom: 0; width: 100%;">
+                    <label class="form-label" for="deepScanZones" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <span>📍 Sub-localities to scan (comma separated)</span>
+                        <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: normal;">Uses 1 search credit per zone</span>
+                    </label>
+                    <input type="text" id="deepScanZones" class="form-input" placeholder="e.g. MP Nagar, Kolar Road, Arera Colony, Indrapuri" autocomplete="off" style="width: 100%;">
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px; line-height: 1.4;">
+                        💡 <strong>Hinglish Tip:</strong> Jis area mein outreach karna chahte hain unke naam comma lagakar likhein. Humein in areas ke alag aur unique businesses milenge.
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -105,7 +137,7 @@
             <div class="results-header">
                 <h2 class="results-title" id="resultsTitle">Results</h2>
                 <div class="results-actions">
-                    <button id="exportCsvBtn" class="btn btn-success btn-sm">📥 Export CSV</button>
+                    <button id="exportExcelBtn" class="btn btn-success btn-sm">📊 Export Excel</button>
                 </div>
             </div>
 
@@ -126,6 +158,7 @@
                                 <th data-sort="phone">Phone</th>
                                 <th data-sort="address">Address</th>
                                 <th data-sort="city">City</th>
+                                <th data-sort="website">Website</th>
                                 <th data-sort="rating">Rating</th>
                                 <th data-sort="reviews">Reviews</th>
                                 <th data-sort="priority">Priority</th>
@@ -170,7 +203,7 @@
                             <button id="saveApiKeyBtn" class="btn btn-primary">Save</button>
                         </div>
                         <div style="margin-top: 12px;">
-                            <span id="apiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
+                            <span id="settingsApiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
                         </div>
                     </div>
                     

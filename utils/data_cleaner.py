@@ -46,6 +46,49 @@ class DataCleaner:
             return f"+{digits}" if digits else ""
 
     @staticmethod
+    def extract_whatsapp_number(phone: str) -> str:
+        """
+        Extract digits-only WhatsApp number from a formatted phone.
+        WhatsApp needs: country code + number, no spaces/symbols.
+        e.g. "+91 98765 43210" → "919876543210"
+        """
+        if not phone:
+            return ""
+        digits = re.sub(r'[^\d]', '', phone)
+        # Indian numbers need 91 prefix
+        if len(digits) == 10:
+            return f"91{digits}"
+        elif len(digits) == 12 and digits.startswith('91'):
+            return digits
+        elif len(digits) == 11 and digits.startswith('0'):
+            return f"91{digits[1:]}"
+        return digits if len(digits) >= 10 else ""
+
+    @staticmethod
+    def assign_priority(lead: Lead) -> str:
+        """
+        Assign priority based on website presence and review count.
+        
+        Priority logic:
+        - IGNORE: Has a website (not our target audience)
+        - HIGH:   No website, has phone, < 50 reviews (needs help the most)
+        - MEDIUM: No website, has phone, 50–200 reviews
+        - LOW:    No website, no phone OR > 200 reviews
+        """
+        if lead.website:
+            return "IGNORE"
+        
+        has_phone = bool(lead.phone)
+        reviews = lead.reviews or 0
+        
+        if has_phone and reviews < 50:
+            return "HIGH"
+        elif has_phone and reviews <= 200:
+            return "MEDIUM"
+        else:
+            return "LOW"
+
+    @staticmethod
     def remove_duplicates(leads: List[Lead]) -> List[Lead]:
         """
         Remove duplicate leads based on place_id, phone number, and name similarity.
@@ -95,16 +138,21 @@ class DataCleaner:
         
         Steps:
         1. Standardize phone numbers
-        2. Clean names (strip whitespace, fix casing)
-        3. Clean addresses
-        4. Remove duplicates
-        5. Sort by priority (HIGH first)
+        2. Extract WhatsApp numbers
+        3. Clean names (strip whitespace, fix casing)
+        4. Clean addresses
+        5. Assign priority scores
+        6. Remove duplicates
+        7. Sort by priority (HIGH first)
         """
         priority_order = {"HIGH": 0, "MEDIUM": 1, "LOW": 2, "IGNORE": 3}
 
         for lead in leads:
             # Standardize phone
             lead.phone = DataCleaner.standardize_phone(lead.phone)
+            
+            # Extract WhatsApp number from phone
+            lead.whatsapp_number = DataCleaner.extract_whatsapp_number(lead.phone)
             
             # Clean name
             lead.name = lead.name.strip()
@@ -117,6 +165,9 @@ class DataCleaner:
             
             # Clean category
             lead.category = lead.category.strip().title() if lead.category else "Other"
+            
+            # Assign priority based on website + reviews
+            lead.priority = DataCleaner.assign_priority(lead)
 
         # Remove duplicates
         leads = DataCleaner.remove_duplicates(leads)

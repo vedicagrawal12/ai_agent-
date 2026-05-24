@@ -11,7 +11,7 @@ class SerpApiCollector(BaseCollector):
     def platform_name(self) -> str:
         return "SerpApi Google Maps"
 
-    def search(self, query: str, city: str, max_results: int = 20) -> List[Lead]:
+    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None) -> List[Lead]:
         """
         Searches Google Maps using SerpApi.
         """
@@ -22,59 +22,74 @@ class SerpApiCollector(BaseCollector):
             
         search_query = f"{query} in {city}"
         
-        params = {
-            "engine": "google_maps",
-            "q": search_query,
-            "type": "search",
-            "api_key": api_key
-        }
-        
         leads = []
-        try:
-            search = GoogleSearch(params)
-            results = search.get_dict()
-            local_results = results.get("local_results", [])
+        start = 0
+        
+        # Max pagination safety limit to prevent infinite loop / consuming too many credits
+        # 100 limit is standard for google_maps (5 pages)
+        while len(leads) < max_results and start <= 100:
+            params = {
+                "engine": "google_maps",
+                "q": search_query,
+                "type": "search",
+                "api_key": api_key,
+                "start": start
+            }
             
-            for place in local_results:
-                # SerpApi doesn't always provide place_id in local_results without extra calls,
-                # but it does provide a unique 'data_id' which we can use.
-                place_id = place.get("data_id") or place.get("place_id") or place.get("title")
+            try:
+                search = GoogleSearch(params)
+                results = search.get_dict()
+                local_results = results.get("local_results", [])
                 
-                # We need to structure this to match our existing Lead format
-                # Note: SerpApi might not always return website natively in 'search' type without 'place' details,
-                # but sometimes it provides links. We'll extract what we can.
-                website = ""
-                links = place.get("links", {})
-                if links:
-                    website = links.get("website", "")
+                if not local_results:
+                    break # No more results
                 
-                if not website:
-                    website = place.get("website", "")
-                
-                lead = Lead(
-                    place_id=place_id,
-                    name=place.get("title", ""),
-                    phone=place.get("phone", ""),
-                    address=place.get("address", ""),
-                    website=website,
-                    rating=place.get("rating", 0.0),
-                    reviews=place.get("reviews", 0),
-                    category=place.get("type", "Business"),
-                    city=city,
-                    source=self.platform_name
-                )
-                
-                # Check for phone numbers and valid data before adding
-                if lead.name:
-                    leads.append(lead)
-                
-                if len(leads) >= max_results:
-                    break
+                for place in local_results:
+                    # SerpApi doesn't always provide place_id in local_results without extra calls,
+                    # but it does provide a unique 'data_id' which we can use.
+                    place_id = place.get("data_id") or place.get("place_id") or place.get("title")
                     
-        except Exception as e:
-            print(f"Error fetching from SerpApi: {e}")
-            
-        return leads
+                    # Exclude already saved place IDs if requested
+                    if exclude_place_ids and place_id in exclude_place_ids:
+                        continue
+                    
+                    # We need to structure this to match our existing Lead format
+                    website = ""
+                    links = place.get("links", {})
+                    if links:
+                        website = links.get("website", "")
+                    
+                    if not website:
+                        website = place.get("website", "")
+                    
+                    lead = Lead(
+                        place_id=place_id,
+                        name=place.get("title", ""),
+                        phone=place.get("phone", ""),
+                        address=place.get("address", ""),
+                        website=website,
+                        rating=place.get("rating", 0.0),
+                        reviews=place.get("reviews", 0),
+                        category=place.get("type", "Business"),
+                        city=city,
+                        source=self.platform_name
+                    )
+                    
+                    # Check for phone numbers and valid data before adding
+                    if lead.name:
+                        leads.append(lead)
+                    
+                    if len(leads) >= max_results:
+                        break
+                
+                # SerpApi usually returns 20 results per page
+                start += 20
+                        
+            except Exception as e:
+                print(f"Error fetching from SerpApi at start {start}: {e}")
+                break
+                
+        return leads[:max_results]
 
     def get_details(self, place_id: str) -> Dict[str, Any]:
         """

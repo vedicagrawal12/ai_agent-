@@ -1305,3 +1305,39 @@ body::before {
     font-size: 0.75rem;
     font-weight: 500;
 }
+
+/* Website evidence */
+.website-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--accent-cyan);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 212, 255, 0.08);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.website-link:hover {
+    background: rgba(0, 212, 255, 0.15);
+    border-color: rgba(0, 212, 255, 0.4);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
+}
+
+.no-website {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--accent-red);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}

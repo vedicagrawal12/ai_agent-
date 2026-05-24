@@ -51,10 +51,18 @@ const API = {
         }
     },
 
-    async search(query, city, maxResults = 20, includeWithWebsite = false) {
+    async search(query, city, maxResults = 20, includeWithWebsite = false, hideSaved = false, deepScan = false, zones = []) {
         return this.request('/api/search', {
             method: 'POST',
-            body: JSON.stringify({ query, city, max_results: maxResults, include_with_website: includeWithWebsite }),
+            body: JSON.stringify({ 
+                query, 
+                city, 
+                max_results: maxResults, 
+                include_with_website: includeWithWebsite,
+                hide_saved: hideSaved,
+                deep_scan: deepScan,
+                zones: zones
+            }),
         });
     },
 
@@ -80,8 +88,8 @@ const API = {
         });
     },
 
-    async exportCSV(leads) {
-        const response = await fetch('/api/export/csv', {
+    async exportExcel(leads) {
+        const response = await fetch('/api/export/excel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ leads }),
@@ -127,6 +135,10 @@ const UI = {
             maxResultsSelect: document.getElementById('maxResults'),
             searchBtn: document.getElementById('searchBtn'),
             includeWebsiteToggle: document.getElementById('includeWebsite'),
+            hideSavedLeadsToggle: document.getElementById('hideSavedLeads'),
+            deepScanToggle: document.getElementById('deepScan'),
+            deepScanContainer: document.getElementById('deepScanContainer'),
+            deepScanZonesInput: document.getElementById('deepScanZones'),
             
             statsBar: document.getElementById('statsBar'),
             statTotalFound: document.getElementById('statTotalFound'),
@@ -231,9 +243,20 @@ const UI = {
         const priorityEmoji = { HIGH: '🔴', MEDIUM: '🟡', LOW: '🟢', IGNORE: '⚪' }[lead.priority] || '';
         const stars = this.renderStars(lead.rating);
         const phoneDisplay = lead.phone || '<span style="color: var(--text-muted)">N/A</span>';
+        
+        const websiteDisplay = lead.website 
+            ? `<a href="${lead.website}" target="_blank" class="website-link" data-tooltip="${lead.website}">🌐 Visit Site</a>` 
+            : `<span class="no-website">❌ No Website</span>`;
+            
         const whatsappBtn = lead.whatsapp_number 
             ? `<button class="row-btn whatsapp" data-tooltip="Send WhatsApp" onclick="App.openWhatsApp(${index})">💬</button>`
             : '';
+        
+        // Build Google Maps search link
+        const mapsQuery = encodeURIComponent(`${lead.name} ${lead.address || lead.city}`);
+        const mapsLink = lead.place_id 
+            ? `https://www.google.com/maps/search/?api=1&query=${mapsQuery}&query_place_id=${lead.place_id}`
+            : `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
         
         return `
             <tr>
@@ -246,6 +269,7 @@ const UI = {
                     <div class="truncate-address" data-tooltip="${this.escapeHtml(lead.address)}">${this.escapeHtml(lead.address || 'N/A')}</div>
                 </td>
                 <td>${this.escapeHtml(lead.city || 'N/A')}</td>
+                <td>${websiteDisplay}</td>
                 <td>
                     <div class="rating">
                         <span class="rating-stars">${stars}</span>
@@ -256,6 +280,7 @@ const UI = {
                 <td><span class="priority-badge ${priorityClass}">${priorityEmoji} ${lead.priority}</span></td>
                 <td>
                     <div class="row-actions">
+                        <a href="${mapsLink}" target="_blank" class="row-btn" data-tooltip="View on Google Maps">📍</a>
                         ${whatsappBtn}
                         <button class="row-btn" data-tooltip="Copy Phone" onclick="App.copyPhone(${index})">📋</button>
                     </div>
@@ -351,6 +376,22 @@ const UI = {
 };
 
 // ============================================================
+// Predefined Sub-localities for Popular Indian Cities
+// ============================================================
+const SUB_LOCALITIES = {
+    "bhopal": ["MP Nagar", "Kolar Road", "Arera Colony", "Indrapuri", "Awadhpuri"],
+    "indore": ["Vijay Nagar", "Palasia", "Bhanwarkuan", "Rajendra Nagar", "Bengali Square"],
+    "delhi": ["Connaught Place", "Karol Bagh", "Rajouri Garden", "Saket", "Dwarka"],
+    "mumbai": ["Andheri West", "Bandra West", "Dadar", "Juhu", "Powai"],
+    "bangalore": ["Koramangala", "Indiranagar", "HSR Layout", "Jayanagar", "Whitefield"],
+    "pune": ["Kothrud", "Koregaon Park", "Hinjawadi", "Wakad", "Baner"],
+    "jaipur": ["Malviya Nagar", "Vaishali Nagar", "C Scheme", "Mansarovar", "Raja Park"],
+    "ahmedabad": ["Satellite", "C G Road", "Vastrapur", "Bodakdev", "Prahlad Nagar"],
+    "lucknow": ["Hazratganj", "Gomti Nagar", "Aliganj", "Indira Nagar", "Charbagh"],
+    "hyderabad": ["Gachibowli", "Madhapur", "Jubilee Hills", "Banjara Hills", "Kondapur"]
+};
+
+// ============================================================
 // Application Controller
 // ============================================================
 const App = {
@@ -361,11 +402,43 @@ const App = {
         await this.loadTemplates();
     },
 
+    suggestZones() {
+        const city = UI.el.cityInput.value.trim().toLowerCase();
+        if (!city) {
+            UI.el.deepScanZonesInput.value = '';
+            return;
+        }
+        
+        // Find matching key in SUB_LOCALITIES
+        const matchedKey = Object.keys(SUB_LOCALITIES).find(k => k === city || city.includes(k));
+        if (matchedKey) {
+            UI.el.deepScanZonesInput.value = SUB_LOCALITIES[matchedKey].join(', ');
+        } else {
+            // Default directional zones if city not recognized
+            const rawCity = UI.el.cityInput.value.trim();
+            UI.el.deepScanZonesInput.value = `North ${rawCity}, South ${rawCity}, East ${rawCity}, West ${rawCity}, Central ${rawCity}`;
+        }
+    },
+
     bindEvents() {
         // Search form
         UI.el.searchForm.addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleSearch();
+        });
+
+        // Deep Scan Toggle & City Input auto-suggest
+        UI.el.deepScanToggle?.addEventListener('change', (e) => {
+            UI.el.deepScanContainer.style.display = e.target.checked ? 'block' : 'none';
+            if (e.target.checked && !UI.el.deepScanZonesInput.value.trim()) {
+                this.suggestZones();
+            }
+        });
+
+        UI.el.cityInput?.addEventListener('input', () => {
+            if (UI.el.deepScanToggle?.checked) {
+                this.suggestZones();
+            }
         });
 
         // Settings modal
@@ -397,9 +470,9 @@ const App = {
             this.saveApiKey();
         });
 
-        // Export CSV
-        document.getElementById('exportCsvBtn').addEventListener('click', () => {
-            this.exportCSV();
+        // Export Excel
+        document.getElementById('exportExcelBtn').addEventListener('click', () => {
+            this.exportExcel();
         });
 
         // Table sorting
@@ -450,6 +523,7 @@ const App = {
             const data = await API.getConfig();
             AppState.hasApiKey = data.has_api_key;
             
+            // Update header status badge
             const statusEl = UI.el.apiKeyStatus;
             if (data.has_api_key) {
                 statusEl.className = 'api-key-status active';
@@ -457,6 +531,18 @@ const App = {
             } else {
                 statusEl.className = 'api-key-status inactive';
                 statusEl.textContent = '✗ Not Set';
+            }
+            
+            // Also update the settings modal status if it exists
+            const settingsStatus = document.getElementById('settingsApiKeyStatus');
+            if (settingsStatus) {
+                if (data.has_api_key) {
+                    settingsStatus.className = 'api-key-status active';
+                    settingsStatus.textContent = '✓ API Key Configured';
+                } else {
+                    settingsStatus.className = 'api-key-status inactive';
+                    settingsStatus.textContent = '✗ Not Set';
+                }
             }
         } catch (error) {
             console.error('Config check failed:', error);
@@ -505,15 +591,20 @@ const App = {
         }
 
         if (!AppState.hasApiKey) {
-            UI.showToast('Please configure your Google Places API key first', 'error');
+            UI.showToast('Please configure your SerpApi key first', 'error');
             UI.openModal('settingsModal');
             return;
         }
 
         try {
+            const hideSaved = UI.el.hideSavedLeadsToggle?.checked || false;
+            const deepScan = UI.el.deepScanToggle?.checked || false;
+            const zonesText = UI.el.deepScanZonesInput?.value || "";
+            const zones = zonesText.split(',').map(z => z.trim()).filter(Boolean);
+
             UI.showLoading(`Searching for "${query}" in ${city}...`);
             
-            const data = await API.search(query, city, maxResults, includeWithWebsite);
+            const data = await API.search(query, city, maxResults, includeWithWebsite, hideSaved, deepScan, zones);
             
             AppState.leads = data.leads;
             AppState.allResults = data.all_results;
@@ -632,6 +723,12 @@ const App = {
         const lead = AppState.currentWhatsAppLead;
         if (!lead) return;
         
+        // Disable button to prevent double clicks
+        const btn = document.getElementById('sendWhatsAppBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Generating...';
+        btn.disabled = true;
+        
         try {
             const customMessage = document.getElementById('customMessageInput')?.value || '';
             
@@ -643,12 +740,22 @@ const App = {
             );
             
             if (data.whatsapp_link) {
-                window.open(data.whatsapp_link, '_blank');
+                // Use location.href or hidden <a> to avoid popup blocker
+                const a = document.createElement('a');
+                a.href = data.whatsapp_link;
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
                 UI.closeModal('whatsappModal');
                 UI.showToast(`WhatsApp opened for ${lead.name}`, 'success');
             }
         } catch (error) {
             UI.showToast(error.message, 'error');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     },
 
@@ -675,25 +782,26 @@ const App = {
     },
 
     // ---- Export ----
-    async exportCSV() {
+    async exportExcel() {
         if (AppState.leads.length === 0) {
             UI.showToast('No leads to export', 'error');
             return;
         }
         
         try {
-            const blob = await API.exportCSV(AppState.leads);
+            UI.showToast('Generating Excel file...', 'info');
+            const blob = await API.exportExcel(AppState.leads);
             
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `leads_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.download = `leads_${new Date().toISOString().slice(0, 10)}.xlsx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             a.remove();
             
-            UI.showToast(`Exported ${AppState.leads.length} leads to CSV`, 'success');
+            UI.showToast(`Exported ${AppState.leads.length} leads to Excel`, 'success');
         } catch (error) {
             UI.showToast('Export failed: ' + error.message, 'error');
         }

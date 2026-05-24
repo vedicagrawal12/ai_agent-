@@ -15,9 +15,6 @@ Usage:
 """
 
 import os
-import io
-import csv
-import json
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, Response, send_file
 from flask_cors import CORS
@@ -85,6 +82,9 @@ def search_businesses():
     city = data.get("city", "").strip()
     max_results = data.get("max_results", 20)
     include_with_website = data.get("include_with_website", False)
+    hide_saved = data.get("hide_saved", False)
+    deep_scan = data.get("deep_scan", False)
+    zones = data.get("zones", [])
     
     if not query:
         return jsonify({"error": "Please enter a business type/keyword"}), 400
@@ -98,18 +98,52 @@ def search_businesses():
         return jsonify({"error": "SerpApi key not configured. Please set it in Settings."}), 401
     
     try:
+        # Get already saved place IDs if hide_saved is enabled
+        exclude_place_ids = set()
+        if hide_saved:
+            import sqlite3
+            try:
+                conn = sqlite3.connect(db.db_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT place_id FROM leads WHERE place_id IS NOT NULL AND place_id != ''")
+                exclude_place_ids = {row[0] for row in cursor.fetchall()}
+                conn.close()
+            except Exception as db_err:
+                print(f"Error fetching saved place IDs: {db_err}")
+
         # Search for businesses
-        all_leads = collector.search(query, city, max_results)
+        all_leads = []
+        if deep_scan and zones:
+            # We want to scan multiple zones
+            # Compute max results to fetch per zone
+            leads_per_zone = max(10, max_results // len(zones))
+            
+            for zone in zones:
+                zone = zone.strip()
+                if not zone:
+                    continue
+                # Search using zone name combined with city
+                zone_leads = collector.search(query, f"{zone}, {city}", leads_per_zone, exclude_place_ids)
+                all_leads.extend(zone_leads)
+        else:
+            # Standard single-city search
+            all_leads = collector.search(query, city, max_results, exclude_place_ids)
         
-        # Clean the data
+        # Clean the data (standardize, assign priority, and DEDUPLICATE combined leads)
         all_leads = DataCleaner.clean_leads(all_leads)
         
         # Filter out businesses with websites (unless requested)
         filtered_leads = DataCleaner.filter_leads(all_leads, include_with_website)
         
+        # Cap to max_results to match the requested amount
+        filtered_leads = filtered_leads[:max_results]
+        all_leads = all_leads[:max_results]
+        
         # Save to database
         db.save_leads(all_leads)
-        db.save_search(query, city, len(all_leads), len(filtered_leads))
+        
+        search_query_log = f"{query} (Deep Scan)" if deep_scan else query
+        db.save_search(search_query_log, city, len(all_leads), len(filtered_leads))
         
         # Build response
         leads_data = [lead.to_dict() for lead in filtered_leads]
@@ -233,15 +267,10 @@ def generate_whatsapp_link():
 # API Routes — Export
 # ============================================================
 
-@app.route("/api/export/csv", methods=["POST"])
-def export_csv():
+@app.route("/api/export/excel", methods=["POST"])
+def export_excel():
     """
-    Export leads as CSV file.
-    
-    Request body:
-        {
-            "leads": [ ... array of lead objects ... ]
-        }
+    Export leads as Excel file (.xlsx) for proper formatting.
     """
     data = request.get_json()
     leads = data.get("leads", [])
@@ -249,44 +278,55 @@ def export_csv():
     if not leads:
         return jsonify({"error": "No leads to export"}), 400
     
-    # Create CSV in memory
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # Header row
-    writer.writerow([
-        "Name", "Phone", "Address", "Website", "Rating", 
-        "Reviews", "Category", "City", "Priority", 
-        "WhatsApp Number", "Source"
-    ])
-    
-    # Data rows
-    for lead in leads:
-        writer.writerow([
-            lead.get("name", ""),
-            lead.get("phone", ""),
-            lead.get("address", ""),
-            lead.get("website", ""),
-            lead.get("rating", ""),
-            lead.get("reviews", ""),
-            lead.get("category", ""),
-            lead.get("city", ""),
-            lead.get("priority", ""),
-            lead.get("whatsapp_number", ""),
-            lead.get("source", "google_maps")
-        ])
-    
-    # Send as downloadable file
-    output.seek(0)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={
-            "Content-Disposition": f"attachment; filename=leads_{timestamp}.csv"
-        }
-    )
+    try:
+        import pandas as pd
+        import io
+        
+        # Prepare data for DataFrame
+        df_data = []
+        for lead in leads:
+            df_data.append({
+                "Business Name": lead.get("name", ""),
+                "Phone": lead.get("phone", ""),
+                "WhatsApp Number": lead.get("whatsapp_number", ""),
+                "Website": lead.get("website", ""),
+                "Category": lead.get("category", ""),
+                "Address": lead.get("address", ""),
+                "City": lead.get("city", ""),
+                "Rating": lead.get("rating", ""),
+                "Reviews": lead.get("reviews", ""),
+                "Priority": lead.get("priority", ""),
+                "Source": lead.get("source", "google_maps")
+            })
+            
+        df = pd.DataFrame(df_data)
+        
+        # Write to memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Leads')
+            
+            # Auto-adjust columns width
+            from openpyxl.utils import get_column_letter
+            worksheet = writer.sheets['Leads']
+            for idx, col in enumerate(df.columns):
+                max_len = max(df[col].astype(str).map(len).max(), len(col)) + 2
+                # Cap the maximum width to 50 to prevent super wide columns
+                max_len = min(max_len, 50)
+                worksheet.column_dimensions[get_column_letter(idx + 1)].width = max_len
+
+        output.seek(0)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        return Response(
+            output.getvalue(),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename=leads_{timestamp}.xlsx"
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": f"Failed to generate Excel file: {str(e)}"}), 500
 
 
 # ============================================================

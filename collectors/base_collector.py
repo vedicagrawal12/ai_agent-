@@ -52,7 +52,7 @@ class BaseCollector(ABC):
     """
 
     @abstractmethod
-    def search(self, query: str, city: str, max_results: int = 20) -> List[Lead]:
+    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None) -> List[Lead]:
         """
         Search for businesses on the platform.
         
@@ -60,6 +60,7 @@ class BaseCollector(ABC):
             query: Business type/keyword (e.g., "gym", "salon")
             city: City name (e.g., "bhopal", "delhi")
             max_results: Maximum number of results to return
+            exclude_place_ids: Optional set of place IDs to exclude from search results
             
         Returns:
             List of Lead objects with business details

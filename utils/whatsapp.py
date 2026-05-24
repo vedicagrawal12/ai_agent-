@@ -121,14 +121,14 @@ class WhatsAppMessenger:
     @staticmethod
     def generate_whatsapp_link(phone_number: str, message: str) -> str:
         """
-        Generate a wa.me link with pre-filled message.
+        Generate a WhatsApp link with pre-filled message using official send API.
         
         Args:
             phone_number: Phone number in international format (digits only, e.g. "919876543210")
             message: Pre-filled message text
             
         Returns:
-            WhatsApp URL string (e.g., "https://wa.me/919876543210?text=Hello...")
+            WhatsApp URL string (e.g., "https://api.whatsapp.com/send?phone=919876543210&text=Hello...")
         """
         if not phone_number:
             return ""
@@ -139,7 +139,7 @@ class WhatsAppMessenger:
         # URL-encode the message
         encoded_message = urllib.parse.quote(message)
         
-        return f"https://wa.me/{clean_number}?text={encoded_message}"
+        return f"https://api.whatsapp.com/send?phone={clean_number}&text={encoded_message}"
 
     @staticmethod
     def generate_bulk_links(leads: List[Lead], template_key: str, custom_message: str = "") -> List[Dict]:
