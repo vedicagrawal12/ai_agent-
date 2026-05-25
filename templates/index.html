@@ -246,6 +246,28 @@
                             <span id="geminiApiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
                         </div>
                     </div>
+
+                    <div class="settings-group">
+                        <div class="settings-group-title">👤 Your Sender Profile (For AI Personalization)</div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+                            Enter your details so Gemini can dynamically sign off and tailor the sales pitches to your name/brand!
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span style="font-size: 0.85rem; width: 120px; color: var(--text-secondary);">Your Name:</span>
+                                <input type="text" id="senderNameInput" class="form-input" placeholder="e.g. Raunak Sharma" style="flex: 1;">
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span style="font-size: 0.85rem; width: 120px; color: var(--text-secondary);">Agency/Brand:</span>
+                                <input type="text" id="senderBrandInput" class="form-input" placeholder="e.g. WebScale Studio" style="flex: 1;">
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span style="font-size: 0.85rem; width: 120px; color: var(--text-secondary);">Your Role:</span>
+                                <input type="text" id="senderRoleInput" class="form-input" placeholder="e.g. UI/UX Designer & Developer" style="flex: 1;">
+                            </div>
+                            <button id="saveSenderProfileBtn" class="btn btn-primary" style="margin-top: 4px; align-self: flex-end;">Save Profile</button>
+                        </div>
+                    </div>
                     
                     <div class="settings-group">
                         <div class="settings-group-title">💡 How to get an API Key</div>
@@ -295,6 +317,27 @@
                     <!-- Templates loaded dynamically -->
                 </div>
 
+                <div style="margin-top: 16px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                    <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">⚙️ Pitch Personalization Options</div>
+                    <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+                        <div style="flex: 1;">
+                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchToneSelect">Tone</label>
+                            <select id="pitchToneSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                <option value="elite" selected>Elite Growth Consultant</option>
+                                <option value="friendly">Friendly Local Freelancer</option>
+                                <option value="direct">Direct Growth Partner</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchLengthSelect">Length</label>
+                            <select id="pitchLengthSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                <option value="detailed" selected>Detailed Value Pitch</option>
+                                <option value="short">Short & Punchy (DM-friendly)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div style="margin-top: 16px; margin-bottom: 16px; text-align: center;">
                     <button id="aiGenerateBtn" class="btn btn-primary" style="background: var(--gradient-primary); border: none; font-size: 0.95rem; padding: 10px 20px; box-shadow: var(--shadow-glow-cyan); width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; cursor: pointer;">
                         ✨ AI Generate Custom Pitch (Gemini)
@@ -305,6 +348,11 @@
                     <label class="form-label">Your Custom Message</label>
                     <textarea id="customMessageInput" class="form-textarea" 
                         placeholder="Type your message here... Use {business_name}, {city}, {category}, {rating}, {reviews} for personalization."></textarea>
+                    
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <input type="text" id="pitchRefineInput" class="form-input" placeholder="e.g., make it a bit shorter / write in pure English..." style="font-size: 0.85rem; flex: 1;">
+                        <button id="refinePitchBtn" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; cursor: pointer;">🔄 Refine</button>
+                    </div>
                 </div>
 
                 <div style="margin-top: 16px;">

@@ -3,7 +3,16 @@ import json
 
 class AIOutreachWriter:
     @staticmethod
-    def generate_pitch(lead_data: dict, project_sample: str, api_key: str) -> str:
+    def generate_pitch(
+        lead_data: dict, 
+        project_sample: str, 
+        api_key: str,
+        tone: str = "elite",
+        length: str = "detailed",
+        sender_info: dict = None,
+        refine_feedback: str = None,
+        previous_pitch: str = None
+    ) -> str:
         """
         Generates a highly personalized, human-like sales pitch using the Gemini API.
         Uses raw requests to avoid installing extra dependencies.
@@ -11,8 +20,107 @@ class AIOutreachWriter:
         if not api_key:
             raise Exception("Gemini API key is required for AI generation.")
 
-        # Build the prompt with an elite system persona
-        prompt = f"""
+        # Resolve tone directives
+        tone_directives = ""
+        if tone == "friendly":
+            tone_directives = """
+- PERSONA: Warm, enthusiastic, super friendly local freelance developer who is eager to help.
+- TONE: Casual, extremely polite, helpful, very human. Speak like a friendly tech-savvy neighbor in Hinglish.
+- VALUE ADD: Appreciates their business's popularity naturally. Avoids looking like a corporate agency.
+- CTA: Offers a super quick video recording or link of a homepage mockup layout made specifically for them.
+"""
+        elif tone == "direct":
+            tone_directives = """
+- PERSONA: Sharp, metric-driven local digital growth partner.
+- TONE: Highly direct, business-focused, professional, metric-heavy, polite but fast-paced.
+- VALUE ADD: Focuses heavily on customer booking leakages and search engine visibility.
+- CTA: Offers a quick look at a raw digital storefront layout draft, zero commitments.
+"""
+        else: # elite
+            tone_directives = """
+- PERSONA: Elite Business Development Consultant & Web Strategy Expert.
+- TONE: Highly professional, polite, warm, growth-focused, extremely authoritative yet friendly.
+- VALUE ADD: Appreciates high review volume and pivots into digital customer conversion gaps.
+- CTA: Offers to share a premium custom-sketched homepage raw mockup/draft layout for their brand.
+"""
+
+        # Resolve length directives
+        length_directives = ""
+        if length == "short":
+            length_directives = """
+- LENGTH: Extremely brief and DM-friendly (maximum 2-3 very short sentences/paragraphs, under 90 words total).
+- STRUCTURE: Hook them, drop the gap, state the matched portfolio proof sentence, and ask the CTA. Keep it ultra-compact so they don't have to scroll on mobile.
+"""
+        else: # detailed
+            length_directives = """
+- LENGTH: Detailed and structured (3-4 crisp, mobile-friendly paragraphs).
+- STRUCTURE: Beautiful flow starting with a warm hook, explaining the conversion gap logically, presenting the matched work sample, and concluding with an irresistible mockup draft offer.
+"""
+
+        # Resolve smart review count hooks
+        try:
+            reviews_count = int(lead_data.get('reviews', 0))
+        except:
+            reviews_count = 0
+        
+        if reviews_count >= 100:
+            hook_type_directive = f"""
+- SMART HOOK (ESTABLISHED AUTHORITY): This local business has a massive review count ({reviews_count} reviews) and is clearly an established local favourite. Frame the pitch around scaling, automating reservations, and retaining premium customers who prefer quick booking interfaces. (e.g. 'Aap Bhopal ke elite brands mein aate hain...').
+"""
+        else:
+            hook_type_directive = f"""
+- SMART HOOK (TRUST & CREDIBILITY BUILDER): This business is newly growing or has low digital proof ({reviews_count} reviews). Frame the pitch around building massive trust, credibility, first impression power, and getting new customers in {lead_data.get('city', 'your city')} using a professional digital storefront.
+"""
+
+        # Resolve sender profile sign-off
+        name = sender_info.get("name", "").strip() if sender_info else ""
+        brand = sender_info.get("brand", "").strip() if sender_info else ""
+        role = sender_info.get("role", "").strip() if sender_info else ""
+        
+        signoff_directive = ""
+        if name or brand or role:
+            signoff_parts = []
+            if name:
+                signoff_parts.append(name)
+            if role:
+                signoff_parts.append(f"({role})")
+            if brand:
+                signoff_parts.append(f"at {brand}")
+            
+            signoff_str = " ".join(signoff_parts)
+            signoff_directive = f"\n7. SIGN OFF: Sign off the message naturally as '{signoff_str}' (e.g. 'Best, {name}' or similar, keeping it friendly)."
+        else:
+            signoff_directive = f"\n7. NO SIGN OFF: Do NOT sign off the message with any name or brand placeholder. Leave it open or end on a friendly CTA."
+
+        # Build the prompt with dynamic context
+        if refine_feedback and previous_pitch:
+            prompt = f"""
+You are an Elite B2B Pitch Copywriter. Your task is to REFINE and REWRITE an existing cold outreach sales pitch based on direct feedback from the user.
+
+Here are the details of the local business we are pitching:
+- Business Name: {lead_data.get('name', 'Business')}
+- City: {lead_data.get('city', 'your city')}
+- Category: {lead_data.get('category', 'Business')}
+
+Here is the PREVIOUS generated sales pitch:
+---------------------------------
+{previous_pitch}
+---------------------------------
+
+Here is the USER'S FEEDBACK/REWRITE REQUEST:
+---------------------------------
+"{refine_feedback}"
+---------------------------------
+
+Strict Copywriting Guidelines for Refinement:
+1. Apply the user's feedback precisely (e.g. making it shorter, translating to a specific language, adding more emojis, changing the focus, etc.).
+2. Keep the natural, conversational, polite Hinglish/English tone.
+3. Preserve the core business personalization details (Reviews/Rating/Name/City) and ensure the dynamic project sample is still naturally included.
+4. Keep the output beautifully formatted with short paragraphs, bold text highlights (using single * asterisks), and a few high-quality emojis.
+5. NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc. Output must be 100% ready to copy-paste.
+"""
+        else:
+            prompt = f"""
 You are an Elite Business Development Consultant, Growth Hacker, and Modern Web Designer in India who helps local businesses double their customers using stunning, fast web portals and digital storefronts.
 
 Write a highly personalized, extremely conversational, and premium sales pitch for the following business:
@@ -26,42 +134,30 @@ Write a highly personalized, extremely conversational, and premium sales pitch f
 Best matching project proof to naturally mention:
 {project_sample}
 
+TONE DIRECTIVES:
+{tone_directives}
+
+LENGTH & STRUCTURE DIRECTIVES:
+{length_directives}
+
+SMART HOOK DIRECTIVES:
+{hook_type_directive}
+
 CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
 1. CASUAL GREETING: NEVER start with robotic or formal things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
 2. IMPRESSION OVER FLATTERY: Do NOT write generic praise like "Aapka review dekh kar mujhe bahut khushi hui." That sounds fake and robotic. Instead, say something exciting and real like:
    "Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekhe—sach mein kamaal ka response hai! {lead_data.get('city', 'your city')} mein log aapki service ko sach mein bahut pasand kar rahe hain. 🔥"
 3. THE GAP (CONVERSATIONAL PAIN POINT): Pivot smoothly. Explain that when high-paying clients look for the best salons/services in their area, they expect an interactive digital booking experience or digital gallery, and not having a website means losing premium clients.
-   E.g., "But ek choti si opportunity miss ho rahi hai—Google search par aapki koi interactive booking site ya digital storefront nahi mili. Aajkal 70%+ premium customers direct list dekh kar online bookings kar lete hain, aur website na hone se ye direct bookings competitors ke paas ja rahi hain."
 4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
    E.g., "{project_sample}"
 5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible and low-friction. Instead of asking for a boring call, offer a free draft/mockup!
-   E.g., "Maine aapke business details ke sath ek *chota sa premium homepage mockup / raw design layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Koi charges nahi hain, just wanted to show you what's possible! Let me know if that sounds good."
-6. FORMATTING & TONE:
+   E.g., "Maine aapke business details ke sath ek *chota sa premium homepage mockup / raw design layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Let me know if that sounds good."
+6. FORMATTING:
    - Language must be ultra-premium, modern, natural Hinglish (how young entrepreneurs talk on WhatsApp).
-   - Use 3-4 very short paragraphs. Break lines to make it easy to read on mobile.
    - Use bold text for key numbers and phrases using asterisks (e.g., *4.8 rating*, *70%+ premium customers*, *free mockup design*).
    - Keep emojis limited to 3 or 4 maximum (e.g. 👋, 🔥, 📈, 💬). No emoji spam.
    - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc. Output must be 100% ready to copy-paste.
-
----------------------------------
-GOLD STANDARD EXAMPLE (Mirror this exact tone, style, vocabulary, and structural flow):
-
-Target Business: "Shiva Café N' Restro" in Bhopal with 4.7 stars and 320 reviews.
-Project Sample: "maine haal hi mein ek Hotel/Restaurant website banayi hai, aap is link par demo dekh sakte hain: https://raunaksharmaq64.github.io/portfolio/restaurant"
-
-Perfect Pitch Output generated by you:
-Hey Shiva Café N' Restro team! 👋 
-
-Google par aapke *4.7 rating* aur *320+ reviews* dekhe—sach mein Bhopal mein aap logo ka food aur brand value next level hai! People are absolutely loving your place. 🔥 
-
-Maine notice kiya ki Google par search karne par aapki koi professional website ya interactive digital menu link nahi mil raha hai. Aajkal mostly customers online menu aur tables book karna chahte hain, aur site na hone ki wajah se 30-40% direct premium orders and table reservations competitors ke paas divert ho jati hain.
-
-Maine haal hi mein ek similar premium brand ke liye ek digital storefront build kiya tha, aap is link par live demo dekh sakte hain: maine haal hi mein ek Hotel/Restaurant website banayi hai, aap is link par demo dekh sakte hain: https://raunaksharmaq64.github.io/portfolio/restaurant
-
-Aapke café ke details ke sath maine ek *chota sa premium homepage mockup design layout* sketch kiya hai (just to show you a fresh idea). Kya main uska ek quick link ya screen recording video share karu yahan? 
-
-No commitments at all, strictly for you to look. Let me know if that sounds good! 💬
----------------------------------
+{signoff_directive}
 """
 
         # 1. Quick validation: Google API Keys ALWAYS start with "AIza"

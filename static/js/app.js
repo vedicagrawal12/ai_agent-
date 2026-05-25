@@ -205,12 +205,22 @@ const UI = {
             saveGeminiApiKeyBtn: document.getElementById('saveGeminiApiKeyBtn'),
             geminiApiKeyStatus: document.getElementById('geminiApiKeyStatus'),
             
+            // Sender Profile elements
+            senderNameInput: document.getElementById('senderNameInput'),
+            senderBrandInput: document.getElementById('senderBrandInput'),
+            senderRoleInput: document.getElementById('senderRoleInput'),
+            saveSenderProfileBtn: document.getElementById('saveSenderProfileBtn'),
+            
             whatsappModal: document.getElementById('whatsappModal'),
             templateOptions: document.getElementById('templateOptions'),
+            pitchToneSelect: document.getElementById('pitchToneSelect'),
+            pitchLengthSelect: document.getElementById('pitchLengthSelect'),
             aiGenerateBtn: document.getElementById('aiGenerateBtn'),
             messagePreview: document.getElementById('messagePreview'),
             customMessageArea: document.getElementById('customMessageArea'),
             customMessageInput: document.getElementById('customMessageInput'),
+            pitchRefineInput: document.getElementById('pitchRefineInput'),
+            refinePitchBtn: document.getElementById('refinePitchBtn'),
             sendWhatsAppBtn: document.getElementById('sendWhatsAppBtn'),
             
             toastContainer: document.getElementById('toastContainer'),
@@ -477,6 +487,7 @@ const App = {
         await this.checkConfig();
         this.checkPortfolio();
         this.checkGeminiConfig();
+        this.checkSenderProfile();
         await this.loadTemplates();
     },
 
@@ -558,9 +569,19 @@ const App = {
             this.saveGeminiApiKey();
         });
 
+        // Save Sender Profile
+        UI.el.saveSenderProfileBtn?.addEventListener('click', () => {
+            this.saveSenderProfile();
+        });
+
         // AI Generate Pitch Button
         UI.el.aiGenerateBtn?.addEventListener('click', () => {
             this.generateAIPitch();
+        });
+
+        // Refine Pitch Button
+        UI.el.refinePitchBtn?.addEventListener('click', () => {
+            this.refineAIPitch();
         });
 
         // Clear Database
@@ -780,6 +801,28 @@ const App = {
         UI.showToast('Gemini API key saved locally!', 'success');
     },
 
+    checkSenderProfile() {
+        const name = localStorage.getItem('sender_name') || '';
+        const brand = localStorage.getItem('sender_brand') || '';
+        const role = localStorage.getItem('sender_role') || '';
+        
+        if (UI.el.senderNameInput) UI.el.senderNameInput.value = name;
+        if (UI.el.senderBrandInput) UI.el.senderBrandInput.value = brand;
+        if (UI.el.senderRoleInput) UI.el.senderRoleInput.value = role;
+    },
+
+    saveSenderProfile() {
+        const name = UI.el.senderNameInput?.value.trim() || '';
+        const brand = UI.el.senderBrandInput?.value.trim() || '';
+        const role = UI.el.senderRoleInput?.value.trim() || '';
+        
+        localStorage.setItem('sender_name', name);
+        localStorage.setItem('sender_brand', brand);
+        localStorage.setItem('sender_role', role);
+        
+        UI.showToast('Sender Profile saved successfully!', 'success');
+    },
+
     async generateAIPitch() {
         const lead = AppState.currentWhatsAppLead;
         if (!lead) return;
@@ -792,6 +835,8 @@ const App = {
         }
 
         const projectSample = this.getBestPortfolioProjectSample(lead);
+        const tone = UI.el.pitchToneSelect?.value || 'elite';
+        const length = UI.el.pitchLengthSelect?.value || 'detailed';
 
         try {
             UI.showLoading('AI Writer generating pitch...');
@@ -804,7 +849,14 @@ const App = {
                 },
                 body: JSON.stringify({
                     lead: lead,
-                    project_sample: projectSample
+                    project_sample: projectSample,
+                    tone: tone,
+                    length: length,
+                    sender: {
+                        name: localStorage.getItem('sender_name') || '',
+                        brand: localStorage.getItem('sender_brand') || '',
+                        role: localStorage.getItem('sender_role') || ''
+                    }
                 })
             });
 
@@ -836,6 +888,75 @@ const App = {
                 // Refresh preview panel
                 this.updateMessagePreview();
                 UI.showToast('✨ Unique AI Sales pitch generated successfully!', 'success');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    async refineAIPitch() {
+        const lead = AppState.currentWhatsAppLead;
+        if (!lead) return;
+
+        const geminiKey = localStorage.getItem('gemini_api_key');
+        if (!geminiKey) {
+            UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        const customMessageInput = document.getElementById('customMessageInput');
+        const previousPitch = customMessageInput?.value.trim() || '';
+        const refineFeedback = UI.el.pitchRefineInput?.value.trim() || '';
+
+        if (!refineFeedback) {
+            UI.showToast('Please enter some refinement feedback first!', 'warning');
+            return;
+        }
+
+        const projectSample = this.getBestPortfolioProjectSample(lead);
+        const tone = UI.el.pitchToneSelect?.value || 'elite';
+        const length = UI.el.pitchLengthSelect?.value || 'detailed';
+
+        try {
+            UI.showLoading('AI Writer refining pitch...');
+            
+            const data = await API.request('/api/outreach/generate-ai', {
+                method: 'POST',
+                headers: {
+                    'X-Gemini-API-Key': geminiKey
+                },
+                body: JSON.stringify({
+                    lead: lead,
+                    project_sample: projectSample,
+                    tone: tone,
+                    length: length,
+                    sender: {
+                        name: localStorage.getItem('sender_name') || '',
+                        brand: localStorage.getItem('sender_brand') || '',
+                        role: localStorage.getItem('sender_role') || ''
+                    },
+                    refine_feedback: refineFeedback,
+                    previous_pitch: previousPitch
+                })
+            });
+
+            if (data.success && data.pitch) {
+                if (customMessageInput) {
+                    customMessageInput.value = data.pitch;
+                }
+                
+                // Clear the refine input
+                if (UI.el.pitchRefineInput) {
+                    UI.el.pitchRefineInput.value = '';
+                }
+
+                this.updateMessagePreview();
+                UI.showToast('Pitch refined successfully!', 'success');
+            } else {
+                UI.showToast(data.error || 'Failed to refine pitch.', 'error');
             }
         } catch (error) {
             UI.showToast(error.message, 'error');

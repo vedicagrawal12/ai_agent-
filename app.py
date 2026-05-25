@@ -465,12 +465,26 @@ def generate_ai_pitch():
         
     lead_data = data.get("lead", {})
     project_sample = data.get("project_sample", "")
+    tone = data.get("tone", "elite")
+    length = data.get("length", "detailed")
+    sender = data.get("sender", {})
+    refine_feedback = data.get("refine_feedback")
+    previous_pitch = data.get("previous_pitch")
     
     if not lead_data:
         return jsonify({"error": "Lead data is required"}), 400
         
     try:
-        pitch = AIOutreachWriter.generate_pitch(lead_data, project_sample, gemini_key)
+        pitch = AIOutreachWriter.generate_pitch(
+            lead_data=lead_data,
+            project_sample=project_sample,
+            api_key=gemini_key,
+            tone=tone,
+            length=length,
+            sender_info=sender,
+            refine_feedback=refine_feedback,
+            previous_pitch=previous_pitch
+        )
         return jsonify({
             "success": True,
             "pitch": pitch
