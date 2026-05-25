@@ -13,33 +13,83 @@ class AIOutreachWriter:
 
         # Build the prompt with an elite system persona
         prompt = f"""
-You are an Elite Business Development Consultant & Digital Marketing Expert with 17+ years of experience in helping local Indian businesses establish solid online presence and grow their sales. 
+You are an Elite Business Development Consultant, Growth Hacker, and Modern Web Designer in India who helps local businesses double their customers using stunning, fast web portals and digital storefronts.
 
-Your goal is to write a highly engaging, warm, professional, and extremely human-like sales outreach pitch. The tone must feel like a genuine recommendation from a friendly consultant, NOT like a pushy salesman or an AI-generated template. Avoid corporate jargon or robotic phrasing. Speak in a natural mix of Hindi and English (conversational Hinglish) that business owners in India easily connect with.
-
-Here are the details of the local business we are reaching out to:
+Write a highly personalized, extremely conversational, and premium sales pitch for the following business:
 - Business Name: {lead_data.get('name', 'Business')}
-- Industry: {lead_data.get('category', 'Business')}
-- City: {lead_data.get('city', 'your city')}
-- Google Maps Rating: {lead_data.get('rating', '0')} stars
-- Google Maps Reviews Count: {lead_data.get('reviews', '0')} reviews
-- Website Status: They do NOT have a website yet. (This is a huge opportunity they are missing!)
+- Category: {lead_data.get('category', 'Business')}
+- Location: {lead_data.get('city', 'your city')}
+- Google Maps Rating: {lead_data.get('rating', '0')}
+- Google Maps Reviews: {lead_data.get('reviews', '0')}
+- Website: They DO NOT have a website yet (Huge gap!).
 
-Here is the best matching sample of my previous work that you must mention as proof:
-- Portfolio Work Sample: {project_sample}
+Best matching project proof to naturally mention:
+{project_sample}
 
-Strict Marketer Copywriting Guidelines:
-1. Act as a Helpful Advisor: Kabhi bhi pushy ya generic spammer ki tarah sound mat karein. Unhe samjhayein ki unka business bohot badhiya hai par website na hone se customer competitors ke paas ja rahe hain.
-2. Appreciate first: Pehle unke business ki Google Maps rating aur reviews ki tareef karein (taaki positive note par start ho).
-3. Soft Gap Pitch: "Maine notice kiya ki Google par search karne pe aapki website nahi mili..." is line ko bohot smooth aur polite tarike se mention karein.
-4. Seamlessly integrate the project sample: Jo portfolio sample link/text diya hai, use bilkul naturally fit karein (e.g., "Maine haal hi mein isi category ke business ke liye ek interactive portal build kiya hai...").
-5. clear Call to Action: Conversation end karte samay ek direct par comfortable call to action dein (e.g. "Kya hum kal ek 2-minute ki choti discussion ya call kar sakte hain?").
-6. Keep it formatted: WhatsApp messages me readability ke liye line breaks, short paragraphs aur emojis (like 👋, 🎯, 🌐, 📈) ka natural aur balanced use karein.
-7. Absolutely No Placeholders: Final output me koi bhi [Your Name], [Insert Link], ya brackets/tags mat chhodna. Message bilkul ready-to-send hona chahiye.
+CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
+1. CASUAL GREETING: NEVER start with robotic or formal things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
+2. IMPRESSION OVER FLATTERY: Do NOT write generic praise like "Aapka review dekh kar mujhe bahut khushi hui." That sounds fake and robotic. Instead, say something exciting and real like:
+   "Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekhe—sach mein kamaal ka response hai! {lead_data.get('city', 'your city')} mein log aapki service ko sach mein bahut pasand kar rahe hain. 🔥"
+3. THE GAP (CONVERSATIONAL PAIN POINT): Pivot smoothly. Explain that when high-paying clients look for the best salons/services in their area, they expect an interactive digital booking experience or digital gallery, and not having a website means losing premium clients.
+   E.g., "But ek choti si opportunity miss ho rahi hai—Google search par aapki koi interactive booking site ya digital storefront nahi mili. Aajkal 70%+ premium customers direct list dekh kar online bookings kar lete hain, aur website na hone se ye direct bookings competitors ke paas ja rahi hain."
+4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
+   E.g., "{project_sample}"
+5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible and low-friction. Instead of asking for a boring call, offer a free draft/mockup!
+   E.g., "Maine aapke business details ke sath ek *chota sa premium homepage mockup / raw design layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Koi charges nahi hain, just wanted to show you what's possible! Let me know if that sounds good."
+6. FORMATTING & TONE:
+   - Language must be ultra-premium, modern, natural Hinglish (how young entrepreneurs talk on WhatsApp).
+   - Use 3-4 very short paragraphs. Break lines to make it easy to read on mobile.
+   - Use bold text for key numbers and phrases using asterisks (e.g., *4.8 rating*, *70%+ premium customers*, *free mockup design*).
+   - Keep emojis limited to 3 or 4 maximum (e.g. 👋, 🔥, 📈, 💬). No emoji spam.
+   - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc. Output must be 100% ready to copy-paste.
+
+---------------------------------
+GOLD STANDARD EXAMPLE (Mirror this exact tone, style, vocabulary, and structural flow):
+
+Target Business: "Shiva Café N' Restro" in Bhopal with 4.7 stars and 320 reviews.
+Project Sample: "maine haal hi mein ek Hotel/Restaurant website banayi hai, aap is link par demo dekh sakte hain: https://raunaksharmaq64.github.io/portfolio/restaurant"
+
+Perfect Pitch Output generated by you:
+Hey Shiva Café N' Restro team! 👋 
+
+Google par aapke *4.7 rating* aur *320+ reviews* dekhe—sach mein Bhopal mein aap logo ka food aur brand value next level hai! People are absolutely loving your place. 🔥 
+
+Maine notice kiya ki Google par search karne par aapki koi professional website ya interactive digital menu link nahi mil raha hai. Aajkal mostly customers online menu aur tables book karna chahte hain, aur site na hone ki wajah se 30-40% direct premium orders and table reservations competitors ke paas divert ho jati hain.
+
+Maine haal hi mein ek similar premium brand ke liye ek digital storefront build kiya tha, aap is link par live demo dekh sakte hain: maine haal hi mein ek Hotel/Restaurant website banayi hai, aap is link par demo dekh sakte hain: https://raunaksharmaq64.github.io/portfolio/restaurant
+
+Aapke café ke details ke sath maine ek *chota sa premium homepage mockup design layout* sketch kiya hai (just to show you a fresh idea). Kya main uska ek quick link ya screen recording video share karu yahan? 
+
+No commitments at all, strictly for you to look. Let me know if that sounds good! 💬
+---------------------------------
 """
 
-        # Models to try in order of fallback preference
-        models = [
+        # 1. Quick validation: Google API Keys ALWAYS start with "AIza"
+        if not api_key.startswith("AIza"):
+            raise Exception("Invalid Gemini API Key format. Google API keys must start with 'AIza' (e.g. 'AIzaSy...'). Please make sure you copied the correct key from Google AI Studio and did not paste your SerpApi key here.")
+
+        # 2. Dynamic Model Discovery: Ask Google what models this key supports!
+        discovered_models = []
+        try:
+            print("Querying Google for available models...")
+            list_url = f"https://generativelanguage.googleapis.com/v1/models?key={api_key}"
+            res = requests.get(list_url, timeout=10)
+            
+            if res.status_code == 200:
+                models_data = res.json().get("models", [])
+                for m in models_data:
+                    name = m.get("name", "")
+                    methods = m.get("supportedGenerationMethods", [])
+                    if "generateContent" in methods:
+                        # Extract short name (e.g. "models/gemini-1.5-flash" -> "gemini-1.5-flash")
+                        model_id = name.split("/")[-1] if "/" in name else name
+                        discovered_models.append(("v1", model_id))
+                print(f"Dynamically discovered models: {discovered_models}")
+        except Exception as list_err:
+            print(f"Model discovery query failed: {list_err}. Falling back to default list.")
+
+        # 3. Compile final models list to try (discovered models first, then hardcoded fallbacks)
+        models_to_try = discovered_models + [
             ("v1", "gemini-1.5-flash"),
             ("v1beta", "gemini-1.5-flash"),
             ("v1beta", "gemini-1.5-flash-latest"),
@@ -47,8 +97,16 @@ Strict Marketer Copywriting Guidelines:
             ("v1beta", "gemini-pro")
         ]
 
+        # Remove duplicates while preserving order
+        seen = set()
+        final_models = []
+        for ver, mod in models_to_try:
+            if (ver, mod) not in seen:
+                seen.add((ver, mod))
+                final_models.append((ver, mod))
+
         last_error = ""
-        for version, model in models:
+        for version, model in final_models:
             url = f"https://generativelanguage.googleapis.com/{version}/models/{model}:generateContent?key={api_key}"
             headers = {
                 "Content-Type": "application/json"
@@ -94,5 +152,15 @@ Strict Marketer Copywriting Guidelines:
             except Exception as e:
                 last_error = str(e)
                 print(f"Network error with model {model}: {last_error}")
+
+        # Check if the error is the common Google Cloud "API not enabled" or "Not found/supported" issue
+        if "not found for API version" in last_error or "not supported for generateContent" in last_error:
+            raise Exception(
+                "Your API key is a valid Google Cloud key, but the Gemini API (Generative Language API) "
+                "is not enabled or is restricted for this key.\n\n"
+                "To fix this, please do ONE of the following:\n"
+                "1. [RECOMMENDED] Go to Google AI Studio (https://aistudio.google.com/), click 'Get API key', and create a new key. Keys created in AI Studio have Gemini enabled automatically.\n"
+                "2. If you created this key in the Google Cloud Console: Go to your Google Cloud Console project, search for the 'Generative Language API' in the API Library, and click 'Enable'. Also, ensure that any API restrictions on your API key under 'Credentials' allow the 'Generative Language API'."
+            )
 
         raise Exception(f"All Gemini models failed. Last error: {last_error}")
