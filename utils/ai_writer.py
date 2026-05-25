@@ -60,7 +60,7 @@ class AIOutreachWriter:
         # Resolve smart review count hooks
         try:
             reviews_count = int(lead_data.get('reviews', 0))
-        except:
+        except (ValueError, TypeError):
             reviews_count = 0
         
         if reviews_count >= 100:
@@ -120,7 +120,52 @@ Strict Copywriting Guidelines for Refinement:
 5. NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc. Output must be 100% ready to copy-paste.
 """
         else:
-            prompt = f"""
+            is_broken = int(lead_data.get('is_broken_website', 0)) == 1
+            website_url = lead_data.get('website', '')
+
+            if is_broken:
+                prompt = f"""
+You are an Elite Business Development Consultant, Growth Hacker, and Modern Web Designer in India who helps local businesses double their customers using stunning, fast web portals and digital storefronts.
+
+Write a highly personalized, extremely conversational, and premium sales pitch for the following business whose listed website is BROKEN/DOWN:
+- Business Name: {lead_data.get('name', 'Business')}
+- Category: {lead_data.get('category', 'Business')}
+- Location: {lead_data.get('city', 'your city')}
+- Google Maps Rating: {lead_data.get('rating', '0')}
+- Google Maps Reviews: {lead_data.get('reviews', '0')}
+- Website: {website_url} (IT IS BROKEN/DOWN! Standard requests return errors or timeouts. A major credibility leak for a business.)
+
+Best matching project proof to naturally mention:
+{project_sample}
+
+TONE DIRECTIVES:
+{tone_directives}
+
+LENGTH & STRUCTURE DIRECTIVES:
+{length_directives}
+
+SMART HOOK DIRECTIVES:
+{hook_type_directive}
+
+CRITICAL COPYWRITING DIRECTIVES FOR BROKEN WEBSITES (FOLLOW THOROUGHLY):
+1. CASUAL GREETING: NEVER start with robotic or formal things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
+2. IMPRESSION OVER FLATTERY & BROKEN WEBSITE HOOK: Say something exciting and real about their reviews first, then immediately flag the broken website listed.
+   For example:
+   "Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekhe—sach mein kamaal ka response hai! Par maine ek critical issue notice kiya... Google Maps par aapki listed website ({website_url}) open nahi ho rahi hai (down/broken error dikha rahi hai). ⚠️"
+3. THE GAP (CONVERSATIONAL PAIN POINT): Explain that when high-paying clients click the website and see an error/blank page, it immediately kills trust. They think the business has shut down or is unprofessional, causing them to lose premium clients to competitors. We can easily fix this and get it up.
+4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
+   E.g., "{project_sample}"
+5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible. Instead of asking for a boring call, offer a free homepage mockup draft styled perfectly for them to replace their broken site!
+   E.g., "Maine aapki website ko bypass karke ek naya *premium, fast-loading homepage mockup / raw design layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Let me know if that sounds good."
+6. FORMATTING:
+   - Language must be ultra-premium, modern, natural Hinglish (how young entrepreneurs talk on WhatsApp).
+   - Use bold text for key numbers and phrases using asterisks (e.g., *4.8 rating*, *broken website*, *free mockup design*).
+   - Keep emojis limited to 3 or 4 maximum (e.g. 👋, ⚠️, 🔥, 💬). No emoji spam.
+   - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc. Output must be 100% ready to copy-paste.
+{signoff_directive}
+"""
+            else:
+                prompt = f"""
 You are an Elite Business Development Consultant, Growth Hacker, and Modern Web Designer in India who helps local businesses double their customers using stunning, fast web portals and digital storefronts.
 
 Write a highly personalized, extremely conversational, and premium sales pitch for the following business:
@@ -238,7 +283,7 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
                 try:
                     error_data = response.json()
                     last_error = error_data.get("error", {}).get("message", f"Status {response.status_code}")
-                except:
+                except Exception:
                     last_error = f"Status {response.status_code}"
                 print(f"Model {model} on {version} failed: {last_error}")
                 

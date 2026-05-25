@@ -33,6 +33,8 @@ class Lead:
     source: str = "google_maps"  # Track which platform the lead came from
     instagram: str = ""
     facebook: str = ""
+    is_broken_website: int = 0
+    line_type: str = ""
 
     def to_dict(self):
         return asdict(self)

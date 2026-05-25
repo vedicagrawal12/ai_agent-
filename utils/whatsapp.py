@@ -115,9 +115,14 @@ class WhatsAppMessenger:
         message = message.replace("{city}", lead.city or "your city")
         message = message.replace("{category}", lead.category or "business")
         message = message.replace("{rating}", str(lead.rating or "great"))
-        message = message.replace("{reviews}", str(lead.reviews or "many"))
+        message = message.replace("{reviews}", str(lead.reviews if lead.reviews is not None else "many"))
         message = message.replace("{address}", lead.address or "")
         message = message.replace("{phone}", lead.phone or "")
+        # Remove project_sample placeholder — only used in AI-generated pitches
+        message = message.replace("{project_sample}", "")
+        # Clean any double whitespace left from removed placeholders
+        import re
+        message = re.sub(r'\n\s*\n\s*\n', '\n\n', message)
 
         return message
 

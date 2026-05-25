@@ -193,7 +193,7 @@ class GoogleMapsCollector(BaseCollector):
             phone=phone,
             address=address,
             website=website,
-            rating=round(rating, 1) if rating else 0.0,
+            rating=round(rating, 1) if rating is not None else 0.0,
             reviews=reviews or 0,
             category=category,
             city=city,
@@ -203,7 +203,7 @@ class GoogleMapsCollector(BaseCollector):
             source="google_maps"
         )
 
-    def search(self, query: str, city: str, max_results: int = 20) -> List[Lead]:
+    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None, start_offset: int = 0, api_key: str = None) -> List[Lead]:
         """
         Search Google Maps for businesses matching the query in the given city.
         
@@ -211,10 +211,15 @@ class GoogleMapsCollector(BaseCollector):
             query: Business type (e.g., "gym", "salon", "restaurant")
             city: City name (e.g., "bhopal", "delhi")
             max_results: Maximum results to return (API max is 20 per page)
+            exclude_place_ids: Optional set of place IDs to exclude (unused, for interface compat)
+            start_offset: Starting offset for pagination (unused, for interface compat)
+            api_key: Optional override API key (falls back to self.api_key)
             
         Returns:
             List of Lead objects with full business details
         """
+        # Use provided api_key or fall back to instance key
+        effective_api_key = api_key or self.api_key
         # Build the search query
         search_query = f"{query} in {city}"
 

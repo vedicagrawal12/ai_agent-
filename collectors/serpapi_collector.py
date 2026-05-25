@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import os
 from serpapi import GoogleSearch
 from .base_collector import BaseCollector, Lead
@@ -47,7 +47,12 @@ class SerpApiCollector(BaseCollector):
                 for place in local_results:
                     # SerpApi doesn't always provide place_id in local_results without extra calls,
                     # but it does provide a unique 'data_id' which we can use.
-                    place_id = place.get("data_id") or place.get("place_id") or place.get("title")
+                    place_id = place.get("data_id") or place.get("place_id")
+                    if not place_id:
+                        # Generate a fallback ID from name+address to avoid conflicts
+                        fallback = f"{place.get('title', '')}_{place.get('address', '')}_{city}"
+                        import hashlib
+                        place_id = f"serpapi_{hashlib.md5(fallback.encode()).hexdigest()[:12]}"
                     
                     # Exclude already saved place IDs if requested
                     if exclude_place_ids and place_id in exclude_place_ids:
@@ -68,8 +73,8 @@ class SerpApiCollector(BaseCollector):
                         phone=place.get("phone", ""),
                         address=place.get("address", ""),
                         website=website,
-                        rating=place.get("rating", 0.0),
-                        reviews=place.get("reviews", 0),
+                        rating=float(place.get("rating") or 0),
+                        reviews=int(place.get("reviews") or 0),
                         category=place.get("type", "Business"),
                         city=city,
                         source=self.platform_name
@@ -91,10 +96,10 @@ class SerpApiCollector(BaseCollector):
                 
         return leads[:max_results]
 
-    def get_details(self, place_id: str) -> Dict[str, Any]:
+    def get_details(self, place_id: str) -> Optional[Lead]:
         """
         Get detailed information. With SerpApi, we could do a 'place' search using the data_id,
         but for our current use case, the initial search returns enough data (phone, website).
-        We'll just return an empty dict for now to satisfy the interface.
+        We'll just return None for now to satisfy the interface.
         """
-        return {}
+        return None

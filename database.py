@@ -71,6 +71,10 @@ class Database:
                 cursor.execute("ALTER TABLE leads ADD COLUMN facebook TEXT DEFAULT ''")
             if 'custom_pitch' not in columns:
                 cursor.execute("ALTER TABLE leads ADD COLUMN custom_pitch TEXT DEFAULT ''")
+            if 'is_broken_website' not in columns:
+                cursor.execute("ALTER TABLE leads ADD COLUMN is_broken_website INTEGER DEFAULT 0")
+            if 'line_type' not in columns:
+                cursor.execute("ALTER TABLE leads ADD COLUMN line_type TEXT DEFAULT ''")
         except Exception as alter_err:
             print(f"Error altering table for dynamic columns: {alter_err}")
 
@@ -116,8 +120,9 @@ class Database:
             try:
                 cursor.execute("""
                     INSERT INTO leads (place_id, name, phone, address, website, rating, 
-                                      reviews, category, city, priority, whatsapp_number, source)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                      reviews, category, city, priority, whatsapp_number, source,
+                                      is_broken_website, line_type)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(place_id) DO UPDATE SET
                         name = excluded.name,
                         phone = excluded.phone,
@@ -129,11 +134,14 @@ class Database:
                         city = excluded.city,
                         priority = excluded.priority,
                         whatsapp_number = excluded.whatsapp_number,
+                        is_broken_website = excluded.is_broken_website,
+                        line_type = excluded.line_type,
                         updated_at = CURRENT_TIMESTAMP
                 """, (
                     lead.place_id, lead.name, lead.phone, lead.address,
                     lead.website, lead.rating, lead.reviews, lead.category,
-                    lead.city, lead.priority, lead.whatsapp_number, lead.source
+                    lead.city, lead.priority, lead.whatsapp_number, lead.source,
+                    lead.is_broken_website, lead.line_type
                 ))
                 
                 if cursor.rowcount > 0:
@@ -261,6 +269,10 @@ class Database:
         # Cities covered
         cursor.execute("SELECT COUNT(DISTINCT city) FROM leads WHERE priority != 'IGNORE'")
         stats["cities_covered"] = cursor.fetchone()[0]
+
+        # Broken websites
+        cursor.execute("SELECT COUNT(*) FROM leads WHERE is_broken_website = 1")
+        stats["broken_websites"] = cursor.fetchone()[0]
 
         conn.close()
         return stats

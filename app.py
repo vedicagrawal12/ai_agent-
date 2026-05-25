@@ -171,12 +171,19 @@ def search_businesses():
             db_lead = db_leads_dict.get(lead.place_id)
             if db_lead:
                 lead_dict['id'] = db_lead['id']
-                lead_dict['instagram'] = db_lead['instagram'] or ''
-                lead_dict['facebook'] = db_lead['facebook'] or ''
+                lead_dict['instagram'] = db_lead.get('instagram') or ''
+                lead_dict['facebook'] = db_lead.get('facebook') or ''
+                lead_dict['custom_pitch'] = db_lead.get('custom_pitch') or ''
+                # Prefer in-memory values for freshly-scanned fields, fall back to DB
+                if not lead_dict.get('is_broken_website'):
+                    lead_dict['is_broken_website'] = db_lead.get('is_broken_website', 0) or 0
+                if not lead_dict.get('line_type'):
+                    lead_dict['line_type'] = db_lead.get('line_type') or ''
             else:
                 lead_dict['id'] = None
                 lead_dict['instagram'] = ''
                 lead_dict['facebook'] = ''
+                lead_dict['custom_pitch'] = ''
             leads_data.append(lead_dict)
 
         all_data = []
@@ -185,12 +192,18 @@ def search_businesses():
             db_lead = db_leads_dict.get(lead.place_id)
             if db_lead:
                 lead_dict['id'] = db_lead['id']
-                lead_dict['instagram'] = db_lead['instagram'] or ''
-                lead_dict['facebook'] = db_lead['facebook'] or ''
+                lead_dict['instagram'] = db_lead.get('instagram') or ''
+                lead_dict['facebook'] = db_lead.get('facebook') or ''
+                lead_dict['custom_pitch'] = db_lead.get('custom_pitch') or ''
+                if not lead_dict.get('is_broken_website'):
+                    lead_dict['is_broken_website'] = db_lead.get('is_broken_website', 0) or 0
+                if not lead_dict.get('line_type'):
+                    lead_dict['line_type'] = db_lead.get('line_type') or ''
             else:
                 lead_dict['id'] = None
                 lead_dict['instagram'] = ''
                 lead_dict['facebook'] = ''
+                lead_dict['custom_pitch'] = ''
             all_data.append(lead_dict)
         
         # Calculate stats
@@ -203,6 +216,7 @@ def search_businesses():
             "low_priority": sum(1 for l in filtered_leads if l.priority == "LOW"),
             "with_phone": sum(1 for l in filtered_leads if l.phone),
             "with_whatsapp": sum(1 for l in filtered_leads if l.whatsapp_number),
+            "broken_websites": sum(1 for l in filtered_leads if l.is_broken_website == 1),
         }
         
         return jsonify({

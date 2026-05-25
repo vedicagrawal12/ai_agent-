@@ -179,6 +179,7 @@ const UI = {
             statsBar: document.getElementById('statsBar'),
             statTotalFound: document.getElementById('statTotalFound'),
             statLeadsCount: document.getElementById('statLeadsCount'),
+            statBrokenWebsites: document.getElementById('statBrokenWebsites'),
             statHighPriority: document.getElementById('statHighPriority'),
             statMediumPriority: document.getElementById('statMediumPriority'),
             statWithPhone: document.getElementById('statWithPhone'),
@@ -256,6 +257,7 @@ const UI = {
         
         this.animateNumber(this.el.statTotalFound, stats.total_found || 0);
         this.animateNumber(this.el.statLeadsCount, stats.leads_count || 0);
+        this.animateNumber(this.el.statBrokenWebsites, stats.broken_websites || 0);
         this.animateNumber(this.el.statHighPriority, stats.high_priority || 0);
         this.animateNumber(this.el.statMediumPriority, stats.medium_priority || 0);
         this.animateNumber(this.el.statWithPhone, stats.with_phone || 0);
@@ -318,15 +320,32 @@ const UI = {
         const priorityClass = `priority-${lead.priority.toLowerCase()}`;
         const priorityEmoji = { HIGH: '🔴', MEDIUM: '🟡', LOW: '🟢', IGNORE: '⚪' }[lead.priority] || '';
         const stars = this.renderStars(lead.rating);
-        const phoneDisplay = lead.phone || '<span style="color: var(--text-muted)">N/A</span>';
         
-        const websiteDisplay = lead.website 
-            ? `<a href="${lead.website}" target="_blank" class="website-link" data-tooltip="${lead.website}">🌐 Visit Site</a>` 
-            : `<span class="no-website">❌ No Website</span>`;
+        let phoneDisplay = lead.phone || '<span style="color: var(--text-muted)">N/A</span>';
+        if (lead.phone && lead.line_type === 'LANDLINE') {
+            phoneDisplay += ` <span class="landline-pill" data-tooltip="Landline Number (No WhatsApp)">Landline</span>`;
+        }
+        
+        let websiteDisplay = '';
+        if (lead.website) {
+            const safeWebsite = this.escapeHtml(lead.website);
+            if (lead.is_broken_website === 1) {
+                websiteDisplay = `<a href="${safeWebsite}" target="_blank" class="broken-website-badge" data-tooltip="BROKEN SITE: ${safeWebsite}">⚠️ Broken Site</a>`;
+            } else {
+                websiteDisplay = `<a href="${safeWebsite}" target="_blank" class="website-link" data-tooltip="${safeWebsite}">🌐 Visit Site</a>`;
+            }
+        } else {
+            websiteDisplay = `<span class="no-website">❌ No Website</span>`;
+        }
             
-        const whatsappBtn = lead.whatsapp_number 
-            ? `<button class="row-btn whatsapp" data-tooltip="Send WhatsApp" onclick="App.openWhatsApp(${index})">💬</button>`
-            : '';
+        let whatsappBtn = '';
+        if (lead.whatsapp_number) {
+            if (lead.line_type === 'LANDLINE') {
+                whatsappBtn = `<button class="row-btn whatsapp disabled-landline" data-tooltip="Landline Number (No WhatsApp)" disabled>💬</button>`;
+            } else {
+                whatsappBtn = `<button class="row-btn whatsapp" data-tooltip="Send WhatsApp" onclick="App.openWhatsApp(${index})">💬</button>`;
+            }
+        }
         
         // Build Google Maps search link
         const mapsQuery = encodeURIComponent(`${lead.name} ${lead.address || lead.city}`);
@@ -460,12 +479,14 @@ const UI = {
         document.getElementById(modalId).classList.remove('active');
     },
 
-    // ---- Helpers ----
     escapeHtml(text) {
         if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 };
 
@@ -1085,7 +1106,7 @@ const App = {
             .replace(/\{city\}/g, lead.city || 'your city')
             .replace(/\{category\}/g, lead.category || 'business')
             .replace(/\{rating\}/g, lead.rating || 'great')
-            .replace(/\{reviews\}/g, lead.reviews || 'many')
+            .replace(/\{reviews\}/g, (lead.reviews !== undefined && lead.reviews !== null) ? lead.reviews : 'many')
             .replace(/\{address\}/g, lead.address || '')
             .replace(/\{phone\}/g, lead.phone || '')
             .replace(/\{project_sample\}/g, projectSampleText);
@@ -1381,7 +1402,7 @@ const App = {
             .replace(/\{city\}/g, lead.city || 'your city')
             .replace(/\{category\}/g, lead.category || 'business')
             .replace(/\{rating\}/g, lead.rating || 'great')
-            .replace(/\{reviews\}/g, lead.reviews || 'many')
+            .replace(/\{reviews\}/g, (lead.reviews !== undefined && lead.reviews !== null) ? lead.reviews : 'many')
             .replace(/\{address\}/g, lead.address || '')
             .replace(/\{phone\}/g, lead.phone || '')
             .replace(/\{project_sample\}/g, projectSampleText);
