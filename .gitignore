@@ -1,28 +1,55 @@
-# Environment
+# Environment Secrets & Virtualenvs
 .env
 venv/
 .venv/
+env/
+ENV/
+bin/
+lib/
+include/
 
-# Python
+# Python Compilation & Caches
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
 *.egg-info/
-dist/
-build/
+.installed.cfg
+*.egg
+manifest
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+htmlcov/
 
-# Database
+# Local Database Files
 *.db
+*.sqlite
+*.sqlite3
 
-# IDE
+# Exports & Report Caches
+*.xlsx
+*.csv
+
+# Editor & IDE Configs
 .vscode/
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
 
-# OS
+# Operating System Files
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Temp & Scratch Files
+# Agent Scratch Directories
 scratch/
 *.html
 !templates/*.html
