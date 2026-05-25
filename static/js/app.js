@@ -223,6 +223,14 @@ const UI = {
             refinePitchBtn: document.getElementById('refinePitchBtn'),
             sendWhatsAppBtn: document.getElementById('sendWhatsAppBtn'),
             
+            // Bulk Actions Elements
+            bulkScanSocialsBtn: document.getElementById('bulkScanSocialsBtn'),
+            bulkGeneratePitchesBtn: document.getElementById('bulkGeneratePitchesBtn'),
+            bulkProgressBanner: document.getElementById('bulkProgressBanner'),
+            bulkProgressLabel: document.getElementById('bulkProgressLabel'),
+            bulkProgressPercentage: document.getElementById('bulkProgressPercentage'),
+            bulkProgressBar: document.getElementById('bulkProgressBar'),
+            
             toastContainer: document.getElementById('toastContainer'),
         };
     },
@@ -582,6 +590,16 @@ const App = {
         // Refine Pitch Button
         UI.el.refinePitchBtn?.addEventListener('click', () => {
             this.refineAIPitch();
+        });
+
+        // Bulk Scan Socials
+        UI.el.bulkScanSocialsBtn?.addEventListener('click', () => {
+            this.handleBulkScanSocials();
+        });
+
+        // Bulk Generate AI Pitches
+        UI.el.bulkGeneratePitchesBtn?.addEventListener('click', () => {
+            this.handleBulkGeneratePitches();
         });
 
         // Clear Database
@@ -1282,6 +1300,60 @@ const App = {
         document.getElementById('whatsappBusinessName').textContent = lead.name;
         document.getElementById('whatsappPhoneNumber').textContent = lead.phone || lead.whatsapp_number;
         
+        // Check if custom_pitch is already available for this lead
+        const customMessageInput = document.getElementById('customMessageInput');
+        const customArea = document.getElementById('customMessageArea');
+        
+        if (lead.custom_pitch) {
+            if (customMessageInput) {
+                customMessageInput.value = lead.custom_pitch;
+            }
+            if (customArea) {
+                customArea.style.display = 'block';
+            }
+            
+            // Programmatically select "custom" template
+            setTimeout(() => {
+                const customRadio = document.querySelector('input[name="template"][value="custom"]');
+                if (customRadio) {
+                    customRadio.checked = true;
+                    AppState.selectedTemplate = 'custom';
+                    
+                    const container = UI.el.templateOptions;
+                    if (container) {
+                        container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
+                        customRadio.closest('.template-option')?.classList.add('selected');
+                    }
+                    this.updateMessagePreview();
+                }
+            }, 50);
+            UI.showToast('✨ Custom AI Pitch preloaded from database!', 'success');
+        } else {
+            // Reset to default
+            if (customMessageInput) {
+                customMessageInput.value = '';
+            }
+            if (customArea) {
+                customArea.style.display = 'none';
+            }
+            
+            // Re-select first template
+            setTimeout(() => {
+                const firstRadio = document.querySelector('input[name="template"]');
+                if (firstRadio) {
+                    firstRadio.checked = true;
+                    AppState.selectedTemplate = firstRadio.value;
+                    
+                    const container = UI.el.templateOptions;
+                    if (container) {
+                        container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
+                        firstRadio.closest('.template-option')?.classList.add('selected');
+                    }
+                    this.updateMessagePreview();
+                }
+            }, 50);
+        }
+        
         this.updateMessagePreview();
         UI.openModal('whatsappModal');
     },
@@ -1495,6 +1567,186 @@ const App = {
         } catch (error) {
             console.error('Failed to load history:', error);
         }
+    },
+
+    async handleBulkScanSocials() {
+        if (AppState.leads.length === 0) {
+            UI.showToast('Bulk scan ke liye table mein leads hona zaroori hai!', 'error');
+            return;
+        }
+
+        const serpKey = localStorage.getItem('serpapi_api_key') || '';
+        const localSerpKey = localStorage.getItem('api_key') || ''; // Check alternative names
+        
+        // Disable bulk buttons
+        UI.el.bulkScanSocialsBtn.disabled = true;
+        UI.el.bulkGeneratePitchesBtn.disabled = true;
+        
+        // Show progress banner
+        UI.el.bulkProgressBanner.style.display = 'block';
+        UI.el.bulkProgressLabel.textContent = 'Preparing bulk social scan...';
+        UI.el.bulkProgressPercentage.textContent = '0%';
+        UI.el.bulkProgressBar.style.width = '0%';
+
+        const leadsToScan = AppState.leads.filter(l => !l.instagram && !l.facebook);
+        if (leadsToScan.length === 0) {
+            UI.showToast('Sabhi leads ke socials already scanned hain!', 'info');
+            UI.el.bulkScanSocialsBtn.disabled = false;
+            UI.el.bulkGeneratePitchesBtn.disabled = false;
+            UI.el.bulkProgressBanner.style.display = 'none';
+            return;
+        }
+
+        let completed = 0;
+        const total = leadsToScan.length;
+
+        for (const lead of leadsToScan) {
+            try {
+                // Find row index in AppState.leads
+                const idx = AppState.leads.findIndex(l => l.id === lead.id);
+                if (idx === -1) continue;
+
+                // Show spinner in UI row (add active scanning indicator)
+                const socialCell = document.querySelector(`#leadsTableBody tr:nth-child(${idx + 1}) td:nth-child(9)`);
+                if (socialCell) {
+                    socialCell.innerHTML = '<span style="font-size: 0.85rem; color: var(--accent-cyan); animation: pulse 1s infinite;">⏳ Scanning...</span>';
+                }
+
+                UI.el.bulkProgressLabel.textContent = `Scanning socials for "${lead.name}" (${completed + 1}/${total})...`;
+
+                const data = await API.request(`/api/leads/${lead.id}/scan-socials`, {
+                    method: 'POST',
+                    headers: {
+                        'X-SerpApi-Key': serpKey || localSerpKey
+                    }
+                });
+
+                if (data.success) {
+                    // Update model state
+                    lead.instagram = data.instagram;
+                    lead.facebook = data.facebook;
+
+                    // Update UI row
+                    if (socialCell) {
+                        let links = [];
+                        if (data.instagram) {
+                            links.push(`<a href="${data.instagram}" target="_blank" class="social-icon instagram" title="Instagram">📸</a>`);
+                        }
+                        if (data.facebook) {
+                            links.push(`<a href="${data.facebook}" target="_blank" class="social-icon facebook" title="Facebook">👥</a>`);
+                        }
+                        socialCell.innerHTML = links.length > 0 ? links.join(' ') : '<span style="color: var(--text-secondary); font-size: 0.85rem;">✗ Not found</span>';
+                    }
+                } else {
+                    if (socialCell) {
+                        socialCell.innerHTML = '<span style="color: var(--accent-red); font-size: 0.85rem;">✗ Error</span>';
+                    }
+                }
+            } catch (err) {
+                console.error(`Error scanning lead ${lead.id} socials:`, err);
+            }
+
+            completed++;
+            const pct = Math.round((completed / total) * 100);
+            UI.el.bulkProgressPercentage.textContent = `${pct}%`;
+            UI.el.bulkProgressBar.style.width = `${pct}%`;
+        }
+
+        UI.showToast(`🎉 Bulk social scan completed! Scanned ${total} leads.`, 'success');
+        UI.el.bulkProgressLabel.textContent = 'Bulk scan complete!';
+        
+        setTimeout(() => {
+            UI.el.bulkProgressBanner.style.display = 'none';
+            UI.el.bulkScanSocialsBtn.disabled = false;
+            UI.el.bulkGeneratePitchesBtn.disabled = false;
+        }, 3000);
+    },
+
+    async handleBulkGeneratePitches() {
+        if (AppState.leads.length === 0) {
+            UI.showToast('Bulk AI generation ke liye leads hona zaroori hai!', 'error');
+            return;
+        }
+
+        const geminiKey = localStorage.getItem('gemini_api_key');
+        if (!geminiKey) {
+            UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        // Disable bulk buttons
+        UI.el.bulkScanSocialsBtn.disabled = true;
+        UI.el.bulkGeneratePitchesBtn.disabled = true;
+
+        // Show progress banner
+        UI.el.bulkProgressBanner.style.display = 'block';
+        UI.el.bulkProgressLabel.textContent = 'Preparing bulk AI pitch writer...';
+        UI.el.bulkProgressPercentage.textContent = '0%';
+        UI.el.bulkProgressBar.style.width = '0%';
+
+        const leadsToGenerate = AppState.leads.filter(l => !l.custom_pitch);
+        if (leadsToGenerate.length === 0) {
+            UI.showToast('Sabhi leads ke customized pitches already pre-generated hain!', 'info');
+            UI.el.bulkScanSocialsBtn.disabled = false;
+            UI.el.bulkGeneratePitchesBtn.disabled = false;
+            UI.el.bulkProgressBanner.style.display = 'none';
+            return;
+        }
+
+        let completed = 0;
+        const total = leadsToGenerate.length;
+        const tone = UI.el.pitchToneSelect?.value || 'elite';
+        const length = UI.el.pitchLengthSelect?.value || 'detailed';
+
+        for (const lead of leadsToGenerate) {
+            try {
+                const idx = AppState.leads.findIndex(l => l.id === lead.id);
+                if (idx === -1) continue;
+
+                UI.el.bulkProgressLabel.textContent = `Generating pitch for "${lead.name}" using Gemini (${completed + 1}/${total})...`;
+
+                const projectSample = this.getBestPortfolioProjectSample(lead);
+
+                const data = await API.request('/api/outreach/generate-ai', {
+                    method: 'POST',
+                    headers: {
+                        'X-Gemini-API-Key': geminiKey
+                    },
+                    body: JSON.stringify({
+                        lead: lead,
+                        project_sample: projectSample,
+                        tone: tone,
+                        length: length,
+                        sender: {
+                            name: localStorage.getItem('sender_name') || '',
+                            brand: localStorage.getItem('sender_brand') || '',
+                            role: localStorage.getItem('sender_role') || ''
+                        }
+                    })
+                });
+
+                if (data.success && data.pitch) {
+                    lead.custom_pitch = data.pitch;
+                }
+            } catch (err) {
+                console.error(`Error generating pitch for lead ${lead.id}:`, err);
+            }
+
+            completed++;
+            const pct = Math.round((completed / total) * 100);
+            UI.el.bulkProgressPercentage.textContent = `${pct}%`;
+            UI.el.bulkProgressBar.style.width = `${pct}%`;
+        }
+
+        UI.showToast(`🎉 Bulk AI Pitch Generation complete! Generated pitches for ${total} leads.`, 'success');
+        UI.el.bulkProgressLabel.textContent = 'Bulk AI generation complete!';
+
+        setTimeout(() => {
+            UI.el.bulkProgressBanner.style.display = 'none';
+            UI.el.bulkScanSocialsBtn.disabled = false;
+            UI.el.bulkGeneratePitchesBtn.disabled = false;
+        }, 3000);
     },
 
     rerunSearch(query, city) {

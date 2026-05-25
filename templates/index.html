@@ -143,6 +143,34 @@
                 </div>
             </div>
 
+            <!-- ======== Bulk Actions Panel & Progress Banner ======== -->
+            <div id="bulkActionsPanel" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div style="font-weight: 700; font-size: 0.95rem; color: var(--accent-cyan); display: flex; align-items: center; gap: 6px;">
+                        ⚡ Bulk Automation Controls (Zero manual effort)
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button id="bulkScanSocialsBtn" class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; font-size: 0.85rem; padding: 8px 16px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            🔍 Auto-Scan All Socials (50% Credits Saved)
+                        </button>
+                        <button id="bulkGeneratePitchesBtn" class="btn btn-primary" style="background: var(--gradient-primary); border: none; font-size: 0.85rem; padding: 8px 16px; display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow-cyan);">
+                            ✨ Bulk AI Generate Pitches (Gemini)
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Bulk Progress Banner (Hidden by default) -->
+                <div id="bulkProgressBanner" style="display: none; margin-top: 8px; padding: 12px; background: var(--bg-input); border-radius: var(--radius-sm); border-left: 4px solid var(--accent-cyan);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span id="bulkProgressLabel" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">Processing...</span>
+                        <span id="bulkProgressPercentage" style="font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan);">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; position: relative;">
+                        <div id="bulkProgressBar" style="width: 0%; height: 100%; background: var(--gradient-primary); transition: width 0.3s ease;"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Empty State -->
             <div id="emptyState" class="empty-state" style="display: none;">
                 <div class="empty-state-icon">🔍</div>

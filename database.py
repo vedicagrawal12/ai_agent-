@@ -69,8 +69,10 @@ class Database:
                 cursor.execute("ALTER TABLE leads ADD COLUMN instagram TEXT DEFAULT ''")
             if 'facebook' not in columns:
                 cursor.execute("ALTER TABLE leads ADD COLUMN facebook TEXT DEFAULT ''")
+            if 'custom_pitch' not in columns:
+                cursor.execute("ALTER TABLE leads ADD COLUMN custom_pitch TEXT DEFAULT ''")
         except Exception as alter_err:
-            print(f"Error altering table for social columns: {alter_err}")
+            print(f"Error altering table for dynamic columns: {alter_err}")
 
         # Search history table
         cursor.execute("""
@@ -385,5 +387,24 @@ class Database:
         except Exception as e:
             print(f"Error fetching lead by ID {lead_id}: {e}")
             return None
+        finally:
+            conn.close()
+
+    def update_lead_pitch(self, lead_id: int, custom_pitch: str) -> bool:
+        """Update the custom AI generated pitch for a lead."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE leads
+                SET custom_pitch = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (custom_pitch, lead_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating custom pitch for lead {lead_id}: {e}")
+            return False
         finally:
             conn.close()

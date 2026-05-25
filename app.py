@@ -485,6 +485,12 @@ def generate_ai_pitch():
             refine_feedback=refine_feedback,
             previous_pitch=previous_pitch
         )
+        
+        # Save generated pitch persistently in database
+        lead_id = lead_data.get("id")
+        if lead_id:
+            db.update_lead_pitch(lead_id, pitch)
+            
         return jsonify({
             "success": True,
             "pitch": pitch
@@ -523,47 +529,29 @@ def scan_lead_socials(lead_id):
     instagram_link = ""
     facebook_link = ""
     
-    # 1. Search Instagram
+    # Combined search for both Instagram and Facebook to save 50% API credits in a single query
     try:
         from serpapi import GoogleSearch
-        ig_query = f'site:instagram.com "{lead.get("name")}" {lead.get("city")}'
+        combined_query = f'(site:instagram.com OR site:facebook.com) "{lead.get("name")}" {lead.get("city")}'
         params = {
             "engine": "google",
-            "q": ig_query,
+            "q": combined_query,
             "api_key": api_key,
-            "num": 3 # Fetch top 3 results
+            "num": 6 # Fetch top 6 results
         }
         search = GoogleSearch(params)
         results = search.get_dict()
         organic = results.get("organic_results", [])
         for item in organic:
             link = item.get("link", "")
-            if "instagram.com/" in link and not any(x in link for x in ["/p/", "/tags/", "/explore/", "/reel/", "/directory/"]):
-                instagram_link = link
-                break
+            if "instagram.com/" in link and not instagram_link:
+                if not any(x in link for x in ["/p/", "/tags/", "/explore/", "/reel/", "/directory/"]):
+                    instagram_link = link
+            elif "facebook.com/" in link and not facebook_link:
+                if not any(x in link for x in ["/sharer/", "/policies/", "/groups/", "/events/", "/post/"]):
+                    facebook_link = link
     except Exception as e:
-        print(f"Error scanning Instagram for lead {lead_id}: {e}")
-        
-    # 2. Search Facebook
-    try:
-        from serpapi import GoogleSearch
-        fb_query = f'site:facebook.com "{lead.get("name")}" {lead.get("city")}'
-        params = {
-            "engine": "google",
-            "q": fb_query,
-            "api_key": api_key,
-            "num": 3
-        }
-        search = GoogleSearch(params)
-        results = search.get_dict()
-        organic = results.get("organic_results", [])
-        for item in organic:
-            link = item.get("link", "")
-            if "facebook.com/" in link and not any(x in link for x in ["/sharer/", "/policies/", "/groups/", "/events/", "/post/"]):
-                facebook_link = link
-                break
-    except Exception as e:
-        print(f"Error scanning Facebook for lead {lead_id}: {e}")
+        print(f"Error scanning combined socials for lead {lead_id}: {e}")
         
     # Update lead in database
     db.update_lead_socials(lead_id, instagram_link, facebook_link)
