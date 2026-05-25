@@ -1165,6 +1165,10 @@ const App = {
     updateMessagePreview() {
         const lead = AppState.currentWhatsAppLead;
         if (!lead) return;
+        
+        const template = AppState.selectedTemplate;
+        let message = '';
+        
         if (template === 'custom') {
             message = document.getElementById('customMessageInput')?.value || '';
         } else {
