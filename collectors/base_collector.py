@@ -54,7 +54,7 @@ class BaseCollector(ABC):
     """
 
     @abstractmethod
-    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None, start_offset: int = 0) -> List[Lead]:
+    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None, start_offset: int = 0, api_key: str = None) -> List[Lead]:
         """
         Search for businesses on the platform.
         
@@ -64,6 +64,7 @@ class BaseCollector(ABC):
             max_results: Maximum number of results to return
             exclude_place_ids: Optional set of place IDs to exclude from search results
             start_offset: Starting offset (pagination start index) for the search
+            api_key: Optional API key to use for the platform search
             
         Returns:
             List of Lead objects with business details

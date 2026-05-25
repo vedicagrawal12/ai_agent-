@@ -93,8 +93,8 @@ def search_businesses():
     if not city:
         return jsonify({"error": "Please enter a city name"}), 400
     
-    # Check API key
-    api_key = API_KEY_STORE.get("serpapi", "")
+    # Check API key (use X-SerpApi-Key header if provided, otherwise fallback to server key)
+    api_key = request.headers.get("X-SerpApi-Key") or API_KEY_STORE.get("serpapi", "")
     if not api_key:
         return jsonify({"error": "SerpApi key not configured. Please set it in Settings."}), 401
     
@@ -124,11 +124,11 @@ def search_businesses():
                 if not zone:
                     continue
                 # Search using zone name combined with city
-                zone_leads = collector.search(query, f"{zone}, {city}", leads_per_zone, exclude_place_ids, start_offset)
+                zone_leads = collector.search(query, f"{zone}, {city}", leads_per_zone, exclude_place_ids, start_offset, api_key=api_key)
                 all_leads.extend(zone_leads)
         else:
             # Standard single-city search
-            all_leads = collector.search(query, city, max_results, exclude_place_ids, start_offset)
+            all_leads = collector.search(query, city, max_results, exclude_place_ids, start_offset, api_key=api_key)
         
         # Clean the data (standardize, assign priority, and DEDUPLICATE combined leads)
         all_leads = DataCleaner.clean_leads(all_leads)
@@ -377,7 +377,7 @@ def export_excel():
 
 @app.route("/api/config", methods=["GET"])
 def get_config():
-    """Get current configuration (masked API key)."""
+    """Check if the server has a default master API key configured."""
     api_key = API_KEY_STORE.get("serpapi", "")
     has_key = bool(api_key)
     masked_key = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else ("***" if api_key else "")
@@ -389,10 +389,11 @@ def get_config():
     })
 
 
-@app.route("/api/config", methods=["POST"])
-def update_config():
+@app.route("/api/config/validate", methods=["POST"])
+def validate_config():
     """
-    Update configuration (API key).
+    Validate a SerpApi key without storing it on the server.
+    This allows secure browser-side storage (localStorage) for deployment.
     """
     data = request.get_json()
     
@@ -415,17 +416,7 @@ def update_config():
         if response.status_code == 401:
             return jsonify({"error": "Invalid SerpApi key"}), 400
             
-        API_KEY_STORE["serpapi"] = api_key
-        
-        # Also save to .env file for persistence
-        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
-        with open(env_path, "w") as f:
-            f.write(f"SERPAPI_KEY={api_key}\n")
-        
-        # Make sure env var is set for the collector
-        os.environ["SERPAPI_KEY"] = api_key
-        
-        return jsonify({"success": True, "message": "API key saved successfully"})
+        return jsonify({"success": True, "message": "API key validated successfully"})
     
     except Exception as e:
         return jsonify({"error": f"Failed to validate API key: {str(e)}"}), 500
@@ -454,7 +445,7 @@ def scan_lead_socials(lead_id):
     if not lead:
         return jsonify({"error": "Lead not found"}), 404
         
-    api_key = API_KEY_STORE.get("serpapi", "")
+    api_key = request.headers.get("X-SerpApi-Key") or API_KEY_STORE.get("serpapi", "")
     if not api_key:
         return jsonify({"error": "SerpApi key not configured"}), 401
         

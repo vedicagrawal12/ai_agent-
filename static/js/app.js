@@ -32,22 +32,46 @@ const API = {
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
         const config = {
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                ...options.headers
+            },
             ...options,
         };
 
+        // Automatically inject local storage API key if available
+        const localKey = localStorage.getItem('serpapi_key');
+        if (localKey) {
+            config.headers['X-SerpApi-Key'] = localKey;
+        }
+
         try {
             const response = await fetch(url, config);
-            const data = await response.json();
             
+            // Check if response is not OK first
             if (!response.ok) {
-                throw new Error(data.error || `Request failed with status ${response.status}`);
+                let errorMessage = `Request failed with status ${response.status}`;
+                try {
+                    const data = await response.json();
+                    errorMessage = data.error || errorMessage;
+                } catch (_) {
+                    // Fallback if response body is not JSON (e.g. 404 HTML from Live Server)
+                    if (response.status === 404) {
+                        errorMessage = `API endpoint not found (404). If you are using VS Code 'Go Live' (Live Server), please close it. Instead, run the backend server with 'python app.py' and open http://localhost:5000 in your browser.`;
+                    }
+                }
+                throw new Error(errorMessage);
             }
             
-            return data;
+            // Attempt to parse JSON response
+            try {
+                return await response.json();
+            } catch (jsonError) {
+                throw new Error(`Invalid server response (not valid JSON). If you are using VS Code 'Go Live' (Live Server), please close it. Instead, run the backend server with 'python app.py' and open http://localhost:5000 in your browser.`);
+            }
         } catch (error) {
-            if (error.message.includes('Failed to fetch')) {
-                throw new Error('Cannot connect to server. Is the Flask app running?');
+            if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+                throw new Error('Cannot connect to server. Please make sure the Flask backend is running (run "python app.py") and access via http://localhost:5000.');
             }
             throw error;
         }
@@ -74,7 +98,7 @@ const API = {
     },
 
     async saveConfig(apiKey) {
-        return this.request('/api/config', {
+        return this.request('/api/config/validate', {
             method: 'POST',
             body: JSON.stringify({ api_key: apiKey }),
         });
@@ -572,26 +596,32 @@ const App = {
     // ---- Config ----
     async checkConfig() {
         try {
-            const data = await API.getConfig();
-            AppState.hasApiKey = data.has_api_key;
+            const localKey = localStorage.getItem('serpapi_key');
+            const data = await API.getConfig(); // Check if server has default key
+            AppState.hasApiKey = !!localKey || data.has_api_key;
             
             // Update header status badge
             const statusEl = UI.el.apiKeyStatus;
-            if (data.has_api_key) {
+            const settingsStatus = document.getElementById('settingsApiKeyStatus');
+            
+            if (localKey) {
+                statusEl.className = 'api-key-status active';
+                statusEl.textContent = '✓ Your Key';
+                if (settingsStatus) {
+                    settingsStatus.className = 'api-key-status active';
+                    settingsStatus.textContent = '✓ Using Your Local API Key';
+                }
+            } else if (data.has_api_key) {
                 statusEl.className = 'api-key-status active';
                 statusEl.textContent = '✓ Connected';
+                if (settingsStatus) {
+                    settingsStatus.className = 'api-key-status active';
+                    settingsStatus.textContent = '✓ Server Default Key Connected';
+                }
             } else {
                 statusEl.className = 'api-key-status inactive';
                 statusEl.textContent = '✗ Not Set';
-            }
-            
-            // Also update the settings modal status if it exists
-            const settingsStatus = document.getElementById('settingsApiKeyStatus');
-            if (settingsStatus) {
-                if (data.has_api_key) {
-                    settingsStatus.className = 'api-key-status active';
-                    settingsStatus.textContent = '✓ API Key Configured';
-                } else {
+                if (settingsStatus) {
                     settingsStatus.className = 'api-key-status inactive';
                     settingsStatus.textContent = '✗ Not Set';
                 }
@@ -603,19 +633,28 @@ const App = {
 
     async saveApiKey() {
         const apiKey = UI.el.apiKeyInput.value.trim();
+        
+        // If the user submits an empty key, it clears their local API key
         if (!apiKey) {
-            UI.showToast('Please enter an API key', 'error');
+            localStorage.removeItem('serpapi_key');
+            AppState.hasApiKey = false;
+            UI.closeModal('settingsModal');
+            await this.checkConfig();
+            UI.showToast('Local API key cleared successfully!', 'info');
             return;
         }
 
         try {
             UI.showLoading('Validating API key...');
-            await API.saveConfig(apiKey);
+            await API.saveConfig(apiKey); // Test validation on server
+            
+            // Save key locally on browser
+            localStorage.setItem('serpapi_key', apiKey);
             AppState.hasApiKey = true;
             UI.el.apiKeyInput.value = '';
             UI.closeModal('settingsModal');
             await this.checkConfig();
-            UI.showToast('API key saved successfully!', 'success');
+            UI.showToast('API key validated & saved locally!', 'success');
         } catch (error) {
             UI.showToast(error.message, 'error');
         } finally {

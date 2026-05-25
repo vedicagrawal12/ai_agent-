@@ -11,11 +11,11 @@ class SerpApiCollector(BaseCollector):
     def platform_name(self) -> str:
         return "SerpApi Google Maps"
 
-    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None, start_offset: int = 0) -> List[Lead]:
+    def search(self, query: str, city: str, max_results: int = 20, exclude_place_ids: set = None, start_offset: int = 0, api_key: str = None) -> List[Lead]:
         """
         Searches Google Maps using SerpApi.
         """
-        api_key = os.getenv("SERPAPI_KEY")
+        api_key = api_key or os.getenv("SERPAPI_KEY")
         if not api_key:
             print("SERPAPI_KEY is not set.")
             return []
