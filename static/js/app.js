@@ -31,12 +31,15 @@ const API = {
 
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
+        // Merge headers properly to prevent options.headers from overwriting Content-Type
+        const mergedHeaders = {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+        };
+
         const config = {
-            headers: { 
-                'Content-Type': 'application/json',
-                ...options.headers
-            },
             ...options,
+            headers: mergedHeaders
         };
 
         // Automatically inject local storage API key if available
