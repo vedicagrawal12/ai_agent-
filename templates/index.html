@@ -231,6 +231,21 @@
                             <span id="portfolioStatus" class="api-key-status inactive">✗ Not Set</span>
                         </div>
                     </div>
+
+                    <div class="settings-group">
+                        <div class="settings-group-title">🤖 Gemini API Key (Optional for AI Writer)</div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+                            Allows generating 100% unique, human-like sales pitches for each client. Get a free key from 
+                            <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-cyan);">Google AI Studio</a> (No credit card needed).
+                        </p>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="password" id="geminiApiKeyInput" class="form-input" placeholder="Paste your Gemini API key here..." style="flex: 1;">
+                            <button id="saveGeminiApiKeyBtn" class="btn btn-primary">Save Key</button>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <span id="geminiApiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
+                        </div>
+                    </div>
                     
                     <div class="settings-group">
                         <div class="settings-group-title">💡 How to get an API Key</div>
@@ -278,6 +293,12 @@
                 
                 <div id="templateOptions" class="template-selector">
                     <!-- Templates loaded dynamically -->
+                </div>
+
+                <div style="margin-top: 16px; margin-bottom: 16px; text-align: center;">
+                    <button id="aiGenerateBtn" class="btn btn-primary" style="background: var(--gradient-primary); border: none; font-size: 0.95rem; padding: 10px 20px; box-shadow: var(--shadow-glow-cyan); width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; cursor: pointer;">
+                        ✨ AI Generate Custom Pitch (Gemini)
+                    </button>
                 </div>
 
                 <div id="customMessageArea" style="display: none; margin-top: 16px;">

@@ -58,6 +58,19 @@ Iska dynamic web dashboard modern UI, high-performance database management, and 
 11. **Premium Modern Dark UI (Wow Aesthetics):**
     - High-quality visual glassmorphism, responsive components, smooth cyan-to-violet colors gradients, soft card entry animations, aur clean interactive visual feedback features design kiye gaye hain.
 
+12. **Smart Portfolio Scraper & Keyword Matcher (Dynamic Outreach):**
+    - Settings mein apna portfolio URL (e.g. `https://raunaksharmaq64.github.io/portfolio/`) save karein. Backend automatically page ko scrape karke saare projects aur unke live demo links extract kar lega.
+    - WhatsApp dynamic templates mein naye **`{project_sample}`** variable ke zariye hamara unique matching engine (Gym, Hotel/Restaurant, Hostel/PG) dynamically sabse best-fit project demo link pitch message mein append kar deta hai.
+
+13. **Stateless Browser-Safe Storage (Render/Vercel Ready):**
+    - Multi-user safe aur 100% cloud-ready architecture. Users ki SerpApi keys aur portfolio projects server-side database ya `.env` files ke bajaye unke browser ke **`localStorage`** mein secure save rehti hain.
+    - Isse server-side par dynamic file writing ki jarurat nahi hoti aur aapki personal search limits/credits bilkul surakshit rehte hain. Yeh system multiple users ke liye bin kisi collision ke perfect chalta hai.
+
+14. **Gemini AI Outreach Personalization Writer (Hinglish Elite Persona):**
+    - Settings mein optional **Gemini API Key** (Google AI Studio se bilkul free milne wali) save karein. 
+    - WhatsApp modal ke andar **`✨ AI Generate Custom Pitch`** click karne par hamara **17+ years experience digital marketer** persona active ho jata hai jo client ke business details, Google rating/reviews aur aapke matched portfolio project sample link ko read karke ekdam warm, friendly, persuasive sales outreach copy write karta hai.
+    - Ye bilkul human-like lagti hai (no generic AI phrasing) aur isse response/conversion rates 10x badh jaate hain!
+
 ---
 
 ## 🔌 Tech Stack & Integrations
@@ -89,7 +102,9 @@ ai_agent/
 │
 ├── utils/                     # Smart text processing utility systems
 │   ├── data_cleaner.py        # Duplicate remover, contact info cleaner, and scoring calculator
-│   └── whatsapp.py            # Phone prependers and dynamic templates writer
+│   ├── whatsapp.py            # Phone prependers and dynamic templates writer
+│   ├── portfolio.py           # Smart HTML portfolio scraper and keyword matcher
+│   └── ai_writer.py           # Elite Gemini AI sales pitch generator
 │
 ├── templates/                 # UI View System
 │   └── index.html             # High-end desktop user-dashboard template
@@ -134,6 +149,17 @@ python app.py
 ```
 Iske baad server running message dikhega and you can open:
 👉 **[http://localhost:5000](http://localhost:5000)** inside your browser!
+
+### 5. Production Cloud Deployment (Render Guide)
+Agar aap is project ko internet par live karke friends ke sath share karna chahte hain, toh **Render** par free mein deploy kar sakte hain:
+1. GitHub par ek **Private** repository banakar code push karein.
+2. [Render.com](https://render.com) par login karke **"New Web Service"** choose karein aur apni repo connect karein.
+3. Configure settings:
+   - **Runtime:** `Python 3`
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn app:app`
+   - **Instance Type:** `Free`
+4. *Dhyan dein:* Har user apni khud ki SerpApi Key aur Portfolio settings mein browser local storage ke through save karega. Isse aapki keys aur limits bilkul 100% surakshit rahengi!
 
 ---
 

@@ -24,6 +24,7 @@ from collectors.serpapi_collector import SerpApiCollector
 from utils.data_cleaner import DataCleaner
 from utils.whatsapp import WhatsAppMessenger
 from utils.portfolio import PortfolioParser
+from utils.ai_writer import AIOutreachWriter
 from database import Database
 
 # Load environment variables
@@ -446,6 +447,36 @@ def scan_portfolio():
         })
     except Exception as e:
         return jsonify({"error": f"Failed to scan portfolio: {str(e)}"}), 500
+
+
+@app.route("/api/outreach/generate-ai", methods=["POST"])
+def generate_ai_pitch():
+    """
+    Generate a unique, highly personalized outreach pitch using Gemini API.
+    Runs statelessly - reads key from header X-Gemini-API-Key.
+    """
+    gemini_key = request.headers.get("X-Gemini-API-Key")
+    if not gemini_key:
+        return jsonify({"error": "Gemini API key is missing. Please configure it in Settings."}), 401
+        
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+        
+    lead_data = data.get("lead", {})
+    project_sample = data.get("project_sample", "")
+    
+    if not lead_data:
+        return jsonify({"error": "Lead data is required"}), 400
+        
+    try:
+        pitch = AIOutreachWriter.generate_pitch(lead_data, project_sample, gemini_key)
+        return jsonify({
+            "success": True,
+            "pitch": pitch
+        })
+    except Exception as e:
+        return jsonify({"error": f"AI Generation failed: {str(e)}"}), 500
 
 
 @app.route("/api/stats", methods=["GET"])

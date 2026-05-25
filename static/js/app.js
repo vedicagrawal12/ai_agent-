@@ -198,9 +198,13 @@ const UI = {
             portfolioUrlInput: document.getElementById('portfolioUrlInput'),
             savePortfolioUrlBtn: document.getElementById('savePortfolioUrlBtn'),
             portfolioStatus: document.getElementById('portfolioStatus'),
+            geminiApiKeyInput: document.getElementById('geminiApiKeyInput'),
+            saveGeminiApiKeyBtn: document.getElementById('saveGeminiApiKeyBtn'),
+            geminiApiKeyStatus: document.getElementById('geminiApiKeyStatus'),
             
             whatsappModal: document.getElementById('whatsappModal'),
             templateOptions: document.getElementById('templateOptions'),
+            aiGenerateBtn: document.getElementById('aiGenerateBtn'),
             messagePreview: document.getElementById('messagePreview'),
             customMessageArea: document.getElementById('customMessageArea'),
             customMessageInput: document.getElementById('customMessageInput'),
@@ -469,6 +473,7 @@ const App = {
         this.bindEvents();
         await this.checkConfig();
         this.checkPortfolio();
+        this.checkGeminiConfig();
         await this.loadTemplates();
     },
 
@@ -543,6 +548,16 @@ const App = {
         // Save Portfolio URL
         UI.el.savePortfolioUrlBtn?.addEventListener('click', () => {
             this.savePortfolioUrl();
+        });
+
+        // Save Gemini API Key
+        UI.el.saveGeminiApiKeyBtn?.addEventListener('click', () => {
+            this.saveGeminiApiKey();
+        });
+
+        // AI Generate Pitch Button
+        UI.el.aiGenerateBtn?.addEventListener('click', () => {
+            this.generateAIPitch();
         });
 
         // Clear Database
@@ -726,6 +741,106 @@ const App = {
         }
     },
 
+    checkGeminiConfig() {
+        const geminiKey = localStorage.getItem('gemini_api_key');
+        const statusEl = UI.el.geminiApiKeyStatus;
+        if (geminiKey) {
+            if (statusEl) {
+                statusEl.className = 'api-key-status active';
+                statusEl.textContent = '✓ Configured';
+            }
+            if (UI.el.geminiApiKeyInput) {
+                UI.el.geminiApiKeyInput.value = geminiKey;
+            }
+        } else {
+            if (statusEl) {
+                statusEl.className = 'api-key-status inactive';
+                statusEl.textContent = '✗ Not Set';
+            }
+        }
+    },
+
+    saveGeminiApiKey() {
+        const geminiKey = UI.el.geminiApiKeyInput.value.trim();
+        
+        // If empty, clear the key
+        if (!geminiKey) {
+            localStorage.removeItem('gemini_api_key');
+            this.checkGeminiConfig();
+            UI.showToast('Gemini API key cleared successfully!', 'info');
+            return;
+        }
+
+        // Save key in localStorage
+        localStorage.setItem('gemini_api_key', geminiKey);
+        this.checkGeminiConfig();
+        UI.showToast('Gemini API key saved locally!', 'success');
+    },
+
+    async generateAIPitch() {
+        const lead = AppState.currentWhatsAppLead;
+        if (!lead) return;
+
+        const geminiKey = localStorage.getItem('gemini_api_key');
+        if (!geminiKey) {
+            UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        const projectSample = this.getBestPortfolioProjectSample(lead);
+
+        try {
+            UI.showLoading('AI Writer generating pitch...');
+            
+            // Call AI writer endpoint statelessly
+            const data = await API.request('/api/outreach/generate-ai', {
+                method: 'POST',
+                headers: {
+                    'X-Gemini-API-Key': geminiKey
+                },
+                body: JSON.stringify({
+                    lead: lead,
+                    project_sample: projectSample
+                })
+            });
+
+            if (data.success && data.pitch) {
+                // Programmatically select "custom" template radio button
+                const customRadio = document.querySelector('input[name="template"][value="custom"]');
+                if (customRadio) {
+                    customRadio.checked = true;
+                    AppState.selectedTemplate = 'custom';
+                    
+                    // Show custom message textarea
+                    const customArea = document.getElementById('customMessageArea');
+                    if (customArea) customArea.style.display = 'block';
+                    
+                    // Highlight selected radio visual option
+                    const container = UI.el.templateOptions;
+                    if (container) {
+                        container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
+                        customRadio.closest('.template-option')?.classList.add('selected');
+                    }
+                }
+
+                // Populate custom message input box with the AI generated pitch
+                const customMessageInput = document.getElementById('customMessageInput');
+                if (customMessageInput) {
+                    customMessageInput.value = data.pitch;
+                }
+
+                // Refresh preview panel
+                this.updateMessagePreview();
+                UI.showToast('✨ Unique AI Sales pitch generated successfully!', 'success');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
     async clearDatabase() {
         if (!confirm("Kya aap sach mein database clean karna chahte hain?\n\n(Isse sirf uncontacted leads aur search history clear hogi, aapka contacted leads record safe rahega.)")) {
             return;
@@ -807,12 +922,22 @@ const App = {
             return;
         }
 
-        // Build pitch message using current selected WhatsApp template
-        const template = AppState.selectedTemplate === 'custom' ? 'website_pitch' : AppState.selectedTemplate;
-        const templateData = AppState.whatsappTemplates[template];
-        let message = templateData ? templateData.message : 'Hello {business_name}!';
+        // Build pitch message using current selected template
+        let message = '';
+        const template = AppState.selectedTemplate;
+        if (template === 'custom') {
+            message = document.getElementById('messagePreview')?.textContent || 
+                      document.getElementById('customMessageInput')?.value || '';
+        }
+        
+        if (!message) {
+            const templateKey = (template === 'custom' || !template) ? 'website_pitch' : template;
+            const templateData = AppState.whatsappTemplates[templateKey];
+            message = templateData ? templateData.message : 'Hello {business_name}!';
+        }
 
-        // Replace template variables
+        // Replace template variables dynamically for this lead
+        const projectSampleText = this.getBestPortfolioProjectSample(lead);
         message = message
             .replace(/\{business_name\}/g, lead.name || 'there')
             .replace(/\{city\}/g, lead.city || 'your city')
@@ -820,7 +945,8 @@ const App = {
             .replace(/\{rating\}/g, lead.rating || 'great')
             .replace(/\{reviews\}/g, lead.reviews || 'many')
             .replace(/\{address\}/g, lead.address || '')
-            .replace(/\{phone\}/g, lead.phone || '');
+            .replace(/\{phone\}/g, lead.phone || '')
+            .replace(/\{project_sample\}/g, projectSampleText);
 
         try {
             // Copy pitch to clipboard

@@ -21,3 +21,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Temp & Scratch Files
+scratch/
+*.html
+!templates/*.html
