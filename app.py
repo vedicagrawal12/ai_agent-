@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 from collectors.serpapi_collector import SerpApiCollector
 from utils.data_cleaner import DataCleaner
 from utils.whatsapp import WhatsAppMessenger
+from utils.portfolio import PortfolioParser
 from database import Database
 
 # Load environment variables
@@ -420,6 +421,31 @@ def validate_config():
     
     except Exception as e:
         return jsonify({"error": f"Failed to validate API key: {str(e)}"}), 500
+
+
+@app.route("/api/portfolio/scan", methods=["POST"])
+def scan_portfolio():
+    """
+    Fetch and parse projects from the user's portfolio URL.
+    This runs statelessly and lets the browser save the projects.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+        
+    portfolio_url = data.get("portfolio_url", "").strip()
+    if not portfolio_url:
+        return jsonify({"error": "Portfolio URL cannot be empty"}), 400
+        
+    try:
+        projects = PortfolioParser.fetch_and_parse(portfolio_url)
+        return jsonify({
+            "success": True,
+            "portfolio_url": portfolio_url,
+            "projects": projects
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to scan portfolio: {str(e)}"}), 500
 
 
 @app.route("/api/stats", methods=["GET"])

@@ -216,6 +216,21 @@
                             <span id="settingsApiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
                         </div>
                     </div>
+
+                    <div class="settings-group">
+                        <div class="settings-group-title">🌐 Your Portfolio Link (For Smart Pitching)</div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+                            Enter your portfolio URL (e.g. <code>https://raunaksharmaq64.github.io/portfolio/</code>).
+                            The agent will dynamically extract your project samples and match them to the client's industry in the WhatsApp message!
+                        </p>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="portfolioUrlInput" class="form-input" placeholder="Enter portfolio URL here..." style="flex: 1;">
+                            <button id="savePortfolioUrlBtn" class="btn btn-primary">Save & Scan</button>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <span id="portfolioStatus" class="api-key-status inactive">✗ Not Set</span>
+                        </div>
+                    </div>
                     
                     <div class="settings-group">
                         <div class="settings-group-title">💡 How to get an API Key</div>

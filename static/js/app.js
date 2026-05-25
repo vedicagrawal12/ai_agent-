@@ -195,6 +195,9 @@ const UI = {
             settingsModal: document.getElementById('settingsModal'),
             apiKeyInput: document.getElementById('apiKeyInput'),
             apiKeyStatus: document.getElementById('apiKeyStatus'),
+            portfolioUrlInput: document.getElementById('portfolioUrlInput'),
+            savePortfolioUrlBtn: document.getElementById('savePortfolioUrlBtn'),
+            portfolioStatus: document.getElementById('portfolioStatus'),
             
             whatsappModal: document.getElementById('whatsappModal'),
             templateOptions: document.getElementById('templateOptions'),
@@ -465,6 +468,7 @@ const App = {
         UI.init();
         this.bindEvents();
         await this.checkConfig();
+        this.checkPortfolio();
         await this.loadTemplates();
     },
 
@@ -534,6 +538,11 @@ const App = {
         // Save API key
         document.getElementById('saveApiKeyBtn').addEventListener('click', () => {
             this.saveApiKey();
+        });
+
+        // Save Portfolio URL
+        UI.el.savePortfolioUrlBtn?.addEventListener('click', () => {
+            this.savePortfolioUrl();
         });
 
         // Clear Database
@@ -655,6 +664,61 @@ const App = {
             UI.closeModal('settingsModal');
             await this.checkConfig();
             UI.showToast('API key validated & saved locally!', 'success');
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    checkPortfolio() {
+        const portfolioUrl = localStorage.getItem('portfolio_url');
+        const statusEl = UI.el.portfolioStatus;
+        if (portfolioUrl) {
+            if (statusEl) {
+                statusEl.className = 'api-key-status active';
+                statusEl.textContent = '✓ Connected';
+            }
+            if (UI.el.portfolioUrlInput) {
+                UI.el.portfolioUrlInput.value = portfolioUrl;
+            }
+        } else {
+            if (statusEl) {
+                statusEl.className = 'api-key-status inactive';
+                statusEl.textContent = '✗ Not Set';
+            }
+        }
+    },
+
+    async savePortfolioUrl() {
+        const portfolioUrl = UI.el.portfolioUrlInput.value.trim();
+        
+        // If the user submits an empty URL, it clears their local portfolio URL and projects
+        if (!portfolioUrl) {
+            localStorage.removeItem('portfolio_url');
+            localStorage.removeItem('portfolio_projects');
+            this.checkPortfolio();
+            UI.showToast('Portfolio link cleared successfully!', 'info');
+            return;
+        }
+
+        try {
+            UI.showLoading('Scanning & parsing portfolio...');
+            const data = await API.request('/api/portfolio/scan', {
+                method: 'POST',
+                body: JSON.stringify({ portfolio_url: portfolioUrl }),
+            });
+            
+            if (data.success) {
+                // Save URL and parsed projects locally in the browser
+                localStorage.setItem('portfolio_url', data.portfolio_url);
+                localStorage.setItem('portfolio_projects', JSON.stringify(data.projects || []));
+                
+                this.checkPortfolio();
+                UI.showToast(`Portfolio scanned successfully! Found ${data.projects.length} project samples.`, 'success');
+            } else {
+                UI.showToast('Failed to scan portfolio.', 'error');
+            }
         } catch (error) {
             UI.showToast(error.message, 'error');
         } finally {
@@ -975,10 +1039,6 @@ const App = {
     updateMessagePreview() {
         const lead = AppState.currentWhatsAppLead;
         if (!lead) return;
-        
-        const template = AppState.selectedTemplate;
-        let message = '';
-        
         if (template === 'custom') {
             message = document.getElementById('customMessageInput')?.value || '';
         } else {
@@ -989,6 +1049,7 @@ const App = {
         }
         
         // Replace template variables
+        const projectSampleText = this.getBestPortfolioProjectSample(lead);
         message = message
             .replace(/\{business_name\}/g, lead.name || 'there')
             .replace(/\{city\}/g, lead.city || 'your city')
@@ -996,7 +1057,8 @@ const App = {
             .replace(/\{rating\}/g, lead.rating || 'great')
             .replace(/\{reviews\}/g, lead.reviews || 'many')
             .replace(/\{address\}/g, lead.address || '')
-            .replace(/\{phone\}/g, lead.phone || '');
+            .replace(/\{phone\}/g, lead.phone || '')
+            .replace(/\{project_sample\}/g, projectSampleText);
         
         const preview = document.getElementById('messagePreview');
         if (preview) {
@@ -1004,6 +1066,61 @@ const App = {
         }
     },
 
+    getBestPortfolioProjectSample(lead) {
+        const portfolioUrl = localStorage.getItem('portfolio_url');
+        const projectsStr = localStorage.getItem('portfolio_projects');
+        
+        if (!portfolioUrl) {
+            return "hamare work samples hamare portfolio par dekh sakte hain: https://raunaksharmaq64.github.io/portfolio/";
+        }
+        
+        let projects = [];
+        try {
+            if (projectsStr) {
+                projects = JSON.parse(projectsStr);
+            }
+        } catch (e) {
+            console.error('Error parsing portfolio projects', e);
+        }
+        
+        if (!projects || projects.length === 0) {
+            return `hamare work samples hamare portfolio par dekh sakte hain: ${portfolioUrl}`;
+        }
+        
+        const category = (lead.category || '').toLowerCase();
+        const name = (lead.name || '').toLowerCase();
+        
+        // 1. Gym / Fitness matching
+        if (category.includes('gym') || category.includes('fitness') || category.includes('workout') || category.includes('health') || 
+            name.includes('gym') || name.includes('fitness') || name.includes('workout')) {
+            const match = projects.find(p => p.title.toLowerCase().includes('gym') || p.desc.toLowerCase().includes('gym'));
+            if (match && match.demo_url) {
+                return `maine haal hi mein ek GYM website banayi hai, aap is link par demo dekh sakte hain: ${match.demo_url}`;
+            }
+        }
+        
+        // 2. Hotel / Restaurant / Cafe / Food matching
+        if (category.includes('hotel') || category.includes('restaurant') || category.includes('cafe') || category.includes('food') || category.includes('dine') || category.includes('bakery') || category.includes('sweet') ||
+            name.includes('hotel') || name.includes('restaurant') || name.includes('cafe') || name.includes('food') || name.includes('dine') || name.includes('bakery')) {
+            const match = projects.find(p => p.title.toLowerCase().includes('hotel') || p.title.toLowerCase().includes('restaurant') || p.title.toLowerCase().includes('prandium') || p.desc.toLowerCase().includes('hotel') || p.desc.toLowerCase().includes('restaurant'));
+            if (match && match.demo_url) {
+                return `maine haal hi mein ek Hotel/Restaurant website banayi hai, aap is link par demo dekh sakte hain: ${match.demo_url}`;
+            }
+        }
+        
+        // 3. Hostel / Student PG matching
+        if (category.includes('hostel') || category.includes('pg') || category.includes('stay') || category.includes('accommodation') ||
+            name.includes('hostel') || name.includes('pg') || name.includes('stay') || name.includes('accommodation')) {
+            const match = projects.find(p => p.title.toLowerCase().includes('hostel') || p.title.toLowerCase().includes('buddy'));
+            if (match && match.demo_url) {
+                return `maine haal hi mein ek Hostel discovery platform banaya hai, aap is link par demo dekh sakte hain: ${match.demo_url}`;
+            }
+        }
+        
+        // 4. Default Fallback to main portfolio
+        return `hamare work samples hamare portfolio par dekh sakte hain: ${portfolioUrl}`;
+    },
+ 
     async sendWhatsApp() {
         const lead = AppState.currentWhatsAppLead;
         if (!lead) return;
@@ -1015,13 +1132,14 @@ const App = {
         btn.disabled = true;
         
         try {
-            const customMessage = document.getElementById('customMessageInput')?.value || '';
+            // Fetch the fully-rendered preview text so we capture the exact matching portfolio URL
+            const previewMessage = document.getElementById('messagePreview')?.textContent || '';
             
             const data = await API.generateWhatsAppLink(
                 lead.whatsapp_number,
-                AppState.selectedTemplate,
+                'custom', // Force the backend to use the exact message we resolved
                 lead,
-                customMessage
+                previewMessage
             );
             
             if (data.whatsapp_link) {

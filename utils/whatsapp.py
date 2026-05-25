@@ -26,6 +26,7 @@ class WhatsAppMessenger:
                 "I noticed your business in {city} and I'm impressed by your {rating}⭐ rating "
                 "with {reviews} reviews on Google Maps.\n\n"
                 "I specialize in creating professional websites for local businesses like yours. "
+                "{project_sample}\n\n"
                 "A website can help you:\n"
                 "✅ Get found online by more customers\n"
                 "✅ Showcase your services & prices\n"
@@ -42,6 +43,7 @@ class WhatsAppMessenger:
                 "Hi {business_name}! 🙏\n\n"
                 "I came across your {category} business in {city} and wanted to reach out.\n\n"
                 "In today's digital world, having a strong online presence is essential. "
+                "{project_sample}\n\n"
                 "I help local businesses like yours get:\n\n"
                 "🌐 A professional website\n"
                 "📱 Social media management\n"
@@ -55,7 +57,8 @@ class WhatsAppMessenger:
             "name": "Simple Introduction",
             "message": (
                 "Hello {business_name}! 👋\n\n"
-                "I help local businesses in {city} build their online presence.\n\n"
+                "I help local businesses in {city} build their online presence. "
+                "{project_sample}\n\n"
                 "Would you be interested in a free website consultation?\n\n"
                 "Thank you! 🙏"
             )
