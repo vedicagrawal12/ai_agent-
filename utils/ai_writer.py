@@ -155,7 +155,8 @@ CRITICAL COPYWRITING DIRECTIVES FOR BROKEN WEBSITES (FOLLOW THOROUGHLY):
 1. CASUAL GREETING: NEVER start with robotic or formal things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
 2. IMPRESSION OVER FLATTERY & BROKEN WEBSITE HOOK: Say something exciting and real about their reviews first, then immediately flag the broken website listed.
    For example:
-   "Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekhe—sach mein kamaal ka response hai! Par maine ek critical issue notice kiya... Google Maps par aapki listed website ({website_url}) open nahi ho rahi hai (down/broken error dikha rahi hai). ⚠️"
+   "Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekhe—sach mein kamaal ka response hai! Par maine ek critical issue notice kiya... Google Maps par aapki listed website open nahi ho rahi hai (down/broken error dikha rahi hai). ⚠️"
+   (Note: Do NOT write or print the actual raw broken website URL '{website_url}' in the output text itself to avoid triggering link filters).
 3. THE GAP (CONVERSATIONAL PAIN POINT): Explain that when high-paying clients click the website and see an error/blank page, it immediately kills trust. They think the business has shut down or is unprofessional, causing them to lose premium clients to competitors. We can easily fix this and get it up.
 4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
    E.g., "{project_sample}"
