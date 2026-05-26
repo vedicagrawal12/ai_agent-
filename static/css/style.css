@@ -1642,3 +1642,14 @@ body::before {
     background: rgba(255, 255, 255, 0.08);
     transform: scale(1.1);
 }
+
+.row-btn.mockup {
+    background: var(--gradient-secondary) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+    box-shadow: var(--shadow-glow-violet) !important;
+}
+
+.row-btn.mockup:hover {
+    transform: scale(1.08);
+}

@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ lead.name }} — Premium Digital Storefront Mockup</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ============================================================
+           Base Layout and CSS variables per theme
+           ============================================================ */
+        :root {
+            --radius-sm: 8px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --font-outfit: 'Outfit', sans-serif;
+            --font-serif: 'Playfair Display', serif;
+            --transition: all 0.3s ease;
+        }
+
+        /* 🏋️‍♂️ GYM THEME VARIABLES */
+        .theme-gym {
+            --bg: #0a0a0e;
+            --bg-card: rgba(22, 22, 35, 0.75);
+            --border-color: rgba(0, 212, 255, 0.15);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #00f0ff;
+            --accent-gradient: linear-gradient(135deg, #00f0ff, #7c3aed);
+            --shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+            --accent-rgb: 0, 240, 255;
+        }
+
+        /* 🍔 RESTAURANT THEME VARIABLES */
+        .theme-restaurant {
+            --bg: #12100e;
+            --bg-card: rgba(30, 25, 20, 0.8);
+            --border-color: rgba(245, 158, 11, 0.15);
+            --text-primary: #fffbeb;
+            --text-secondary: #d97706;
+            --accent: #f59e0b;
+            --accent-gradient: linear-gradient(135deg, #f59e0b, #ea580c);
+            --shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+            --accent-rgb: 245, 158, 11;
+        }
+
+        /* 💅 SALON THEME VARIABLES */
+        .theme-salon {
+            --bg: #0f0a0c;
+            --bg-card: rgba(28, 20, 24, 0.85);
+            --border-color: rgba(236, 72, 153, 0.15);
+            --text-primary: #fff5f7;
+            --text-secondary: #f472b6;
+            --accent: #ec4899;
+            --accent-gradient: linear-gradient(135deg, #ec4899, #f43f5e);
+            --shadow: 0 0 20px rgba(236, 72, 153, 0.2);
+            --accent-rgb: 236, 72, 153;
+        }
+
+        /* 💼 DEFAULT THEME VARIABLES */
+        .theme-default {
+            --bg: #0b0f19;
+            --bg-card: rgba(17, 24, 39, 0.8);
+            --border-color: rgba(59, 130, 246, 0.15);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent: #3b82f6;
+            --accent-gradient: linear-gradient(135deg, #3b82f6, #06b6d4);
+            --shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+            --accent-rgb: 59, 130, 246;
+        }
+
+        /* Base Resets */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-outfit);
+            background: var(--bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+            padding-top: 75px; /* Leave room for sticky banner */
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* ============================================================
+           Interactive Floating Pitch Banner (CRITICAL conversion element)
+           ============================================================ */
+        .pitch-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            animation: slideDown var(--transition);
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+
+        .pitch-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pitch-badge {
+            background: var(--accent-gradient);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: var(--shadow);
+        }
+
+        .pitch-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .pitch-text strong {
+            color: #fff;
+        }
+
+        .pitch-cta-btn {
+            background: #25D366; /* WhatsApp Green */
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            transition: var(--transition);
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+        }
+
+        .pitch-cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+            filter: brightness(1.1);
+        }
+
+        /* Glass Container styling */
+        .glass-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ============================================================
+           Header & Hero Section
+           ============================================================ */
+        .site-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .logo span {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            opacity: 0.8;
+            transition: var(--transition);
+        }
+
+        .nav-links a:hover {
+            opacity: 1;
+            color: var(--accent);
+        }
+
+        .btn-header-cta {
+            background: var(--accent-gradient);
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .btn-header-cta:hover {
+            transform: scale(1.03);
+            filter: brightness(1.1);
+        }
+
+        /* Hero Section */
+        .hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 80px 0;
+            gap: 48px;
+        }
+
+        .hero-content {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .hero-tag {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hero-title {
+            font-family: var(--font-serif);
+            font-size: 3.5rem;
+            line-height: 1.15;
+            color: var(--text-primary);
+        }
+
+        .hero-desc {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 500px;
+        }
+
+        .hero-ctas {
+            display: flex;
+            gap: 16px;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-block;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent);
+        }
+
+        .hero-visual {
+            flex: 0.9;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Glassmorphic visual card */
+        .visual-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Circle backgrounds under glass */
+        .glow-circle {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            filter: blur(80px);
+            opacity: 0.25;
+            z-index: 1;
+        }
+
+        .glow-1 { top: -20px; right: -20px; }
+        .glow-2 { bottom: -20px; left: -20px; }
+
+        /* ============================================================
+           Features & Services Section
+           ============================================================ */
+        .services {
+            padding: 80px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: 2.5rem;
+            color: var(--text-primary);
+        }
+
+        .section-subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .service-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .service-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .service-icon {
+            font-size: 2rem;
+            background: rgba(var(--accent-rgb), 0.1);
+            color: var(--accent);
+            width: 50px;
+            height: 50px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .service-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .service-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================================
+           Google Reviews Proof Section
+           ============================================================ */
+        .proof-section {
+            padding: 60px 0;
+            background: rgba(255, 255, 255, 0.01);
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .proof-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 32px;
+        }
+
+        .proof-title {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            max-width: 400px;
+        }
+
+        .proof-stats {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .proof-stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .proof-stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+
+        .proof-stat-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+        }
+
+        .stars {
+            color: #f59e0b; /* Yellow stars */
+            font-size: 1.3rem;
+            letter-spacing: 2px;
+        }
+
+        /* ============================================================
+           Booking Scheduler Section
+           ============================================================ */
+        .booking-section {
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .booking-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            box-shadow: 0 10px 45px rgba(0,0,0,0.3);
+        }
+
+        .booking-input-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .booking-input-group {
+            flex: 1;
+            min-width: 200px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .booking-input-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .booking-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: var(--font-outfit);
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .booking-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(255,255,255,0.08);
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.15);
+        }
+
+        .booking-btn {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .booking-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        /* ============================================================
+           Footer
+           ============================================================ */
+        .site-footer {
+            padding: 40px 0;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .site-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 900px) {
+            .hero {
+                flex-direction: column;
+                text-align: center;
+                padding: 40px 0;
+            }
+            .hero-content {
+                align-items: center;
+            }
+            .hero-desc {
+                margin: 0 auto;
+            }
+            .hero-ctas {
+                justify-content: center;
+            }
+            .site-footer {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body class="theme-{{ theme }}">
+
+    <!-- ============================================================
+         Interactive Pitch Overlay (Brought to you by LeadHunter AI)
+         ============================================================ -->
+    <div class="pitch-banner">
+        <div class="pitch-info">
+            <span class="pitch-badge">Live Mockup Draft</span>
+            <div class="pitch-text">
+                This is a premium online preview designed for <strong>{{ lead.name }}</strong> by <strong>{{ sender_name or 'LeadHunter Developer Partner' }}</strong>.
+            </div>
+        </div>
+        
+        <!-- Redirect CTA Link back to developer's WhatsApp -->
+        <button id="pitchCtaBtn" class="pitch-cta-btn">
+            <svg style="width:18px;height:18px;fill:currentColor;" viewBox="0 0 24 24">
+                <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 0 0 1.333 4.982L2 22l5.202-1.362a9.92 9.92 0 0 0 4.808 1.226h.003c5.505 0 9.99-4.477 9.99-9.985C22.003 6.478 17.518 2 12.012 2zm6.19 13.916c-.27.76-1.34 1.383-1.85 1.436-.45.047-.99.076-2.61-.582-2.07-.84-3.39-2.943-3.49-3.08-.1-.136-.8-1.066-.8-2.031 0-.966.5-1.442.68-1.636.18-.194.39-.243.52-.243.13 0 .26 0 .37.005.12.005.28-.044.44.335.16.388.55 1.34.6 1.437.05.097.08.21.01.34-.07.13-.13.22-.26.37-.13.15-.27.33-.39.45-.13.12-.26.26-.11.52.15.25.66 1.096 1.42 1.77.97.868 1.79 1.137 2.05 1.267.26.13.41.11.56-.06c.15-.17.65-.76.82-.97.18-.21.36-.18.6-.09.24.09 1.52.72 1.79.85.27.13.45.2.52.32.07.13.07.74-.2 1.503z"/>
+            </svg>
+            Let's Launch This Site!
+        </button>
+    </div>
+
+    <!-- ============================================================
+         Header Component
+         ============================================================ -->
+    <header class="glass-container">
+        <div class="site-header">
+            <a href="#" class="logo">
+                {% if theme == 'gym' %}
+                    ⚡ {{ lead.name.split(' ')[0] }}<span>Fit</span>
+                {% elif theme == 'restaurant' %}
+                    🍽️ {{ lead.name.split(' ')[0] }}<span>Gourmet</span>
+                {% elif theme == 'salon' %}
+                    🌸 {{ lead.name.split(' ')[0] }}<span>Style</span>
+                {% else %}
+                    🏢 {{ lead.name.split(' ')[0] }}<span>Digital</span>
+                {% endif %}
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="#services">Services</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#reviews">Reviews</a></li>
+                <li><a href="#booking">Book Appointment</a></li>
+            </ul>
+            
+            <a href="#booking" class="btn-header-cta">
+                {% if theme == 'gym' %}Join Now{% elif theme == 'restaurant' %}Reserve Table{% else %}Book Slot{% endif %}
+            </a>
+        </div>
+    </header>
+
+    <!-- ============================================================
+         Hero Component
+         ============================================================ -->
+    <main class="glass-container">
+        <section class="hero">
+            <div class="hero-content">
+                <div class="hero-tag">
+                    <span>✨</span> Premium Local Business Experience
+                </div>
+                
+                <h1 class="hero-title">
+                    {% if theme == 'gym' %}
+                        Unlock Your Potential. Build Your *Ultimate* Body.
+                    {% elif theme == 'restaurant' %}
+                        Crafting Exceptional Flavours & Culinary Memories.
+                    {% elif theme == 'salon' %}
+                        Redefine Beauty. Discover Your Signature Style.
+                    {% else %}
+                        Stunning Premium Experiences Crafted Perfectly for You.
+                    {% endif %}
+                </h1>
+                
+                <p class="hero-desc">
+                    Welcome to <strong>{{ lead.name }}</strong> based in **{{ lead.city }}**. We provide best-in-class professional {{ lead.category.lower() }} services, committed to quality, luxury, and unmatched satisfaction.
+                </p>
+                
+                <div class="hero-ctas">
+                    <a href="#booking" class="btn-primary">
+                        {% if theme == 'gym' %}Get Free Pass{% elif theme == 'restaurant' %}Book Table Now{% else %}Schedule Appointment{% endif %}
+                    </a>
+                    <a href="#services" class="btn-secondary">Explore Services</a>
+                </div>
+            </div>
+            
+            <div class="hero-visual">
+                <!-- Glowing backing circles -->
+                <div class="glow-circle glow-1"></div>
+                <div class="glow-circle glow-2"></div>
+                
+                <!-- Front visual card -->
+                <div class="visual-card">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <h3 style="font-family: var(--font-serif); font-size: 1.4rem;">🔥 Weekly Special</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary);">Unlock 30% discount on first booking of signature packages this week!</p>
+                    </div>
+                    
+                    <div style="border-top: 1px solid var(--border-color); padding-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                            <span>✓ Premium Standards</span>
+                            <span style="color: var(--accent); font-weight: bold;">Verified</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                            <span>✓ Locality Rating</span>
+                            <span style="color: var(--accent); font-weight: bold;">Top Fav</span>
+                        </div>
+                    </div>
+                    
+                    <a href="#booking" class="btn-primary" style="text-align: center; font-size: 0.85rem; padding: 12px;">Grab Special Offer</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             Social Proof Component (Extracts actual Google Maps stats)
+             ============================================================ -->
+        <section class="proof-section" id="reviews">
+            <div class="proof-container">
+                <div class="proof-title">
+                    High Ratings Trusted by <strong>{{ lead.city }}</strong> Locals
+                </div>
+                
+                <div class="proof-stats">
+                    <div class="proof-stat-item">
+                        <div class="proof-stat-number">{{ lead.rating or '4.8' }} ★</div>
+                        <span class="stars">{{ '★' * (lead.rating|int if lead.rating else 5) }}{{ '☆' * (5 - (lead.rating|int if lead.rating else 5)) }}</span>
+                        <div class="proof-stat-label">Google Rating</div>
+                    </div>
+                    
+                    <div class="proof-stat-item">
+                        <div class="proof-stat-number">{{ lead.reviews or '80' }}+</div>
+                        <div class="proof-stat-label">Trusted Reviews</div>
+                    </div>
+                    
+                    <div class="proof-stat-item">
+                        <div class="proof-stat-number">100%</div>
+                        <div class="proof-stat-label">Premium Service</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             Services Component (Customized per Category)
+             ============================================================ -->
+        <section class="services" id="services">
+            <div class="section-header">
+                <h2 class="section-title">Our Signature Services</h2>
+                <p class="section-subtitle">We design outstanding, customized packages suited for your ultimate lifestyle and health goals.</p>
+            </div>
+            
+            <div class="services-grid">
+                {% if theme == 'gym' %}
+                    <div class="service-card">
+                        <div class="service-icon">🏋️‍♂️</div>
+                        <h4 class="service-title">Personal Strength Training</h4>
+                        <p class="service-desc">Work with elite certified trainers to design specific resistance routines to maximize muscle growth.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon">🥊</div>
+                        <h4 class="service-title">High-Energy Boxing Classes</h4>
+                        <p class="service-desc">Cardio intensive classes to shred fat, boost metabolic rates, and build perfect body definitions.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon">🥗</div>
+                        <h4 class="service-title">Custom Diet Consultations</h4>
+                        <p class="service-desc">Targeted macro profiles, calorie plans, and supplements guides mapped out by clinical dietitians.</p>
+                    </div>
+                {% elif theme == 'restaurant' %}
+                    <div class="service-card">
+                        <div class="service-icon">🍷</div>
+                        <h4 class="service-title">Premium Dine-In Experience</h4>
+                        <p class="service-desc">Enjoy gourmet food in an intimate elegant ambient environment perfect for events and couples.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon">🍕</div>
+                        <h4 class="service-title">Signature Woodfired Pizza</h4>
+                        <p class="service-desc">Freshly prepared, thin crust pizzas with premium locally sourced mozzarella cheese and signature sauce.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon">🎂</div>
+                        <h4 class="service-title">Catering & Parties Packages</h4>
+                        <p class="service-desc">Custom gourmet buffet platters, drinks, and mocktails curated specially for private celebrations.</p>
+                    </div>
+                {% elif theme == 'salon' %}
+                    <div class="service-card">
+                        <div class="service-icon">💇‍♀️</div>
+                        <h4 class="service-title">Luxury Hair Cut & Color</h4>
+                        <p class="service-desc">Signature cuts, hair coloring, balayage, and advanced Keratin styling by expert designers.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon">🧖‍♀️</div>
+                        <h4 class="service-title">Premium Organic Facials</h4>
+                        <p class="service-desc">Deep skin treatments utilizing organic oils, minerals, and glowing therapies to refresh your face.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon">💅</div>
+                        <h4 class="service-title">Nail Couture & Art Design</h4>
+                        <p class="service-desc">High-end gel extensions, premium spa manicure-pedicure therapies, and customized nail styling.</p>
+                    </div>
+                {% else %}
+                    <div class="service-card">
+                        <div class="service-icon">⭐</div>
+                        <h4 class="service-title">Premium Professional Service</h4>
+                        <p class="service-desc">Top-notch services delivered at the highest local standards with verified quality assurance.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon">🎯</div>
+                        <h4 class="service-title">Customized Client Solutions</h4>
+                        <p class="service-desc">Custom tailored proposals mapped out carefully to match exactly what you want.</p>
+                    </div>
+                    <div class="service-card">
+                        <div class="service-icon">📈</div>
+                        <h4 class="service-title">Quality Growth Focus</h4>
+                        <p class="service-desc">Dedicated to driving extreme satisfaction and helping our local clients succeed.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- ============================================================
+             Interactive Scheduler Booking Form
+             ============================================================ -->
+        <section class="booking-section" id="booking">
+            <div class="section-header">
+                <h2 class="section-title">Ready to Experience the Best?</h2>
+                <p class="section-subtitle">Book your exclusive priority slot in less than 60 seconds. Our experts will reserve the slot for you.</p>
+            </div>
+            
+            <div class="booking-wrapper">
+                <h3 style="font-family: var(--font-serif); font-size: 1.5rem; text-align: left; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">📅 Priority Slot Booking</h3>
+                
+                <div class="booking-input-row">
+                    <div class="booking-input-group">
+                        <label for="bookingName">Your Name</label>
+                        <input type="text" id="bookingName" class="booking-input" placeholder="e.g. Sahil Sharma">
+                    </div>
+                    <div class="booking-input-group">
+                        <label for="bookingPhone">Phone Number</label>
+                        <input type="tel" id="bookingPhone" class="booking-input" placeholder="e.g. +91 98765 43210">
+                    </div>
+                </div>
+                
+                <div class="booking-input-row">
+                    <div class="booking-input-group">
+                        <label for="bookingDate">Preferred Date</label>
+                        <input type="date" id="bookingDate" class="booking-input">
+                    </div>
+                    <div class="booking-input-group">
+                        <label for="bookingTime">Preferred Time</label>
+                        <select id="bookingTime" class="booking-input">
+                            <option value="10:00 AM">10:00 AM</option>
+                            <option value="12:00 PM">12:00 PM</option>
+                            <option value="02:00 PM">02:00 PM</option>
+                            <option value="04:00 PM">04:00 PM</option>
+                            <option value="06:00 PM">06:00 PM</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button id="bookBtn" class="booking-btn">Reserve My Slot Now</button>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             Footer Component
+             ============================================================ -->
+        <footer class="site-footer">
+            <div>
+                © 2026 <strong>{{ lead.name }}</strong>. All rights reserved.
+            </div>
+            <div>
+                Designed with Love by <a href="#" id="devLink">{{ sender_brand or 'LeadHunter AI Developer Partner' }}</a>
+            </div>
+        </footer>
+    </main>
+
+    <!-- Interactive script to trigger mock booking confirmation -->
+    <script>
+        document.getElementById('bookBtn').addEventListener('click', () => {
+            const name = document.getElementById('bookingName').value;
+            const phone = document.getElementById('bookingPhone').value;
+            const date = document.getElementById('bookingDate').value;
+            const time = document.getElementById('bookingTime').value;
+            
+            if(!name || !phone || !date) {
+                alert('Please enter Name, Phone, and Date to reserve slot!');
+                return;
+            }
+            
+            alert(`🎉 Congratulations ${name}! Your slot is successfully reserved at {{ lead.name }} for ${date} at ${time}.\n\n(This is a dynamic mockup validation sample)`);
+        });
+
+        // Sticky banner redirection WhatsApp flow
+        const leadPhone = "{{ lead.whatsapp_number or lead.phone }}";
+        const leadName = encodeURIComponent("{{ lead.name }}");
+        const devBrand = encodeURIComponent("{{ sender_brand or 'LeadHunter Partner' }}");
+        
+        // Developer details cookie or local storage parsing
+        const senderName = localStorage.getItem('sender_name') || 'Sahil';
+        const senderBrand = localStorage.getItem('sender_brand') || 'LeadHunter AI';
+        const senderRole = localStorage.getItem('sender_role') || 'Freelancer';
+        
+        // WhatsApp target link back to Developer!
+        const devPhone = localStorage.getItem('developer_phone') || ''; // Checks if user configured their own phone to get bookings
+        
+        document.getElementById('devLink').textContent = senderBrand;
+        
+        document.getElementById('pitchCtaBtn').addEventListener('click', () => {
+            const pitchMsg = `Hey! Maine ${decodeURIComponent(leadName)} ka live webpage mockup dekha aur mujhe bahut pasand aaya. Main ise customize karke live domain par launch karwana chahta hoon. Let's discuss!`;
+            
+            // If they configured a dev phone, redirect back to developer's whatsapp
+            let targetPhone = devPhone.trim();
+            if(!targetPhone) {
+                // fallback to active user details
+                targetPhone = "919876543210"; // standard default developer target placeholder
+            }
+            // Format phone to clean string
+            targetPhone = targetPhone.replace(/[^0-9]/g, '');
+            if(targetPhone && !targetPhone.startsWith('91') && targetPhone.length === 10) {
+                targetPhone = '91' + targetPhone;
+            }
+            
+            window.open(`https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(pitchMsg)}`, '_blank');
+        });
+    </script>
+</body>
+</html>

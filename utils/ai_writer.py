@@ -11,7 +11,8 @@ class AIOutreachWriter:
         length: str = "detailed",
         sender_info: dict = None,
         refine_feedback: str = None,
-        previous_pitch: str = None
+        previous_pitch: str = None,
+        mockup_link: str = ""
     ) -> str:
         """
         Generates a highly personalized, human-like sales pitch using the Gemini API.
@@ -135,6 +136,9 @@ Write a highly personalized, extremely conversational, and premium sales pitch f
 - Google Maps Reviews: {lead_data.get('reviews', '0')}
 - Website: {website_url} (IT IS BROKEN/DOWN! Standard requests return errors or timeouts. A major credibility leak for a business.)
 
+Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
+{mockup_link}
+
 Best matching project proof to naturally mention:
 {project_sample}
 
@@ -155,8 +159,9 @@ CRITICAL COPYWRITING DIRECTIVES FOR BROKEN WEBSITES (FOLLOW THOROUGHLY):
 3. THE GAP (CONVERSATIONAL PAIN POINT): Explain that when high-paying clients click the website and see an error/blank page, it immediately kills trust. They think the business has shut down or is unprofessional, causing them to lose premium clients to competitors. We can easily fix this and get it up.
 4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
    E.g., "{project_sample}"
-5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible. Instead of asking for a boring call, offer a free homepage mockup draft styled perfectly for them to replace their broken site!
-   E.g., "Maine aapki website ko bypass karke ek naya *premium, fast-loading homepage mockup / raw design layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Let me know if that sounds good."
+5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible. Instead of asking for a boring call, offer a free homepage mockup draft styled perfectly for them!
+   - IF the mockup link is provided above (i.e. "{mockup_link}" is not empty), you MUST naturally weave this link into your CTA (e.g., "Maine aapki website ko bypass karke ek premium live *homepage mockup layout* sketch kiya hai, aap is link par check kar sakte hain: {mockup_link} ...").
+   - IF the mockup link is not provided, ask to share (e.g. "Maine aapki website ko bypass karke ek naya *homepage mockup layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Let me know if that sounds good.").
 6. FORMATTING:
    - Language must be ultra-premium, modern, natural Hinglish (how young entrepreneurs talk on WhatsApp).
    - Use bold text for key numbers and phrases using asterisks (e.g., *4.8 rating*, *broken website*, *free mockup design*).
@@ -175,6 +180,9 @@ Write a highly personalized, extremely conversational, and premium sales pitch f
 - Google Maps Rating: {lead_data.get('rating', '0')}
 - Google Maps Reviews: {lead_data.get('reviews', '0')}
 - Website: They DO NOT have a website yet (Huge gap!).
+
+Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
+{mockup_link}
 
 Best matching project proof to naturally mention:
 {project_sample}
@@ -196,7 +204,8 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
 4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
    E.g., "{project_sample}"
 5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible and low-friction. Instead of asking for a boring call, offer a free draft/mockup!
-   E.g., "Maine aapke business details ke sath ek *chota sa premium homepage mockup / raw design layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Let me know if that sounds good."
+   - IF the mockup link is provided above (i.e. "{mockup_link}" is not empty), you MUST naturally weave this link into your CTA (e.g., "Maine aapke business details ke sath ek premium live *homepage mockup layout* sketch kiya hai, aap is link par check kar sakte hain: {mockup_link} ...").
+   - IF the mockup link is not provided, ask to share (e.g. "Maine aapke business details ke sath ek *chota sa premium homepage mockup / raw design layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Let me know if that sounds good.").
 6. FORMATTING:
    - Language must be ultra-premium, modern, natural Hinglish (how young entrepreneurs talk on WhatsApp).
    - Use bold text for key numbers and phrases using asterisks (e.g., *4.8 rating*, *70%+ premium customers*, *free mockup design*).

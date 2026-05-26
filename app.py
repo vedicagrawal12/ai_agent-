@@ -511,6 +511,16 @@ def generate_ai_pitch():
         return jsonify({"error": "Lead data is required"}), 400
         
     try:
+        # Dynamic Mockup Link Construction
+        sender_name = sender.get("name", "")
+        sender_brand = sender.get("brand", "")
+        base_host = request.host_url.rstrip('/')
+        lead_id = lead_data.get("id")
+        
+        mockup_link = ""
+        if lead_id:
+            mockup_link = f"{base_host}/preview/{lead_id}?sender_name={sender_name}&sender_brand={sender_brand}"
+
         pitch = AIOutreachWriter.generate_pitch(
             lead_data=lead_data,
             project_sample=project_sample,
@@ -519,7 +529,8 @@ def generate_ai_pitch():
             length=length,
             sender_info=sender,
             refine_feedback=refine_feedback,
-            previous_pitch=previous_pitch
+            previous_pitch=previous_pitch,
+            mockup_link=mockup_link
         )
         
         # Save generated pitch persistently in database
@@ -609,6 +620,32 @@ def clear_db():
         return jsonify(result)
     else:
         return jsonify({"error": result.get("error")}), 500
+
+
+@app.route("/preview/<int:lead_id>")
+def live_preview_mockup(lead_id):
+    """Serve a stunning personalized website mockup for the business lead."""
+    lead = db.get_lead_by_id(lead_id)
+    if not lead:
+        return "Lead not found", 404
+        
+    # Fetch sender info from query parameters
+    sender_name = request.args.get("sender_name", "")
+    sender_brand = request.args.get("sender_brand", "")
+    
+    # Determine design theme based on category
+    category = (lead.get("category") or "").lower()
+    name = (lead.get("name") or "").lower()
+    
+    theme = "default"
+    if any(x in category or x in name for x in ["gym", "fitness", "workout", "health", "sports", "trainer", "yoga"]):
+        theme = "gym"
+    elif any(x in category or x in name for x in ["hotel", "restaurant", "cafe", "food", "dine", "bakery", "sweet", "pizza", "burger", "coffee"]):
+        theme = "restaurant"
+    elif any(x in category or x in name for x in ["salon", "spa", "beauty", "hair", "parlor", "boutique", "grooming", "clinic", "dental", "doctor", "dentist"]):
+        theme = "salon"
+        
+    return render_template("preview_mockup.html", lead=lead, theme=theme, sender_name=sender_name, sender_brand=sender_brand)
 
 
 # ============================================================

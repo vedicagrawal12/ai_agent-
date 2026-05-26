@@ -415,6 +415,7 @@ const UI = {
                     <div class="row-actions">
                         <a href="${mapsLink}" target="_blank" class="row-btn" data-tooltip="View on Google Maps">📍</a>
                         ${whatsappBtn}
+                        <button class="row-btn mockup" data-tooltip="Copy Mockup Link" onclick="App.copyMockupLink(${lead.id})">📱</button>
                         <button class="row-btn" data-tooltip="Copy Phone" onclick="App.copyPhone(${index})">📋</button>
                     </div>
                 </td>
@@ -529,8 +530,9 @@ const UI = {
                 <div class="kanban-card-priority-badge ${priorityClass}">${priorityClass} Priority</div>
             </div>
             <div class="kanban-card-actions" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div style="display: flex; gap: 6px;">
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                     ${actionsHtml}
+                    <button class="kanban-card-btn mockup" title="Copy Live Mockup Link" onclick="App.copyMockupLink(${lead.id})">📱 Mockup</button>
                 </div>
                 ${whatsappBtnHtml}
             </div>
@@ -1771,6 +1773,32 @@ const App = {
             document.execCommand('copy');
             document.body.removeChild(textArea);
             UI.showToast(`Copied: ${lead.phone}`, 'success');
+        });
+    },
+
+    // ---- Copy Mockup Link ----
+    copyMockupLink(id) {
+        if (!id) {
+            UI.showToast('Lead must be saved to database to generate mockup', 'error');
+            return;
+        }
+        
+        const senderName = localStorage.getItem('sender_name') || '';
+        const senderBrand = localStorage.getItem('sender_brand') || '';
+        
+        const url = `${window.location.origin}/preview/${id}?sender_name=${encodeURIComponent(senderName)}&sender_brand=${encodeURIComponent(senderBrand)}`;
+        
+        navigator.clipboard.writeText(url).then(() => {
+            UI.showToast('🚀 Mockup Link copied to clipboard! Ready to share!', 'success');
+        }).catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = url;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            UI.showToast('🚀 Mockup Link copied to clipboard! Ready to share!', 'success');
         });
     },
 
