@@ -226,7 +226,6 @@ const UI = {
             
             // Bulk Actions Elements
             bulkScanSocialsBtn: document.getElementById('bulkScanSocialsBtn'),
-            bulkGeneratePitchesBtn: document.getElementById('bulkGeneratePitchesBtn'),
             bulkProgressBanner: document.getElementById('bulkProgressBanner'),
             bulkProgressLabel: document.getElementById('bulkProgressLabel'),
             bulkProgressPercentage: document.getElementById('bulkProgressPercentage'),
@@ -616,11 +615,6 @@ const App = {
         // Bulk Scan Socials
         UI.el.bulkScanSocialsBtn?.addEventListener('click', () => {
             this.handleBulkScanSocials();
-        });
-
-        // Bulk Generate AI Pitches
-        UI.el.bulkGeneratePitchesBtn?.addEventListener('click', () => {
-            this.handleBulkGeneratePitches();
         });
 
         // Clear Database
@@ -1601,7 +1595,6 @@ const App = {
         
         // Disable bulk buttons
         UI.el.bulkScanSocialsBtn.disabled = true;
-        UI.el.bulkGeneratePitchesBtn.disabled = true;
         
         // Show progress banner
         UI.el.bulkProgressBanner.style.display = 'block';
@@ -1613,7 +1606,6 @@ const App = {
         if (leadsToScan.length === 0) {
             UI.showToast('Sabhi leads ke socials already scanned hain!', 'info');
             UI.el.bulkScanSocialsBtn.disabled = false;
-            UI.el.bulkGeneratePitchesBtn.disabled = false;
             UI.el.bulkProgressBanner.style.display = 'none';
             return;
         }
@@ -1679,96 +1671,10 @@ const App = {
         setTimeout(() => {
             UI.el.bulkProgressBanner.style.display = 'none';
             UI.el.bulkScanSocialsBtn.disabled = false;
-            UI.el.bulkGeneratePitchesBtn.disabled = false;
         }, 3000);
     },
 
-    async handleBulkGeneratePitches() {
-        if (AppState.leads.length === 0) {
-            UI.showToast('Bulk AI generation ke liye leads hona zaroori hai!', 'error');
-            return;
-        }
 
-        const geminiKey = localStorage.getItem('gemini_api_key');
-        if (!geminiKey) {
-            UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
-            UI.openModal('settingsModal');
-            return;
-        }
-
-        // Disable bulk buttons
-        UI.el.bulkScanSocialsBtn.disabled = true;
-        UI.el.bulkGeneratePitchesBtn.disabled = true;
-
-        // Show progress banner
-        UI.el.bulkProgressBanner.style.display = 'block';
-        UI.el.bulkProgressLabel.textContent = 'Preparing bulk AI pitch writer...';
-        UI.el.bulkProgressPercentage.textContent = '0%';
-        UI.el.bulkProgressBar.style.width = '0%';
-
-        const leadsToGenerate = AppState.leads.filter(l => !l.custom_pitch);
-        if (leadsToGenerate.length === 0) {
-            UI.showToast('Sabhi leads ke customized pitches already pre-generated hain!', 'info');
-            UI.el.bulkScanSocialsBtn.disabled = false;
-            UI.el.bulkGeneratePitchesBtn.disabled = false;
-            UI.el.bulkProgressBanner.style.display = 'none';
-            return;
-        }
-
-        let completed = 0;
-        const total = leadsToGenerate.length;
-        const tone = UI.el.pitchToneSelect?.value || 'elite';
-        const length = UI.el.pitchLengthSelect?.value || 'detailed';
-
-        for (const lead of leadsToGenerate) {
-            try {
-                const idx = AppState.leads.findIndex(l => l.id === lead.id);
-                if (idx === -1) continue;
-
-                UI.el.bulkProgressLabel.textContent = `Generating pitch for "${lead.name}" using Gemini (${completed + 1}/${total})...`;
-
-                const projectSample = this.getBestPortfolioProjectSample(lead);
-
-                const data = await API.request('/api/outreach/generate-ai', {
-                    method: 'POST',
-                    headers: {
-                        'X-Gemini-API-Key': geminiKey
-                    },
-                    body: JSON.stringify({
-                        lead: lead,
-                        project_sample: projectSample,
-                        tone: tone,
-                        length: length,
-                        sender: {
-                            name: localStorage.getItem('sender_name') || '',
-                            brand: localStorage.getItem('sender_brand') || '',
-                            role: localStorage.getItem('sender_role') || ''
-                        }
-                    })
-                });
-
-                if (data.success && data.pitch) {
-                    lead.custom_pitch = data.pitch;
-                }
-            } catch (err) {
-                console.error(`Error generating pitch for lead ${lead.id}:`, err);
-            }
-
-            completed++;
-            const pct = Math.round((completed / total) * 100);
-            UI.el.bulkProgressPercentage.textContent = `${pct}%`;
-            UI.el.bulkProgressBar.style.width = `${pct}%`;
-        }
-
-        UI.showToast(`🎉 Bulk AI Pitch Generation complete! Generated pitches for ${total} leads.`, 'success');
-        UI.el.bulkProgressLabel.textContent = 'Bulk AI generation complete!';
-
-        setTimeout(() => {
-            UI.el.bulkProgressBanner.style.display = 'none';
-            UI.el.bulkScanSocialsBtn.disabled = false;
-            UI.el.bulkGeneratePitchesBtn.disabled = false;
-        }, 3000);
-    },
 
     rerunSearch(query, city) {
         UI.el.queryInput.value = query;
