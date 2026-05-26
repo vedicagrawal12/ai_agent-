@@ -26,6 +26,20 @@
             </div>
         </header>
 
+        <!-- ======== Follow-up Reminders Banner ======== -->
+        <div id="followupRemindersBanner" style="display: none; margin-bottom: 24px;">
+            <div style="background: rgba(249, 115, 22, 0.15); border: 1px solid var(--accent-orange); border-radius: var(--radius-md); padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); backdrop-filter: blur(10px); animation: pulse-border 2s infinite ease-in-out;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 1.6rem; animation: swing 2s infinite ease-in-out; transform-origin: top center;">🔔</span>
+                    <div>
+                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--accent-orange);">Pending Follow-up Reminders!</h4>
+                        <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-secondary);" id="followupRemindersText">You have 0 follow-up tasks due today.</p>
+                    </div>
+                </div>
+                <button id="viewFollowupsBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-orange); color: var(--accent-orange); background: rgba(249, 115, 22, 0.05); padding: 8px 16px; font-size: 0.8rem; cursor: pointer; border-radius: 4px; font-weight: 600; transition: all 0.3s ease;">View Follow-ups</button>
+            </div>
+        </div>
+
         <!-- ======== Search Section ======== -->
         <section class="search-section">
             <h2 class="search-title">🔍 Search Local Businesses</h2>
@@ -368,6 +382,20 @@
                     </div>
 
                     <div class="settings-group">
+                        <div class="settings-group-title">📝 AI Pitch Custom Prompt Settings</div>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+                            Define your unique value proposition, background, experience, or custom instructions. Gemini AI will dynamically weave these into every high-converting pitch generated for WhatsApp & Email!
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <textarea id="customPitchRulesInput" class="form-input" rows="4" placeholder="e.g. I am a Python/NextJS developer with 3 years of experience. Highlight premium UI/UX designs, extremely fast performance, and direct call-to-actions that convert readers instantly." style="flex: 1; resize: vertical; min-height: 100px; font-family: inherit; font-size: 0.85rem; line-height: 1.4; padding: 10px;"></textarea>
+                            <button id="saveCustomPitchRulesBtn" class="btn btn-primary" style="margin-top: 4px; align-self: flex-end;">Save Pitch Rules</button>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <span id="customPitchRulesStatus" class="api-key-status inactive">✗ Not Set</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
                         <div class="settings-group-title">📧 Direct SMTP Mail Settings (Stateless & Secure)</div>
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
                             Configure SMTP to dispatch high-converting cold emails directly from this dashboard. Stored securely on your browser only.
@@ -586,6 +614,59 @@
                         <div class="empty-state-icon">📜</div>
                         <div class="empty-state-title">Loading...</div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== Schedule Reminder Modal ======== -->
+    <div id="scheduleReminderModal" class="modal-overlay">
+        <div class="modal" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title">📅 Set Follow-up Reminder</h3>
+                <button class="modal-close">✕</button>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 24px 16px;">
+                <span style="font-size: 3.5rem; display: block; margin-bottom: 12px; animation: bounce 2s infinite;">⏱️</span>
+                <h4 style="margin: 0 0 8px 0; font-size: 1.15rem; font-weight: 700; color: var(--accent-orange);" id="reminderLeadName">Bhopal Hair Lounge</h4>
+                <p style="margin: 0 0 24px 0; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
+                    Sales follow-ups increase conversions by up to 80%! Do you want to schedule an automatic dashboard notification reminder?
+                </p>
+                
+                <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary reminder-preset-btn" data-days="1" style="flex: 1; font-size: 0.8rem; padding: 10px 0; font-weight: 600;">1 Day</button>
+                        <button class="btn btn-secondary reminder-preset-btn selected" data-days="3" style="flex: 1; font-size: 0.8rem; padding: 10px 0; font-weight: 600; border-color: var(--accent-orange); color: var(--accent-orange); background: rgba(249, 115, 22, 0.05);">3 Days (Best)</button>
+                        <button class="btn btn-secondary reminder-preset-btn" data-days="5" style="flex: 1; font-size: 0.8rem; padding: 10px 0; font-weight: 600;">5 Days</button>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px; justify-content: center; margin-top: 4px;">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;">Or pick custom date:</span>
+                        <input type="date" id="customReminderDateInput" class="form-input" style="max-width: 180px; font-size: 0.85rem; padding: 6px 10px;">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 12px; justify-content: center; width: 100%;">
+                    <button id="skipReminderBtn" class="btn btn-ghost" style="padding: 10px 24px; min-width: 100px;">Skip</button>
+                    <button id="saveReminderBtn" class="btn btn-primary" style="padding: 10px 32px; min-width: 130px; background: var(--accent-orange); border-color: var(--accent-orange); font-weight: 600;">Set Reminder</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== Follow-ups Modal ======== -->
+    <div id="followupsModal" class="modal-overlay">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title">⏰ Active Follow-up Reminders</h3>
+                <button class="modal-close">✕</button>
+            </div>
+            <div class="modal-body" style="padding-top: 8px;">
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.4;">
+                    Here are your leads that are scheduled for follow-up outreach. High-converting sales require multiple touchpoints!
+                </p>
+                <div id="followupsListContainer" style="display: flex; flex-direction: column; gap: 12px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+                    <!-- Follow-up items will be populated dynamically -->
                 </div>
             </div>
         </div>

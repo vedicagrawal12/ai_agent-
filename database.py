@@ -79,6 +79,10 @@ class Database:
                 cursor.execute("ALTER TABLE leads ADD COLUMN pipeline_stage TEXT DEFAULT 'NEW'")
             if 'email' not in columns:
                 cursor.execute("ALTER TABLE leads ADD COLUMN email TEXT DEFAULT ''")
+            if 'remind_date' not in columns:
+                cursor.execute("ALTER TABLE leads ADD COLUMN remind_date TEXT DEFAULT ''")
+            if 'remind_status' not in columns:
+                cursor.execute("ALTER TABLE leads ADD COLUMN remind_status TEXT DEFAULT ''")
         except Exception as alter_err:
             print(f"Error altering table for dynamic columns: {alter_err}")
 
@@ -471,6 +475,64 @@ class Database:
             return True
         except Exception as e:
             print(f"Error updating email for lead {lead_id}: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def schedule_reminder(self, lead_id: int, remind_date: str) -> bool:
+        """Schedule a follow-up reminder date for a lead."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE leads
+                SET remind_date = ?,
+                    remind_status = 'PENDING',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (remind_date, lead_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error scheduling reminder for lead {lead_id}: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def get_pending_reminders(self) -> List[Dict]:
+        """Fetch all leads that have a pending follow-up reminder."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT * FROM leads 
+                WHERE remind_date IS NOT NULL AND remind_date != '' 
+                AND remind_status = 'PENDING'
+                ORDER BY remind_date ASC
+            """)
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        except Exception as e:
+            print(f"Error fetching pending reminders: {e}")
+            return []
+        finally:
+            conn.close()
+
+    def dismiss_reminder(self, lead_id: int) -> bool:
+        """Dismiss/complete a follow-up reminder for a lead."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE leads
+                SET remind_status = 'DISMISSED',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (lead_id,))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error dismissing reminder for lead {lead_id}: {e}")
             return False
         finally:
             conn.close()

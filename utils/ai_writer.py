@@ -12,7 +12,8 @@ class AIOutreachWriter:
         sender_info: dict = None,
         refine_feedback: str = None,
         previous_pitch: str = None,
-        mockup_link: str = ""
+        mockup_link: str = "",
+        custom_pitch_rules: str = ""
     ) -> str:
         """
         Generates a highly personalized, human-like sales pitch using the Gemini API.
@@ -20,6 +21,10 @@ class AIOutreachWriter:
         """
         if not api_key:
             raise Exception("Gemini API key is required for AI generation.")
+
+        custom_rules_directive = ""
+        if custom_pitch_rules:
+            custom_rules_directive = f"\n- CUSTOM USER PROFILE & OUTREACH RULES (CRITICAL: You must strictly incorporate these personalized preferences and details in your pitch writing):\n{custom_pitch_rules}\n"
 
         # Resolve tone directives
         tone_directives = ""
@@ -49,12 +54,12 @@ class AIOutreachWriter:
         length_directives = ""
         if length == "short":
             length_directives = """
-- LENGTH: Brief, snappy, and DM-friendly (maximum 2-3 very short sentences/paragraphs, under 90 words total).
+- LENGTH: Brief, snappy, and DM-friendly (maximum 2-3 very short sentences/paragraphs, under 100 words total).
 - STRUCTURE: Casual hook, drop the digital gap, state the matched portfolio proof sentence naturally, and give the CTA. Keep it compact so they can see it instantly on mobile.
 """
         else: # detailed
             length_directives = """
-- LENGTH: Detailed and structured (3-4 crisp, mobile-friendly paragraphs, under 170 words total).
+- LENGTH: Detailed and structured (3-4 crisp, mobile-friendly paragraphs, under 250 words total).
 - STRUCTURE: Beautiful natural flow starting with a warm casual hook, highlighting the trust/conversion gap logically, presenting the matched work sample, and concluding with a friendly mockup draft offer.
 """
 
@@ -97,7 +102,7 @@ class AIOutreachWriter:
         if refine_feedback and previous_pitch:
             prompt = f"""
 You are an Elite B2B Pitch Copywriter. Your task is to REFINE and REWRITE an existing cold outreach sales pitch based on direct feedback from the user.
-
+{custom_rules_directive}
 Here are the details of the local business we are pitching:
 - Business Name: {lead_data.get('name', 'Business')}
 - City: {lead_data.get('city', 'your city')}
@@ -135,7 +140,7 @@ Write an outreach pitch for a local business whose website is BROKEN/DOWN (it re
 - Google Maps Rating: {lead_data.get('rating', '0')}
 - Google Maps Reviews: {lead_data.get('reviews', '0')}
 - Listed Broken Website: {website_url}
-
+{custom_rules_directive}
 Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
 {mockup_link}
 
@@ -181,7 +186,7 @@ Write an outreach pitch for a local business who DOES NOT HAVE A WEBSITE YET:
 - Location: {lead_data.get('city', 'your city')}
 - Google Maps Rating: {lead_data.get('rating', '0')}
 - Google Maps Reviews: {lead_data.get('reviews', '0')}
-
+{custom_rules_directive}
 Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
 {mockup_link}
 
@@ -226,13 +231,18 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
         api_key: str,
         tone: str = "elite",
         sender_info: dict = None,
-        mockup_link: str = ""
+        mockup_link: str = "",
+        custom_pitch_rules: str = ""
     ) -> str:
         """
         Generates a highly personalized, human-like sales cold email with a Subject Line and Body.
         """
         if not api_key:
             raise Exception("Gemini API key is required for AI generation.")
+
+        custom_rules_directive = ""
+        if custom_pitch_rules:
+            custom_rules_directive = f"\n- CUSTOM USER PROFILE & OUTREACH RULES (CRITICAL: You must strictly incorporate these personalized preferences and details in your pitch writing):\n{custom_pitch_rules}\n"
 
         # Resolve tone directives
         tone_directives = ""
@@ -290,7 +300,7 @@ Here are the details of the business:
 - Google Maps Rating: {lead_data.get('rating', '0')}
 - Google Maps Reviews: {lead_data.get('reviews', '0')}
 - Website State: {"Broken/Down listed URL: " + website_url if is_broken else "DOES NOT HAVE A WEBSITE YET"}
-
+{custom_rules_directive}
 Best matching project proof to mention in the email body:
 {project_sample}
 

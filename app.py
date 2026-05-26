@@ -274,6 +274,52 @@ def delete_lead(lead_id):
     return jsonify({"success": True, "message": "Lead deleted"})
 
 
+@app.route("/api/leads/<int:lead_id>/schedule-reminder", methods=["POST"])
+def schedule_lead_reminder(lead_id):
+    """Schedule a follow-up reminder for a lead."""
+    data = request.get_json() or {}
+    days = data.get("days")
+    custom_date = data.get("custom_date")
+    
+    if days is not None:
+        try:
+            from datetime import date, timedelta
+            remind_date = (date.today() + timedelta(days=int(days))).isoformat()
+        except Exception as date_err:
+            return jsonify({"error": f"Invalid days value: {date_err}"}), 400
+    elif custom_date:
+        remind_date = custom_date
+    else:
+        return jsonify({"error": "Either days or custom_date is required"}), 400
+        
+    success = db.schedule_reminder(lead_id, remind_date)
+    if success:
+        return jsonify({
+            "success": True, 
+            "message": f"Follow-up reminder scheduled for {remind_date}",
+            "remind_date": remind_date
+        })
+    else:
+        return jsonify({"error": "Failed to schedule reminder"}), 500
+
+
+@app.route("/api/reminders", methods=["GET"])
+def get_pending_reminders():
+    """Get all active pending reminders from the database."""
+    reminders = db.get_pending_reminders()
+    return jsonify({"success": True, "reminders": reminders})
+
+
+@app.route("/api/leads/<int:lead_id>/dismiss-reminder", methods=["POST"])
+def dismiss_lead_reminder(lead_id):
+    """Dismiss a pending follow-up reminder for a lead."""
+    success = db.dismiss_reminder(lead_id)
+    if success:
+        return jsonify({"success": True, "message": "Reminder dismissed successfully"})
+    else:
+        return jsonify({"error": "Failed to dismiss reminder"}), 500
+
+
 # ============================================================
 # API Routes — WhatsApp
 # ============================================================
@@ -506,6 +552,7 @@ def generate_ai_pitch():
     sender = data.get("sender", {})
     refine_feedback = data.get("refine_feedback")
     previous_pitch = data.get("previous_pitch")
+    custom_pitch_rules = data.get("custom_pitch_rules", "")
     
     if not lead_data:
         return jsonify({"error": "Lead data is required"}), 400
@@ -520,7 +567,7 @@ def generate_ai_pitch():
         mockup_link = ""
         if lead_id:
             mockup_link = f"{base_host}/preview/{lead_id}?sender_name={sender_name}&sender_brand={sender_brand}"
-
+  
         pitch = AIOutreachWriter.generate_pitch(
             lead_data=lead_data,
             project_sample=project_sample,
@@ -530,8 +577,10 @@ def generate_ai_pitch():
             sender_info=sender,
             refine_feedback=refine_feedback,
             previous_pitch=previous_pitch,
-            mockup_link=mockup_link
+            mockup_link=mockup_link,
+            custom_pitch_rules=custom_pitch_rules
         )
+        
         
         # Save generated pitch persistently in database
         lead_id = lead_data.get("id")
@@ -694,6 +743,7 @@ def generate_email_ai_pitch():
     project_sample = data.get("project_sample", "")
     tone = data.get("tone", "elite")
     sender = data.get("sender", {})
+    custom_pitch_rules = data.get("custom_pitch_rules", "")
     
     if not lead_data:
         return jsonify({"error": "Lead data is required"}), 400
@@ -714,7 +764,8 @@ def generate_email_ai_pitch():
             api_key=gemini_key,
             tone=tone,
             sender_info=sender,
-            mockup_link=mockup_link
+            mockup_link=mockup_link,
+            custom_pitch_rules=custom_pitch_rules
         )
         
         # Parse SUBJECT and BODY

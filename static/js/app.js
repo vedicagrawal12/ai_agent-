@@ -220,6 +220,23 @@ const UI = {
             senderRoleInput: document.getElementById('senderRoleInput'),
             saveSenderProfileBtn: document.getElementById('saveSenderProfileBtn'),
             
+            // Custom Pitch Rules elements
+            customPitchRulesInput: document.getElementById('customPitchRulesInput'),
+            saveCustomPitchRulesBtn: document.getElementById('saveCustomPitchRulesBtn'),
+            customPitchRulesStatus: document.getElementById('customPitchRulesStatus'),
+            
+            // Reminders & Follow-up elements
+            followupRemindersBanner: document.getElementById('followupRemindersBanner'),
+            followupRemindersText: document.getElementById('followupRemindersText'),
+            viewFollowupsBtn: document.getElementById('viewFollowupsBtn'),
+            followupsModal: document.getElementById('followupsModal'),
+            followupsListContainer: document.getElementById('followupsListContainer'),
+            scheduleReminderModal: document.getElementById('scheduleReminderModal'),
+            reminderLeadName: document.getElementById('reminderLeadName'),
+            customReminderDateInput: document.getElementById('customReminderDateInput'),
+            skipReminderBtn: document.getElementById('skipReminderBtn'),
+            saveReminderBtn: document.getElementById('saveReminderBtn'),
+            
             // SMTP Settings elements
             smtpHostInput: document.getElementById('smtpHostInput'),
             smtpPortInput: document.getElementById('smtpPortInput'),
@@ -764,7 +781,9 @@ const App = {
         this.checkPortfolio();
         this.checkGeminiConfig();
         this.checkSenderProfile();
+        this.checkCustomPitchRules();
         this.checkSmtpConfig();
+        this.loadReminders();
         await this.loadTemplates();
     },
 
@@ -849,6 +868,57 @@ const App = {
         // Save Sender Profile
         UI.el.saveSenderProfileBtn?.addEventListener('click', () => {
             this.saveSenderProfile();
+        });
+
+        // Save Custom Pitch Rules
+        UI.el.saveCustomPitchRulesBtn?.addEventListener('click', () => {
+            this.saveCustomPitchRules();
+        });
+
+        // View Follow-ups Alert Banner Click
+        UI.el.viewFollowupsBtn?.addEventListener('click', () => {
+            this.openActiveReminders();
+        });
+
+        // Set reminder presets inside Schedule Reminder Modal
+        document.querySelectorAll('.reminder-preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.reminder-preset-btn').forEach(b => b.classList.remove('selected'));
+                e.target.classList.add('selected');
+                
+                // Keep styles dynamic
+                document.querySelectorAll('.reminder-preset-btn').forEach(b => {
+                    b.style.borderColor = '';
+                    b.style.color = '';
+                    b.style.background = '';
+                });
+                e.target.style.borderColor = 'var(--accent-orange)';
+                e.target.style.color = 'var(--accent-orange)';
+                e.target.style.background = 'rgba(249, 115, 22, 0.05)';
+                
+                // Clear custom date input if preset selected
+                if (UI.el.customReminderDateInput) UI.el.customReminderDateInput.value = '';
+            });
+        });
+
+        // Clear custom date select resets selected presets
+        UI.el.customReminderDateInput?.addEventListener('input', () => {
+            document.querySelectorAll('.reminder-preset-btn').forEach(b => {
+                b.classList.remove('selected');
+                b.style.borderColor = '';
+                b.style.color = '';
+                b.style.background = '';
+            });
+        });
+
+        // Skip Reminder popup
+        UI.el.skipReminderBtn?.addEventListener('click', () => {
+            UI.closeModal('scheduleReminderModal');
+        });
+
+        // Save Reminder popup
+        UI.el.saveReminderBtn?.addEventListener('click', () => {
+            this.saveScheduledReminder();
         });
 
         // Save SMTP Settings
@@ -1148,6 +1218,29 @@ const App = {
         UI.showToast('Sender Profile saved successfully!', 'success');
     },
 
+    checkCustomPitchRules() {
+        const rules = localStorage.getItem('custom_pitch_rules') || '';
+        if (UI.el.customPitchRulesInput) UI.el.customPitchRulesInput.value = rules;
+        
+        const statusEl = UI.el.customPitchRulesStatus;
+        if (statusEl) {
+            if (rules) {
+                statusEl.textContent = '✓ Configured & Active';
+                statusEl.className = 'api-key-status active';
+            } else {
+                statusEl.textContent = '✗ Not Set';
+                statusEl.className = 'api-key-status inactive';
+            }
+        }
+    },
+
+    saveCustomPitchRules() {
+        const rules = UI.el.customPitchRulesInput?.value.trim() || '';
+        localStorage.setItem('custom_pitch_rules', rules);
+        this.checkCustomPitchRules();
+        UI.showToast('AI Pitch Custom Rules saved successfully!', 'success');
+    },
+
     async generateAIPitch() {
         const lead = AppState.currentWhatsAppLead;
         if (!lead) return;
@@ -1181,7 +1274,8 @@ const App = {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
                         role: localStorage.getItem('sender_role') || ''
-                    }
+                    },
+                    custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
                 })
             });
 
@@ -1264,7 +1358,8 @@ const App = {
                         role: localStorage.getItem('sender_role') || ''
                     },
                     refine_feedback: refineFeedback,
-                    previous_pitch: previousPitch
+                    previous_pitch: previousPitch,
+                    custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
                 })
             });
 
@@ -1607,8 +1702,8 @@ const App = {
 
     },
 
-    openWhatsApp(index) {
-        const lead = AppState.leads[index];
+    openWhatsApp(indexOrLead) {
+        const lead = typeof indexOrLead === 'object' ? indexOrLead : AppState.leads[indexOrLead];
         if (!lead || !lead.whatsapp_number) {
             UI.showToast('No WhatsApp number available for this business', 'error');
             return;
@@ -1813,6 +1908,11 @@ const App = {
                     });
                     
                     UI.renderLeads(AppState.leads);
+                    
+                    // Trigger follow-up scheduler
+                    setTimeout(() => {
+                        App.promptFollowupReminder(lead.id, lead.name);
+                    }, 500);
                 } catch (contactErr) {
                     console.error('Error marking contacted:', contactErr);
                 }
@@ -2124,10 +2224,11 @@ const App = {
         }
     },
 
-    openEmail(index) {
-        const lead = AppState.leads[index];
+    openEmail(indexOrLead) {
+        const lead = typeof indexOrLead === 'object' ? indexOrLead : AppState.leads[indexOrLead];
         if (!lead) return;
 
+        const index = typeof indexOrLead === 'number' ? indexOrLead : AppState.leads.findIndex(l => l.id === lead.id);
         AppState.currentEmailIndex = index;
         AppState.currentEmailLead = lead;
 
@@ -2248,7 +2349,8 @@ const App = {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
                         role: localStorage.getItem('sender_role') || ''
-                    }
+                    },
+                    custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
                 })
             });
 
@@ -2372,6 +2474,11 @@ const App = {
             
             UI.renderLeads(AppState.leads);
             
+            // Trigger follow-up scheduler
+            setTimeout(() => {
+                App.promptFollowupReminder(lead.id, lead.name);
+            }, 500);
+            
             await API.request(`/api/leads/${lead.id}/contact`, {
                 method: 'POST',
                 body: JSON.stringify({ notes: 'Contacted via Cold Email' })
@@ -2380,6 +2487,212 @@ const App = {
         } catch (err) {
             console.error('Error syncing pipeline stage to Pitched:', err);
         }
+    },
+
+    async loadReminders() {
+        try {
+            const data = await API.request('/api/reminders');
+            if (data.success && data.reminders) {
+                AppState.reminders = data.reminders;
+                
+                // Count due/overdue reminders
+                const todayStr = new Date().toISOString().split('T')[0];
+                const dueReminders = data.reminders.filter(r => r.remind_date <= todayStr);
+                const count = dueReminders.length;
+                
+                const banner = UI.el.followupRemindersBanner;
+                const textEl = UI.el.followupRemindersText;
+                
+                if (count > 0 && banner && textEl) {
+                    textEl.textContent = `You have ${count} pending follow-up reminder${count > 1 ? 's' : ''} due today or overdue.`;
+                    banner.style.display = 'block';
+                } else if (banner) {
+                    banner.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading reminders:', error);
+        }
+    },
+
+    promptFollowupReminder(leadId, leadName) {
+        AppState.currentReminderLeadId = leadId;
+        
+        if (UI.el.reminderLeadName) {
+            UI.el.reminderLeadName.textContent = leadName;
+        }
+        if (UI.el.customReminderDateInput) {
+            UI.el.customReminderDateInput.value = '';
+        }
+        
+        // Reset preset buttons styling
+        document.querySelectorAll('.reminder-preset-btn').forEach(btn => {
+            btn.classList.remove('selected');
+            btn.style.borderColor = '';
+            btn.style.color = '';
+            btn.style.background = '';
+            
+            // Set 3 days as default
+            if (btn.getAttribute('data-days') === '3') {
+                btn.classList.add('selected');
+                btn.style.borderColor = 'var(--accent-orange)';
+                btn.style.color = 'var(--accent-orange)';
+                btn.style.background = 'rgba(249, 115, 22, 0.05)';
+            }
+        });
+        
+        UI.openModal('scheduleReminderModal');
+    },
+
+    async saveScheduledReminder() {
+        const leadId = AppState.currentReminderLeadId;
+        if (!leadId) return;
+        
+        const customDate = UI.el.customReminderDateInput?.value || '';
+        let payload = {};
+        
+        if (customDate) {
+            payload = { custom_date: customDate };
+        } else {
+            const selectedPreset = document.querySelector('.reminder-preset-btn.selected');
+            const days = selectedPreset ? parseInt(selectedPreset.getAttribute('data-days')) : 3;
+            payload = { days: days };
+        }
+        
+        try {
+            UI.showLoading('Saving follow-up reminder...');
+            const data = await API.request(`/api/leads/${leadId}/schedule-reminder`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            
+            if (data.success) {
+                UI.showToast('📅 Reminder scheduled successfully!', 'success');
+                UI.closeModal('scheduleReminderModal');
+                this.loadReminders();
+            } else {
+                UI.showToast(data.error || 'Failed to save reminder.', 'error');
+            }
+        } catch (error) {
+            UI.showToast('Failed to save reminder: ' + error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    openActiveReminders() {
+        this.renderFollowups();
+        UI.openModal('followupsModal');
+    },
+
+    async dismissLeadReminder(leadId) {
+        try {
+            UI.showLoading('Dismissing reminder...');
+            const data = await API.request(`/api/leads/${leadId}/dismiss-reminder`, {
+                method: 'POST'
+            });
+            if (data.success) {
+                UI.showToast('Reminder cleared successfully!', 'success');
+                await this.loadReminders();
+                this.renderFollowups();
+            } else {
+                UI.showToast(data.error || 'Failed to clear reminder.', 'error');
+            }
+        } catch (error) {
+            UI.showToast('Error clearing reminder: ' + error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    renderFollowups() {
+        const container = UI.el.followupsListContainer;
+        if (!container) return;
+        
+        const reminders = AppState.reminders || [];
+        if (reminders.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="padding: 24px;">
+                    <div class="empty-state-icon">⏰</div>
+                    <div class="empty-state-title">No pending follow-ups!</div>
+                    <div class="empty-state-desc">You are all caught up on your sales outreach. Great job!</div>
+                </div>
+            `;
+            return;
+        }
+        
+        const todayStr = new Date().toISOString().split('T')[0];
+        const today = new Date(todayStr);
+        
+        let html = '';
+        reminders.forEach(lead => {
+            const remindDate = new Date(lead.remind_date);
+            const diffTime = remindDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            let dateBadge = '';
+            if (diffDays === 0) {
+                dateBadge = `<span style="font-size: 0.75rem; color: var(--accent-orange); font-weight: 700; background: rgba(249, 115, 22, 0.1); padding: 2px 6px; border-radius: 4px;">⏰ Due Today</span>`;
+            } else if (diffDays < 0) {
+                const absDays = Math.abs(diffDays);
+                dateBadge = `<span style="font-size: 0.75rem; color: var(--accent-red); font-weight: 700; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px;">⚠️ Overdue by ${absDays} day${absDays > 1 ? 's' : ''}</span>`;
+            } else {
+                dateBadge = `<span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 700; background: rgba(0, 240, 255, 0.1); padding: 2px 6px; border-radius: 4px;">📅 Due in ${diffDays} day${diffDays > 1 ? 's' : ''}</span>`;
+            }
+            
+            // Build action buttons safely
+            let whatsappBtn = '';
+            if (lead.whatsapp_number) {
+                whatsappBtn = `<button class="row-btn whatsapp" data-tooltip="WhatsApp Pitch" onclick="App.triggerWhatsAppReminder(${lead.id})" style="padding: 6px; border-radius: 4px;">💬</button>`;
+            }
+            
+            let emailBtn = '';
+            if (lead.email) {
+                emailBtn = `<button class="row-btn email" data-tooltip="Email Pitch" onclick="App.triggerEmailReminder(${lead.id})" style="padding: 6px; border-radius: 4px;">📧</button>`;
+            }
+            
+            html += `
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">${lead.name}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                            ${lead.category} • ${lead.city}
+                        </div>
+                        <div style="margin-top: 6px; display: flex; align-items: center; gap: 6px;">
+                            ${dateBadge}
+                            <span style="font-size: 0.7rem; color: var(--text-muted);">(${lead.remind_date})</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        ${whatsappBtn}
+                        ${emailBtn}
+                        <button class="row-btn delete" data-tooltip="Dismiss Reminder" onclick="App.dismissLeadReminder(${lead.id})" style="border-color: var(--accent-green); color: var(--accent-green); background: rgba(16, 185, 129, 0.05); padding: 6px; border-radius: 4px;">✓</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    },
+
+    triggerWhatsAppReminder(leadId) {
+        const lead = (AppState.reminders || []).find(r => r.id === leadId);
+        if (!lead) return;
+        
+        UI.closeModal('followupsModal');
+        setTimeout(() => {
+            this.openWhatsApp(lead);
+        }, 300);
+    },
+
+    triggerEmailReminder(leadId) {
+        const lead = (AppState.reminders || []).find(r => r.id === leadId);
+        if (!lead) return;
+        
+        UI.closeModal('followupsModal');
+        setTimeout(() => {
+            this.openEmail(lead);
+        }, 300);
     }
 };
 
