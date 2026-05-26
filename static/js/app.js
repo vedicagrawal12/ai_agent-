@@ -20,7 +20,8 @@ const AppState = {
     isLoading: false,
     hasApiKey: false,
     currentOffset: 0,
-    activeSearchParams: null
+    activeSearchParams: null,
+    currentView: 'list'
 };
 
 // ============================================================
@@ -121,6 +122,13 @@ const API = {
         return this.request('/api/whatsapp/generate', {
             method: 'POST',
             body: JSON.stringify({ phone, template, lead, custom_message: customMessage }),
+        });
+    },
+
+    async updateLeadPipelineStage(leadId, stage) {
+        return this.request(`/api/leads/${leadId}/pipeline`, {
+            method: 'POST',
+            body: JSON.stringify({ stage }),
         });
     },
 
@@ -231,6 +239,12 @@ const UI = {
             bulkProgressPercentage: document.getElementById('bulkProgressPercentage'),
             bulkProgressBar: document.getElementById('bulkProgressBar'),
             
+            // Kanban elements
+            listViewBtn: document.getElementById('listViewBtn'),
+            kanbanViewBtn: document.getElementById('kanbanViewBtn'),
+            kanbanContainer: document.getElementById('kanbanContainer'),
+            tableContainer: document.getElementById('tableContainer'),
+            
             toastContainer: document.getElementById('toastContainer'),
         };
     },
@@ -293,20 +307,27 @@ const UI = {
         if (leads.length === 0) {
             this.el.emptyState.style.display = 'block';
             this.el.tableContainer.style.display = 'none';
+            if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
             if (this.el.loadMoreContainer) this.el.loadMoreContainer.style.display = 'none';
             return;
         }
         
         this.el.emptyState.style.display = 'none';
-        this.el.tableContainer.style.display = 'block';
         
-        this.el.leadsTableBody.innerHTML = leads.map((lead, i) => this.createLeadRow(lead, i)).join('');
+        // Show/hide container based on active view state
+        if (AppState.currentView === 'kanban') {
+            this.el.tableContainer.style.display = 'none';
+            if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'block';
+            this.renderKanbanBoard(leads);
+        } else {
+            this.el.tableContainer.style.display = 'block';
+            if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
+            this.el.leadsTableBody.innerHTML = leads.map((lead, i) => this.createLeadRow(lead, i)).join('');
+        }
         
         // Show/hide Load More button based on if we fetched any results
         if (this.el.loadMoreContainer) {
             const maxResults = AppState.activeSearchParams ? AppState.activeSearchParams.maxResults : 20;
-            // If the active list is a multiple of maxResults (or close), there could be more
-            // If it's 0 or we fetched a small page, hide it.
             if (leads.length > 0 && leads.length % maxResults === 0) {
                 this.el.loadMoreContainer.style.display = 'block';
             } else {
@@ -407,6 +428,188 @@ const UI = {
         const half = rating % 1 >= 0.5 ? 1 : 0;
         const empty = 5 - full - half;
         return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+    },
+
+    // ---- Kanban Board Renderers ----
+    renderKanbanBoard(leads) {
+        const columns = ['NEW', 'PITCHED', 'INTERESTED', 'CONVERTED', 'IGNORED'];
+        
+        // Clear all columns first
+        columns.forEach(stage => {
+            const cardsContainer = document.querySelector(`.kanban-cards[data-stage="${stage}"]`);
+            if (cardsContainer) {
+                cardsContainer.innerHTML = '';
+            }
+            const columnEl = document.querySelector(`.kanban-column[data-stage="${stage}"]`);
+            const countBadge = columnEl?.querySelector('.column-count');
+            if (countBadge) countBadge.textContent = '0';
+        });
+        
+        // Track card counts per stage
+        const counts = { NEW: 0, PITCHED: 0, INTERESTED: 0, CONVERTED: 0, IGNORED: 0 };
+        
+        leads.forEach(lead => {
+            const stage = (lead.pipeline_stage || 'NEW').toUpperCase();
+            if (!columns.includes(stage)) return;
+            
+            counts[stage]++;
+            const cardsContainer = document.querySelector(`.kanban-cards[data-stage="${stage}"]`);
+            if (cardsContainer) {
+                const card = this.createKanbanCard(lead);
+                cardsContainer.appendChild(card);
+            }
+        });
+        
+        // Update all badges
+        columns.forEach(stage => {
+            const columnEl = document.querySelector(`.kanban-column[data-stage="${stage}"]`);
+            const countBadge = columnEl?.querySelector('.column-count');
+            if (countBadge) {
+                countBadge.textContent = counts[stage];
+            }
+        });
+        
+        // Initialize HTML5 Drag-and-Drop listeners
+        this.initKanbanDragAndDrop();
+    },
+
+    createKanbanCard(lead) {
+        const card = document.createElement('div');
+        card.className = 'kanban-card';
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('data-id', lead.id);
+        
+        const priorityClass = (lead.priority || 'LOW').toUpperCase();
+        
+        // Determine site label
+        let siteLabel = '';
+        if (lead.is_broken_website === 1) {
+            siteLabel = `<span style="color: var(--accent-red); font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">⚠️ Broken site</span>`;
+        } else if (lead.website) {
+            siteLabel = `<span style="color: var(--accent-green); font-size: 0.7rem; font-weight: 500;">✓ Website</span>`;
+        } else {
+            siteLabel = `<span style="color: var(--text-muted); font-size: 0.7rem;">No website</span>`;
+        }
+        
+        let actionsHtml = '';
+        const idx = AppState.leads.findIndex(l => l.id === lead.id);
+        
+        // Scan or show Socials
+        if (lead.instagram || lead.facebook) {
+            if (lead.instagram) {
+                actionsHtml += `<button class="kanban-card-btn instagram" title="Instagram DM & Auto-Copy" onclick="App.openInstagram(${idx})" style="background: var(--gradient-primary); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; border: none; display: flex; align-items: center; gap: 4px; cursor: pointer;">📸 DM</button>`;
+            }
+            if (lead.facebook) {
+                actionsHtml += `<a href="${lead.facebook}" target="_blank" class="kanban-card-btn facebook" title="Facebook Profile" style="background: var(--accent-blue); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 25px;">📘 Page</a>`;
+            }
+        } else if (lead.id) {
+            actionsHtml += `<button class="kanban-card-btn scan-social" onclick="App.scanSocials(${lead.id}, ${idx})" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(0,212,255,0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 4px; cursor: pointer;">🔍 Scan Socials</button>`;
+        }
+        
+        // WhatsApp button
+        let whatsappBtnHtml = '';
+        if (lead.whatsapp_number) {
+            if (lead.line_type === 'LANDLINE') {
+                whatsappBtnHtml = `<button class="kanban-card-btn whatsapp disabled-landline" title="Landline Number (No WhatsApp)" style="background: rgba(255,255,255,0.05); color: var(--text-muted); border-radius: 4px; padding: 4px 8px; border: 1px solid var(--border-color); font-size: 0.75rem; cursor: not-allowed;" disabled>💬 Pitch</button>`;
+            } else {
+                whatsappBtnHtml = `<button class="kanban-card-btn whatsapp" title="Personalized WhatsApp Pitch" onclick="App.openWhatsApp(${idx})" style="background: var(--gradient-whatsapp); color: white; border-radius: 4px; padding: 4px 8px; border: none; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 4px; cursor: pointer;">💬 Pitch</button>`;
+            }
+        }
+        
+        card.innerHTML = `
+            <div class="kanban-card-title" title="${lead.name}">${lead.name}</div>
+            <div class="kanban-card-category">${lead.category || 'Local Business'}</div>
+            <div class="kanban-card-meta">
+                <div>📞 ${lead.phone || 'No phone'}</div>
+                <div>📍 ${lead.city || 'Local'}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 4px;">
+                    <div>⭐ ${lead.rating ? lead.rating.toFixed(1) : '0.0'} (${lead.reviews || 0})</div>
+                    ${siteLabel}
+                </div>
+                <div class="kanban-card-priority-badge ${priorityClass}">${priorityClass} Priority</div>
+            </div>
+            <div class="kanban-card-actions" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div style="display: flex; gap: 6px;">
+                    ${actionsHtml}
+                </div>
+                ${whatsappBtnHtml}
+            </div>
+        `;
+        
+        return card;
+    },
+
+    initKanbanDragAndDrop() {
+        const cards = document.querySelectorAll('.kanban-card');
+        const columns = document.querySelectorAll('.kanban-column');
+        
+        cards.forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                card.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
+            });
+            
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+            });
+        });
+        
+        columns.forEach(column => {
+            column.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                column.classList.add('drag-over');
+            });
+            
+            column.addEventListener('dragleave', () => {
+                column.classList.remove('drag-over');
+            });
+            
+            column.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                column.classList.remove('drag-over');
+                
+                const leadId = parseInt(e.dataTransfer.getData('text/plain'));
+                const newStage = column.getAttribute('data-stage');
+                
+                if (!leadId || !newStage) return;
+                
+                const lead = AppState.leads.find(l => l.id === leadId);
+                if (!lead) return;
+                
+                const oldStage = lead.pipeline_stage || 'NEW';
+                if (oldStage.toUpperCase() === newStage.toUpperCase()) return;
+                
+                try {
+                    // Update state locally first for snappy responsiveness
+                    lead.pipeline_stage = newStage;
+                    
+                    // If transitioning to PITCHED, also set contacted = 1 and contact_date locally
+                    if (newStage === 'PITCHED') {
+                        lead.contacted = 1;
+                        if (!lead.contact_date) {
+                            lead.contact_date = new Date().toISOString();
+                        }
+                    }
+                    
+                    // Re-render immediately
+                    UI.renderLeads(AppState.leads);
+                    
+                    // Sync with database
+                    const data = await API.updateLeadPipelineStage(leadId, newStage);
+                    if (data.success) {
+                        UI.showToast(`Updated "${lead.name}" pipeline stage to ${newStage}!`, 'success');
+                    } else {
+                        throw new Error(data.error || 'Sync failed');
+                    }
+                } catch (err) {
+                    console.error('Failed to sync Kanban stage:', err);
+                    UI.showToast(`Stage sync failed: ${err.message}. Reverting...`, 'error');
+                    // Revert state
+                    lead.pipeline_stage = oldStage;
+                    UI.renderLeads(AppState.leads);
+                }
+            });
+        });
     },
 
     // ---- Sorting ----
@@ -630,6 +833,15 @@ const App = {
         // Load More Pagination
         document.getElementById('loadMoreBtn')?.addEventListener('click', () => {
             this.loadMoreLeads();
+        });
+
+        // View Switcher Tabs
+        UI.el.listViewBtn?.addEventListener('click', () => {
+            this.switchView('list');
+        });
+
+        UI.el.kanbanViewBtn?.addEventListener('click', () => {
+            this.switchView('kanban');
         });
 
         // Table sorting
@@ -1260,6 +1472,26 @@ const App = {
         }
     },
 
+    // ---- Kanban Views ----
+    switchView(view) {
+        AppState.currentView = view;
+        
+        if (view === 'kanban') {
+            UI.el.listViewBtn?.classList.add('active');
+            UI.el.kanbanViewBtn?.classList.remove('active'); // Wait, listViewBtn should be active when view is list, let's look at switcher styling!
+            // Wait: in index.html, we had:
+            // class="view-btn active" for listViewBtn and class="view-btn" for kanbanViewBtn.
+            // So if view is 'kanban':
+            UI.el.listViewBtn?.classList.remove('active');
+            UI.el.kanbanViewBtn?.classList.add('active');
+        } else {
+            UI.el.listViewBtn?.classList.add('active');
+            UI.el.kanbanViewBtn?.classList.remove('active');
+        }
+        
+        UI.renderLeads(AppState.leads);
+    },
+
     // ---- WhatsApp ----
     async loadTemplates() {
         try {
@@ -1494,6 +1726,23 @@ const App = {
                 
                 UI.closeModal('whatsappModal');
                 UI.showToast(`WhatsApp opened for ${lead.name}`, 'success');
+                
+                // Automatically mark lead as contacted and transition pipeline to PITCHED
+                try {
+                    lead.contacted = 1;
+                    lead.contact_date = new Date().toISOString();
+                    lead.pipeline_stage = 'PITCHED';
+                    
+                    // Trigger backend API
+                    await API.request(`/api/leads/${lead.id}/contact`, {
+                        method: 'POST',
+                        body: JSON.stringify({ notes: lead.notes || 'Contacted via WhatsApp' })
+                    });
+                    
+                    UI.renderLeads(AppState.leads);
+                } catch (contactErr) {
+                    console.error('Error marking contacted:', contactErr);
+                }
             }
         } catch (error) {
             UI.showToast(error.message, 'error');

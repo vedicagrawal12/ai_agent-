@@ -75,6 +75,8 @@ class Database:
                 cursor.execute("ALTER TABLE leads ADD COLUMN is_broken_website INTEGER DEFAULT 0")
             if 'line_type' not in columns:
                 cursor.execute("ALTER TABLE leads ADD COLUMN line_type TEXT DEFAULT ''")
+            if 'pipeline_stage' not in columns:
+                cursor.execute("ALTER TABLE leads ADD COLUMN pipeline_stage TEXT DEFAULT 'NEW'")
         except Exception as alter_err:
             print(f"Error altering table for dynamic columns: {alter_err}")
 
@@ -220,6 +222,7 @@ class Database:
             SET contacted = 1, 
                 contact_date = ?, 
                 notes = ?,
+                pipeline_stage = CASE WHEN pipeline_stage = 'NEW' THEN 'PITCHED' ELSE pipeline_stage END,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         """, (datetime.now().isoformat(), notes, lead_id))
@@ -417,6 +420,36 @@ class Database:
             return True
         except Exception as e:
             print(f"Error updating custom pitch for lead {lead_id}: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def update_lead_pipeline_stage(self, lead_id: int, stage: str) -> bool:
+        """Update the pipeline stage of a lead."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            # If transitioning to PITCHED, also set contacted = 1
+            if stage == "PITCHED":
+                cursor.execute("""
+                    UPDATE leads
+                    SET pipeline_stage = ?,
+                        contacted = 1,
+                        contact_date = CASE WHEN contact_date IS NULL OR contact_date = '' THEN ? ELSE contact_date END,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (stage, datetime.now().isoformat(), lead_id))
+            else:
+                cursor.execute("""
+                    UPDATE leads
+                    SET pipeline_stage = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (stage, lead_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating pipeline stage for lead {lead_id}: {e}")
             return False
         finally:
             conn.close()

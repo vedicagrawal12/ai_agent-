@@ -251,6 +251,22 @@ def mark_lead_contacted(lead_id):
     return jsonify({"success": True, "message": "Lead marked as contacted"})
 
 
+@app.route("/api/leads/<int:lead_id>/pipeline", methods=["POST"])
+def update_lead_pipeline(lead_id):
+    """Update lead pipeline stage."""
+    data = request.get_json() or {}
+    stage = data.get("stage", "NEW").upper()
+    
+    if stage not in ["NEW", "PITCHED", "INTERESTED", "CONVERTED", "IGNORED"]:
+        return jsonify({"error": "Invalid pipeline stage"}), 400
+        
+    success = db.update_lead_pipeline_stage(lead_id, stage)
+    if success:
+        return jsonify({"success": True, "message": f"Lead pipeline updated to {stage}", "stage": stage})
+    else:
+        return jsonify({"error": "Failed to update pipeline stage"}), 500
+
+
 @app.route("/api/leads/<int:lead_id>", methods=["DELETE"])
 def delete_lead(lead_id):
     """Delete a lead."""

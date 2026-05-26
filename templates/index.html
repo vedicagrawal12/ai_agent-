@@ -173,6 +173,12 @@
                 </div>
             </div>
 
+            <!-- View Switcher Tabs -->
+            <div class="view-switcher-container" style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(255, 255, 255, 0.03); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); width: fit-content;">
+                <button id="listViewBtn" class="view-btn active">📇 List View</button>
+                <button id="kanbanViewBtn" class="view-btn">📋 Kanban CRM</button>
+            </div>
+
             <!-- Empty State -->
             <div id="emptyState" class="empty-state" style="display: none;">
                 <div class="empty-state-icon">🔍</div>
@@ -208,6 +214,68 @@
                     <button id="loadMoreBtn" class="btn btn-secondary btn-lg" style="background: var(--gradient-primary); border: none; color: white; box-shadow: var(--shadow-glow-cyan); transition: var(--transition-base); min-width: 250px;">
                         ⏭️ Load Next Page (Get More Leads)
                     </button>
+                </div>
+            </div>
+
+            <!-- Kanban CRM Board -->
+            <div id="kanbanContainer" class="kanban-container" style="display: none; width: 100%; overflow-x: auto; padding-bottom: 12px; margin-top: 16px;">
+                <div class="kanban-board" style="display: flex; gap: 16px; min-width: 1000px; align-items: flex-start;">
+                    
+                    <!-- New Column -->
+                    <div class="kanban-column" data-stage="NEW">
+                        <div class="kanban-column-header">
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🆕 New Leads</span>
+                            <span class="column-count badge-cyan" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); font-weight: bold;">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="NEW" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                            <!-- Cards rendered dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Pitched Column -->
+                    <div class="kanban-column" data-stage="PITCHED">
+                        <div class="kanban-column-header">
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">💬 Pitched</span>
+                            <span class="column-count badge-violet" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(124, 58, 237, 0.1); color: var(--accent-violet); font-weight: bold;">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="PITCHED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                            <!-- Cards rendered dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Interested Column -->
+                    <div class="kanban-column" data-stage="INTERESTED">
+                        <div class="kanban-column-header">
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🤝 Interested</span>
+                            <span class="column-count badge-amber" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(245, 158, 11, 0.1); color: var(--accent-amber); font-weight: bold;">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="INTERESTED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                            <!-- Cards rendered dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Converted Column -->
+                    <div class="kanban-column" data-stage="CONVERTED">
+                        <div class="kanban-column-header">
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🎉 Converted</span>
+                            <span class="column-count badge-green" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(16, 185, 129, 0.1); color: var(--accent-green); font-weight: bold;">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="CONVERTED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                            <!-- Cards rendered dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Ignored Column -->
+                    <div class="kanban-column" data-stage="IGNORED">
+                        <div class="kanban-column-header">
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">❌ Ignored</span>
+                            <span class="column-count badge-red" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(239, 68, 68, 0.1); color: var(--accent-red); font-weight: bold;">0</span>
+                        </div>
+                        <div class="kanban-cards" data-stage="IGNORED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                            <!-- Cards rendered dynamically -->
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
         </section>
