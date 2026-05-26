@@ -104,15 +104,15 @@ def search_businesses():
         # Get already saved place IDs if hide_saved is enabled
         exclude_place_ids = set()
         if hide_saved:
-            import sqlite3
             try:
-                conn = sqlite3.connect(db.db_path)
+                conn = db._get_connection()
                 cursor = conn.cursor()
                 cursor.execute("SELECT place_id FROM leads WHERE place_id IS NOT NULL AND place_id != ''")
                 exclude_place_ids = {row[0] for row in cursor.fetchall()}
-                conn.close()
             except Exception as db_err:
                 print(f"Error fetching saved place IDs: {db_err}")
+            finally:
+                conn.close()
 
         # Search for businesses
         all_leads = []
@@ -149,20 +149,19 @@ def search_businesses():
         db.save_search(search_query_log, city, len(all_leads), len(filtered_leads))
         
         # Fetch the saved leads from DB to get database IDs and social links
-        import sqlite3
         db_leads_dict = {}
         try:
-            conn = sqlite3.connect(db.db_path)
-            conn.row_factory = sqlite3.Row
+            conn = db._get_connection()
             cursor = conn.cursor()
             place_ids = [l.place_id for l in all_leads if l.place_id]
             if place_ids:
                 placeholders = ",".join("?" for _ in place_ids)
                 cursor.execute(f"SELECT * FROM leads WHERE place_id IN ({placeholders})", place_ids)
                 db_leads_dict = {row['place_id']: dict(row) for row in cursor.fetchall()}
-            conn.close()
         except Exception as db_err:
             print(f"Error fetching database IDs for search response: {db_err}")
+        finally:
+            conn.close()
 
         # Build response
         leads_data = []

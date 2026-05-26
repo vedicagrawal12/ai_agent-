@@ -148,7 +148,8 @@ class DataCleaner:
     def check_website_health(url: str) -> bool:
         """
         Perform a lightweight HTTP HEAD/GET request to test if a website is online/active.
-        Returns True if working (2xx or 3xx), False if broken (4xx, 5xx, or network exception).
+        Returns True if working (any server response), False if broken (network exception/DNS failure).
+        Optimized: reduced timeouts, HEAD 405/501 treated as alive (BUG #13/#14 fix).
         """
         import requests
         if not url:
@@ -164,17 +165,24 @@ class DataCleaner:
         }
         
         try:
-            # 1. Try fast HEAD request first
-            response = requests.head(target_url, headers=headers, timeout=3.0, allow_redirects=True)
-            if response.status_code < 400:
+            # 1. Try fast HEAD request first (2s timeout instead of 3s)
+            response = requests.head(target_url, headers=headers, timeout=2.0, allow_redirects=True)
+            # Any response under 500 means server is alive (405 = HEAD not supported, still alive!)
+            if response.status_code < 500:
                 return True
+            # 5xx means server error — try GET to confirm
+        except requests.exceptions.ConnectionError:
+            return False  # DNS/network failure = broken
+        except requests.exceptions.Timeout:
+            pass  # Timeout on HEAD — fall through to GET
         except Exception:
             pass
             
         try:
-            # 2. Fallback to GET request if HEAD failed or was refused
-            response = requests.get(target_url, headers=headers, timeout=3.0, allow_redirects=True)
-            if response.status_code < 400:
+            # 2. Fallback GET only if HEAD timed out or returned 5xx
+            response = requests.get(target_url, headers=headers, timeout=2.0, allow_redirects=True, stream=True)
+            response.close()  # Close immediately — we only need the status code
+            if response.status_code < 500:
                 return True
         except Exception:
             pass

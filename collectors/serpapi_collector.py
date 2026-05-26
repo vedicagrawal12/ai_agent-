@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 import os
+import hashlib
 from serpapi import GoogleSearch
 from .base_collector import BaseCollector, Lead
 
@@ -55,7 +56,6 @@ class SerpApiCollector(BaseCollector):
                     if not place_id:
                         # Generate a fallback ID from name+address to avoid conflicts
                         fallback = f"{place.get('title', '')}_{place.get('address', '')}_{city}"
-                        import hashlib
                         place_id = f"serpapi_{hashlib.md5(fallback.encode()).hexdigest()[:12]}"
                     
                     # Exclude already saved place IDs if requested

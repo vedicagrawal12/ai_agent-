@@ -119,10 +119,13 @@ class WhatsAppMessenger:
         message = message.replace("{address}", lead.address or "")
         message = message.replace("{phone}", lead.phone or "")
         # Remove project_sample placeholder — only used in AI-generated pitches
-        message = message.replace("{project_sample}", "")
-        # Clean any double whitespace left from removed placeholders
+        message = message.replace(" {project_sample}", "").replace("{project_sample}", "")
+        # Clean any double whitespace/spaces left from removed placeholders
         import re
+        message = re.sub(r'[ \t]+', ' ', message)  # Remove multiple spaces
+        message = re.sub(r' \n', '\n', message)  # Remove space before newline
         message = re.sub(r'\n\s*\n\s*\n', '\n\n', message)
+        message = message.strip()
 
         return message
 

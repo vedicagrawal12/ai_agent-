@@ -281,10 +281,12 @@ const UI = {
             listViewBtn: document.getElementById('listViewBtn'),
             kanbanViewBtn: document.getElementById('kanbanViewBtn'),
             kanbanContainer: document.getElementById('kanbanContainer'),
-            tableContainer: document.getElementById('tableContainer'),
             
             toastContainer: document.getElementById('toastContainer'),
         };
+
+        // AbortController for Kanban drag-and-drop listeners (prevents accumulation)
+        this._kanbanAbortController = null;
     },
 
     // ---- Loading ----
@@ -596,6 +598,13 @@ const UI = {
     },
 
     initKanbanDragAndDrop() {
+        // Abort previous listeners to prevent accumulation (BUG #1 fix)
+        if (this._kanbanAbortController) {
+            this._kanbanAbortController.abort();
+        }
+        this._kanbanAbortController = new AbortController();
+        const signal = this._kanbanAbortController.signal;
+
         const cards = document.querySelectorAll('.kanban-card');
         const columns = document.querySelectorAll('.kanban-column');
         
@@ -603,22 +612,22 @@ const UI = {
             card.addEventListener('dragstart', (e) => {
                 card.classList.add('dragging');
                 e.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
-            });
+            }, { signal });
             
             card.addEventListener('dragend', () => {
                 card.classList.remove('dragging');
-            });
+            }, { signal });
         });
         
         columns.forEach(column => {
             column.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 column.classList.add('drag-over');
-            });
+            }, { signal });
             
             column.addEventListener('dragleave', () => {
                 column.classList.remove('drag-over');
-            });
+            }, { signal });
             
             column.addEventListener('drop', async (e) => {
                 e.preventDefault();
@@ -664,7 +673,7 @@ const UI = {
                     lead.pipeline_stage = oldStage;
                     UI.renderLeads(AppState.leads);
                 }
-            });
+            }, { signal });
         });
     },
 
@@ -711,7 +720,7 @@ const UI = {
 
     // ---- Toasts ----
     showToast(message, type = 'info') {
-        const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+        const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
         
         // Intercept SerpApi search quota limits exhaustion
         if (message && (message.includes('run out of searches') || message.includes('quota') || message.includes('SerpApi Error'))) {
@@ -721,10 +730,18 @@ const UI = {
         
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.innerHTML = `
-            <span class="toast-icon">${icons[type]}</span>
-            <span class="toast-message">${message}</span>
-        `;
+        
+        // Use DOM API instead of innerHTML to prevent HTML injection (BUG #18 fix)
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'toast-icon';
+        iconSpan.textContent = icons[type] || 'ℹ️';
+        
+        const msgSpan = document.createElement('span');
+        msgSpan.className = 'toast-message';
+        msgSpan.textContent = message;
+        
+        toast.appendChild(iconSpan);
+        toast.appendChild(msgSpan);
         
         this.el.toastContainer.appendChild(toast);
         
@@ -1466,17 +1483,16 @@ const App = {
             return;
         }
 
-        // Build pitch message using current selected template
+        // Build pitch message: always use default template for Instagram DM (BUG #16 fix)
+        // Don't rely on WhatsApp modal's stale selectedTemplate state
         let message = '';
-        const template = AppState.selectedTemplate;
-        if (template === 'custom') {
-            message = document.getElementById('messagePreview')?.textContent || 
-                      document.getElementById('customMessageInput')?.value || '';
-        }
         
-        if (!message) {
-            const templateKey = (template === 'custom' || !template) ? 'website_pitch' : template;
-            const templateData = AppState.whatsappTemplates[templateKey];
+        // If lead already has a custom AI pitch saved, use that
+        if (lead.custom_pitch) {
+            message = lead.custom_pitch;
+        } else {
+            // Use default website_pitch template
+            const templateData = AppState.whatsappTemplates['website_pitch'];
             message = templateData ? templateData.message : 'Hello {business_name}!';
         }
 
@@ -1617,14 +1633,21 @@ const App = {
                 AppState.leads = AppState.leads.concat(data.leads);
                 AppState.allResults = AppState.allResults.concat(data.all_results);
                 
-                // Update stats (combine or overwrite)
-                AppState.stats = data.stats;
-                UI.updateStats(data.stats);
+                // Accumulate stats across pages instead of overwriting (BUG #15 fix)
+                const pageStats = data.stats;
+                AppState.stats.total_found = (AppState.stats.total_found || 0) + (pageStats.total_found || 0);
+                AppState.stats.leads_count = (AppState.stats.leads_count || 0) + (pageStats.leads_count || 0);
+                AppState.stats.broken_websites = (AppState.stats.broken_websites || 0) + (pageStats.broken_websites || 0);
+                AppState.stats.high_priority = (AppState.stats.high_priority || 0) + (pageStats.high_priority || 0);
+                AppState.stats.medium_priority = (AppState.stats.medium_priority || 0) + (pageStats.medium_priority || 0);
+                AppState.stats.with_phone = (AppState.stats.with_phone || 0) + (pageStats.with_phone || 0);
+                AppState.stats.with_whatsapp = (AppState.stats.with_whatsapp || 0) + (pageStats.with_whatsapp || 0);
+                UI.updateStats(AppState.stats);
                 
                 // Re-render
                 UI.renderLeads(AppState.leads);
                 
-                UI.showToast(`Loaded ${data.stats.leads_count} more leads! Total leads in view: ${AppState.leads.length}`, 'success');
+                UI.showToast(`Loaded ${pageStats.leads_count} more leads! Total leads in view: ${AppState.leads.length}`, 'success');
             } else {
                 UI.showToast('No more new leads found on the next pages.', 'info');
                 if (UI.el.loadMoreContainer) {
@@ -1652,11 +1675,6 @@ const App = {
         AppState.currentView = view;
         
         if (view === 'kanban') {
-            UI.el.listViewBtn?.classList.add('active');
-            UI.el.kanbanViewBtn?.classList.remove('active'); // Wait, listViewBtn should be active when view is list, let's look at switcher styling!
-            // Wait: in index.html, we had:
-            // class="view-btn active" for listViewBtn and class="view-btn" for kanbanViewBtn.
-            // So if view is 'kanban':
             UI.el.listViewBtn?.classList.remove('active');
             UI.el.kanbanViewBtn?.classList.add('active');
         } else {
@@ -1901,18 +1919,22 @@ const App = {
                     lead.contact_date = new Date().toISOString();
                     lead.pipeline_stage = 'PITCHED';
                     
-                    // Trigger backend API
-                    await API.request(`/api/leads/${lead.id}/contact`, {
-                        method: 'POST',
-                        body: JSON.stringify({ notes: lead.notes || 'Contacted via WhatsApp' })
-                    });
+                    // Guard: Only sync to backend if lead has a database ID (BUG #10 fix)
+                    if (lead.id) {
+                        await API.request(`/api/leads/${lead.id}/contact`, {
+                            method: 'POST',
+                            body: JSON.stringify({ notes: lead.notes || 'Contacted via WhatsApp' })
+                        });
+                    }
                     
                     UI.renderLeads(AppState.leads);
                     
-                    // Trigger follow-up scheduler
-                    setTimeout(() => {
-                        App.promptFollowupReminder(lead.id, lead.name);
-                    }, 500);
+                    // Trigger follow-up scheduler (only if lead has DB ID)
+                    if (lead.id) {
+                        setTimeout(() => {
+                            App.promptFollowupReminder(lead.id, lead.name);
+                        }, 500);
+                    }
                 } catch (contactErr) {
                     console.error('Error marking contacted:', contactErr);
                 }
@@ -2006,10 +2028,13 @@ const App = {
             const container = document.getElementById('historyList');
             
             if (data.history && data.history.length > 0) {
-                container.innerHTML = data.history.map(item => `
-                    <div class="history-item" onclick="App.rerunSearch('${item.query}', '${item.city}')">
+                // Store history data for safe re-run (BUG #7/#8 fix: no inline onclick with unescaped strings)
+                AppState.searchHistory = data.history;
+
+                container.innerHTML = data.history.map((item, idx) => `
+                    <div class="history-item" data-history-index="${idx}">
                         <div>
-                            <div class="history-query">🔍 ${item.query} in ${item.city}</div>
+                            <div class="history-query">🔍 ${UI.escapeHtml(item.query)} in ${UI.escapeHtml(item.city)}</div>
                         </div>
                         <div class="history-meta">
                             <span>📊 ${item.results_count} found</span>
@@ -2018,6 +2043,17 @@ const App = {
                         </div>
                     </div>
                 `).join('');
+
+                // Event delegation: attach click handlers via data-attribute (safe from XSS/quotes)
+                container.querySelectorAll('.history-item[data-history-index]').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const idx = parseInt(el.getAttribute('data-history-index'));
+                        const item = AppState.searchHistory[idx];
+                        if (item) {
+                            App.rerunSearch(item.query, item.city);
+                        }
+                    });
+                });
             } else {
                 container.innerHTML = `
                     <div class="empty-state" style="padding: 32px;">
@@ -2038,8 +2074,7 @@ const App = {
             return;
         }
 
-        const serpKey = localStorage.getItem('serpapi_api_key') || '';
-        const localSerpKey = localStorage.getItem('api_key') || ''; // Check alternative names
+        const serpKey = localStorage.getItem('serpapi_key') || '';
         
         // Disable bulk buttons
         UI.el.bulkScanSocialsBtn.disabled = true;
@@ -2076,10 +2111,7 @@ const App = {
                 UI.el.bulkProgressLabel.textContent = `Scanning socials for "${lead.name}" (${completed + 1}/${total})...`;
 
                 const data = await API.request(`/api/leads/${lead.id}/scan-socials`, {
-                    method: 'POST',
-                    headers: {
-                        'X-SerpApi-Key': serpKey || localSerpKey
-                    }
+                    method: 'POST'
                 });
 
                 if (data.success) {
@@ -2197,7 +2229,11 @@ const App = {
             });
 
             if (data.success && data.email) {
-                AppState.leads[index].email = data.email;
+                // Find lead by ID instead of array index to handle stale indices after sort (BUG #9 fix)
+                const safeIdx = AppState.leads.findIndex(l => l.id === leadId);
+                if (safeIdx !== -1) {
+                    AppState.leads[safeIdx].email = data.email;
+                }
                 UI.showToast(`📧 Found public email: ${data.email}!`, 'success');
                 UI.renderLeads(AppState.leads);
             } else {

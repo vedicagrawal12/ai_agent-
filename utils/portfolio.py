@@ -20,13 +20,30 @@ class PortfolioParser:
                 headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
             )
             
-            # Disable SSL check to bypass certification issues
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            
-            with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
-                html = response.read().decode('utf-8')
+            # Try with secure SSL verification first (fixes BUG #20)
+            try:
+                ctx = ssl.create_default_context()
+                with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
+                    html = response.read().decode('utf-8')
+            except Exception as ssl_err:
+                # Detect if the error is related to SSL/certificates
+                is_ssl_issue = False
+                if isinstance(ssl_err, ssl.SSLError):
+                    is_ssl_issue = True
+                elif hasattr(ssl_err, 'reason') and isinstance(getattr(ssl_err, 'reason'), ssl.SSLError):
+                    is_ssl_issue = True
+                elif "certificate" in str(ssl_err).lower() or "ssl" in str(ssl_err).lower():
+                    is_ssl_issue = True
+                
+                if is_ssl_issue:
+                    print(f"SSL verification failed for {url}, falling back to disabling SSL check: {ssl_err}")
+                    ctx = ssl.create_default_context()
+                    ctx.check_hostname = False
+                    ctx.verify_mode = ssl.CERT_NONE
+                    with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
+                        html = response.read().decode('utf-8')
+                else:
+                    raise ssl_err
                 
             return PortfolioParser.parse_html(html)
         except Exception as e:

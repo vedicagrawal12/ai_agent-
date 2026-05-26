@@ -356,8 +356,10 @@ BODY:
         except Exception as list_err:
             print(f"Model discovery query failed: {list_err}. Falling back to default list.")
 
-        # 3. Compile final models list to try
-        models_to_try = discovered_models + [
+        # 3. Compile final models list to try (capped to prevent long timeout chains — BUG #6 fix)
+        # Limit discovered models to top 3 to avoid trying 10+ models × 12s timeout each
+        discovered_capped = discovered_models[:3]
+        models_to_try = discovered_capped + [
             ("v1", "gemini-1.5-flash"),
             ("v1beta", "gemini-1.5-flash"),
             ("v1beta", "gemini-1.5-flash-latest"),
@@ -371,6 +373,8 @@ BODY:
             if (ver, mod) not in seen:
                 seen.add((ver, mod))
                 final_models.append((ver, mod))
+            if len(final_models) >= 5:
+                break
 
         last_error = ""
         for version, model in final_models:

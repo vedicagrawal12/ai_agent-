@@ -19,10 +19,17 @@ from collectors.base_collector import Lead
 class Database:
     """SQLite database manager for lead storage."""
 
+    # Class-level flag to prevent double cleanup in Flask debug mode (reloader runs __init__ twice)
+    _cleanup_done = False
+
     def __init__(self, db_path: str = "leads.db"):
         """Initialize database connection and create tables if needed."""
         self.db_path = db_path
         self._init_db()
+        # Run startup cleanup once, outside of _init_db (BUG #12 fix)
+        if not Database._cleanup_done:
+            Database._cleanup_done = True
+            self.cleanup_old_data()
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get a database connection with row factory."""
@@ -112,20 +119,29 @@ class Database:
 
         conn.commit()
         conn.close()
-        self.cleanup_old_data()
 
     def save_leads(self, leads: List[Lead]) -> int:
         """
         Save leads to the database, updating existing ones.
         
-        Returns the number of new leads saved.
+        Returns the number of genuinely NEW leads saved (not updates).
         """
         conn = self._get_connection()
         cursor = conn.cursor()
         new_count = 0
 
+        # Pre-fetch existing place_ids to distinguish INSERT from UPDATE
+        existing_place_ids = set()
+        try:
+            cursor.execute("SELECT place_id FROM leads WHERE place_id IS NOT NULL AND place_id != ''")
+            existing_place_ids = {row[0] for row in cursor.fetchall()}
+        except Exception:
+            pass
+
         for lead in leads:
             try:
+                is_new = lead.place_id and lead.place_id not in existing_place_ids
+
                 cursor.execute("""
                     INSERT INTO leads (place_id, name, phone, address, website, rating, 
                                       reviews, category, city, priority, whatsapp_number, source,
@@ -152,8 +168,9 @@ class Database:
                     lead.is_broken_website, lead.line_type
                 ))
                 
-                if cursor.rowcount > 0:
+                if is_new:
                     new_count += 1
+                    existing_place_ids.add(lead.place_id)
             except Exception as e:
                 print(f"Error saving lead {lead.name}: {e}")
                 continue
