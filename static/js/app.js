@@ -861,7 +861,16 @@ const App = {
                 
                 // Show/hide custom message area
                 const customArea = document.getElementById('customMessageArea');
-                customArea.style.display = e.target.value === 'custom' ? 'block' : 'none';
+                if (customArea) {
+                    customArea.style.display = e.target.value === 'custom' ? 'block' : 'none';
+                }
+
+                // Update selected visual styling class on template-option labels
+                const container = document.getElementById('templateOptions');
+                if (container) {
+                    container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
+                    e.target.closest('.template-option')?.classList.add('selected');
+                }
             }
         });
 
@@ -1527,13 +1536,6 @@ const App = {
                 </label>
             `;
 
-        // Add click handlers for visual selection
-        container.querySelectorAll('.template-option').forEach(option => {
-            option.addEventListener('click', () => {
-                container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
-                option.classList.add('selected');
-            });
-        });
     },
 
     openWhatsApp(index) {
