@@ -354,6 +354,11 @@ def export_excel():
                 "Rating": lead.get("rating", ""),
                 "Reviews": lead.get("reviews", ""),
                 "Priority": lead.get("priority", ""),
+                "Instagram": lead.get("instagram", ""),
+                "Facebook": lead.get("facebook", ""),
+                "Contacted": "Yes" if lead.get("contacted") == 1 or lead.get("contacted") is True else "No",
+                "Contact Date": lead.get("contact_date", ""),
+                "Notes": lead.get("notes", ""),
                 "Source": lead.get("source", "google_maps")
             })
             
