@@ -25,23 +25,23 @@ class AIOutreachWriter:
         tone_directives = ""
         if tone == "friendly":
             tone_directives = """
-- PERSONA: Warm, enthusiastic, super friendly local freelance developer who is eager to help.
-- TONE: Casual, extremely polite, helpful, very human. Speak like a friendly tech-savvy neighbor in Hinglish.
-- VALUE ADD: Appreciates their business's popularity naturally. Avoids looking like a corporate agency.
-- CTA: Offers a super quick video recording or link of a homepage mockup layout made specifically for them.
+- PERSONA: A super friendly, enthusiastic local freelance developer in India who is passionate about helping local brands look elite online.
+- TONE: Casual, extremely warm, helpful, very human. Talk like a friendly tech-savvy partner in colloquial Hinglish.
+- VALUE ADD: Appreciates their business's popularity naturally. NEVER sound like a corporate agency, heavy salesperson, or robot. Keep it very conversational.
+- CTA: Offers a super friendly, zero-pressure preview mockup link designed specifically for them to check out.
 """
         elif tone == "direct":
             tone_directives = """
-- PERSONA: Sharp, metric-driven local digital growth partner.
-- TONE: Highly direct, business-focused, professional, metric-heavy, polite but fast-paced.
-- VALUE ADD: Focuses heavily on customer booking leakages and search engine visibility.
+- PERSONA: A sharp, growth-minded local digital growth consultant.
+- TONE: Direct, professional, growth-focused, metric-conscious, but polite and conversational. Speaks natural, founder-to-founder Hinglish.
+- VALUE ADD: Cleanly highlights customer booking leaks and digital trust gaps.
 - CTA: Offers a quick look at a raw digital storefront layout draft, zero commitments.
 """
         else: # elite
             tone_directives = """
-- PERSONA: Elite Business Development Consultant & Web Strategy Expert.
-- TONE: Highly professional, polite, warm, growth-focused, extremely authoritative yet friendly.
-- VALUE ADD: Appreciates high review volume and pivots into digital customer conversion gaps.
+- PERSONA: Elite Business Development Consultant & Modern Web Strategy Expert.
+- TONE: Professional, warm, polished, growth-focused, authoritative yet super friendly. Ditch textbook formal terms. Speak like a premium digital partner.
+- VALUE ADD: Appreciates their massive local reputation and highlights how a top-tier digital experience matches their real-world quality.
 - CTA: Offers to share a premium custom-sketched homepage raw mockup/draft layout for their brand.
 """
 
@@ -49,13 +49,13 @@ class AIOutreachWriter:
         length_directives = ""
         if length == "short":
             length_directives = """
-- LENGTH: Extremely brief and DM-friendly (maximum 2-3 very short sentences/paragraphs, under 90 words total).
-- STRUCTURE: Hook them, drop the gap, state the matched portfolio proof sentence, and ask the CTA. Keep it ultra-compact so they don't have to scroll on mobile.
+- LENGTH: Brief, snappy, and DM-friendly (maximum 2-3 very short sentences/paragraphs, under 90 words total).
+- STRUCTURE: Casual hook, drop the digital gap, state the matched portfolio proof sentence naturally, and give the CTA. Keep it compact so they can see it instantly on mobile.
 """
         else: # detailed
             length_directives = """
-- LENGTH: Detailed and structured (3-4 crisp, mobile-friendly paragraphs).
-- STRUCTURE: Beautiful flow starting with a warm hook, explaining the conversion gap logically, presenting the matched work sample, and concluding with an irresistible mockup draft offer.
+- LENGTH: Detailed and structured (3-4 crisp, mobile-friendly paragraphs, under 170 words total).
+- STRUCTURE: Beautiful natural flow starting with a warm casual hook, highlighting the trust/conversion gap logically, presenting the matched work sample, and concluding with a friendly mockup draft offer.
 """
 
         # Resolve smart review count hooks
@@ -66,11 +66,11 @@ class AIOutreachWriter:
         
         if reviews_count >= 100:
             hook_type_directive = f"""
-- SMART HOOK (ESTABLISHED AUTHORITY): This local business has a massive review count ({reviews_count} reviews) and is clearly an established local favourite. Frame the pitch around scaling, automating reservations, and retaining premium customers who prefer quick booking interfaces. (e.g. 'Aap Bhopal ke elite brands mein aate hain...').
+- SMART HOOK (ESTABLISHED AUTHORITY): This local business has a massive review count ({reviews_count} reviews) and is clearly an established local favorite. Frame the pitch around scaling, keeping up with demand, and retaining premium customers who prefer quick booking interfaces. (e.g. 'Aap Bhopal ke elite brands mein aate hain...' or 'Google par aapka setup dekh kar maza aa gaya!').
 """
         else:
             hook_type_directive = f"""
-- SMART HOOK (TRUST & CREDIBILITY BUILDER): This business is newly growing or has low digital proof ({reviews_count} reviews). Frame the pitch around building massive trust, credibility, first impression power, and getting new customers in {lead_data.get('city', 'your city')} using a professional digital storefront.
+- SMART HOOK (TRUST & CREDIBILITY BUILDER): This business is growing and has a good start ({reviews_count} reviews). Frame the pitch around building massive trust, credibility, first impression power, and turning online searchers into lifetime customers in {lead_data.get('city', 'your city')} using a professional digital storefront.
 """
 
         # Resolve sender profile sign-off
@@ -89,7 +89,7 @@ class AIOutreachWriter:
                 signoff_parts.append(f"at {brand}")
             
             signoff_str = " ".join(signoff_parts)
-            signoff_directive = f"\n7. SIGN OFF: Sign off the message naturally as '{signoff_str}' (e.g. 'Best, {name}' or similar, keeping it friendly)."
+            signoff_directive = f"\n7. SIGN OFF: Sign off the message naturally as '{signoff_str}' (e.g. 'Best, {name}' or similar, keeping it friendly and casual)."
         else:
             signoff_directive = f"\n7. NO SIGN OFF: Do NOT sign off the message with any name or brand placeholder. Leave it open or end on a friendly CTA."
 
@@ -126,15 +126,15 @@ Strict Copywriting Guidelines for Refinement:
 
             if is_broken:
                 prompt = f"""
-You are an Elite Business Development Consultant, Growth Hacker, and Modern Web Designer in India who helps local businesses double their customers using stunning, fast web portals and digital storefronts.
+You are an Elite B2B Growth Strategist, Freelance Web Developer, and Conversion Consultant in India. You write highly personalized, warm, and 100% human-sounding WhatsApp pitches for local business owners.
+Write an outreach pitch for a local business whose website is BROKEN/DOWN (it returns errors/fails to load, causing them to lose premium clients):
 
-Write a highly personalized, extremely conversational, and premium sales pitch for the following business whose listed website is BROKEN/DOWN:
 - Business Name: {lead_data.get('name', 'Business')}
 - Category: {lead_data.get('category', 'Business')}
 - Location: {lead_data.get('city', 'your city')}
 - Google Maps Rating: {lead_data.get('rating', '0')}
 - Google Maps Reviews: {lead_data.get('reviews', '0')}
-- Website: {website_url} (IT IS BROKEN/DOWN! Standard requests return errors or timeouts. A major credibility leak for a business.)
+- Listed Broken Website: {website_url}
 
 Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
 {mockup_link}
@@ -152,35 +152,35 @@ SMART HOOK DIRECTIVES:
 {hook_type_directive}
 
 CRITICAL COPYWRITING DIRECTIVES FOR BROKEN WEBSITES (FOLLOW THOROUGHLY):
-1. CASUAL GREETING: NEVER start with robotic or formal things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
-2. IMPRESSION OVER FLATTERY & BROKEN WEBSITE HOOK: Say something exciting and real about their reviews first, then immediately flag the broken website listed.
+1. CASUAL GREETING: NEVER start with formal, robotic things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly, human greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
+2. IMPRESSION OVER FLATTERY & BROKEN WEBSITE HOOK: Speak like a real human who just noticed a bug. Start with a direct, casual statement about their amazing local reputation, then bring up the broken website naturally. Do NOT repeat a single static script. Vary your style.
    For example:
-   "Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekhe—sach mein kamaal ka response hai! Par maine ek critical issue notice kiya... Google Maps par aapki listed website open nahi ho rahi hai (down/broken error dikha rahi hai). ⚠️"
-   (Note: Do NOT write or print the actual raw broken website URL '{website_url}' in the output text itself to avoid triggering link filters).
-3. THE GAP (CONVERSATIONAL PAIN POINT): Explain that when high-paying clients click the website and see an error/blank page, it immediately kills trust. They think the business has shut down or is unprofessional, causing them to lose premium clients to competitors. We can easily fix this and get it up.
-4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
+   "Hey there! Bhopal me aapka setup sach me bahut popular hai—Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekh kar maza aa gaya! 🔥 Par maine ek critical issue notice kiya... Google Maps par aapki listed website open nahi ho rahi hai (error page/down dikha rahi hai). ⚠️"
+   (Note: Do NOT write or print the actual raw broken website URL '{website_url}' in the output text itself to avoid triggering safety/phishing link filters).
+3. THE CONVERSATIONAL PAIN POINT (THE GAP): Explain in casual Hinglish how this is a massive trust leak. When premium clients search for the best salons/services in their area, they click the website first. If it shows an error, they think the business has shut down or is unmanaged, and immediately switch to a competitor.
+4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. Connect it smoothly into the conversation. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
    E.g., "{project_sample}"
 5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible. Instead of asking for a boring call, offer a free homepage mockup draft styled perfectly for them!
    - IF the mockup link is provided above (i.e. "{mockup_link}" is not empty), you MUST naturally weave this link into your CTA (e.g., "Maine aapki website ko bypass karke ek premium live *homepage mockup layout* sketch kiya hai, aap is link par check kar sakte hain: {mockup_link} ...").
    - IF the mockup link is not provided, ask to share (e.g. "Maine aapki website ko bypass karke ek naya *homepage mockup layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Let me know if that sounds good.").
-6. FORMATTING:
-   - Language must be ultra-premium, modern, natural Hinglish (how young entrepreneurs talk on WhatsApp).
-   - Use bold text for key numbers and phrases using asterisks (e.g., *4.8 rating*, *broken website*, *free mockup design*).
-   - Keep emojis limited to 3 or 4 maximum (e.g. 👋, ⚠️, 🔥, 💬). No emoji spam.
+6. FORMATTING & LANGUAGE STYLE (CRITICAL FOR HUMAN FEEL):
+   - LANGUAGE: Must be highly natural, conversational Hinglish (how modern young founders and entrepreneurs talk on WhatsApp in India). Ditch textbook formal vocabulary. Use words like: *setup*, *vibe*, *fuss*, *traffic*, *leads*, *look*, *draft*, *leakage*, *switch*.
+   - Keep paragraphs short (maximum 2-3 sentences per paragraph) with clean spacing to look great on WhatsApp mobile screens.
+   - Use bold text for key numbers and phrases using asterisks (e.g., *{lead_data.get('rating')} rating*, *website down*, *free mockup design*).
+   - EMOJIS: Keep emojis limited to 3 or 4 maximum (e.g. 👋, ⚠️, 🔥, 📈). Do NOT spam emojis at the end of every sentence.
    - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc. Output must be 100% ready to copy-paste.
 {signoff_directive}
 """
             else:
                 prompt = f"""
-You are an Elite Business Development Consultant, Growth Hacker, and Modern Web Designer in India who helps local businesses double their customers using stunning, fast web portals and digital storefronts.
+You are an Elite B2B Growth Strategist, Freelance Web Developer, and Conversion Consultant in India. You write highly personalized, warm, and 100% human-sounding WhatsApp pitches for local business owners.
+Write an outreach pitch for a local business who DOES NOT HAVE A WEBSITE YET:
 
-Write a highly personalized, extremely conversational, and premium sales pitch for the following business:
 - Business Name: {lead_data.get('name', 'Business')}
 - Category: {lead_data.get('category', 'Business')}
 - Location: {lead_data.get('city', 'your city')}
 - Google Maps Rating: {lead_data.get('rating', '0')}
 - Google Maps Reviews: {lead_data.get('reviews', '0')}
-- Website: They DO NOT have a website yet (Huge gap!).
 
 Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
 {mockup_link}
@@ -198,19 +198,21 @@ SMART HOOK DIRECTIVES:
 {hook_type_directive}
 
 CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
-1. CASUAL GREETING: NEVER start with robotic or formal things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
-2. IMPRESSION OVER FLATTERY: Do NOT write generic praise like "Aapka review dekh kar mujhe bahut khushi hui." That sounds fake and robotic. Instead, say something exciting and real like:
-   "Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekhe—sach mein kamaal ka response hai! {lead_data.get('city', 'your city')} mein log aapki service ko sach mein bahut pasand kar rahe hain. 🔥"
-3. THE GAP (CONVERSATIONAL PAIN POINT): Pivot smoothly. Explain that when high-paying clients look for the best salons/services in their area, they expect an interactive digital booking experience or digital gallery, and not having a website means losing premium clients.
-4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
+1. CASUAL GREETING: NEVER start with formal, robotic things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly, human greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
+2. IMPRESSION OVER FLATTERY: Speak like a real human salesperson who is genuinely impressed. Do NOT repeat a single static script. Vary your style.
+   For example:
+   "Hey there! Bhopal me aapka setup sach me bahut popular hai—Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekh kar maza aa gaya! 🔥 Bhopal ke log aapki services ko sach me bahut pasand karte hain."
+3. THE GAP (CONVERSATIONAL PAIN POINT): Pivot smoothly. Explain in conversational Hinglish that today, premium clients look for a modern, sleek digital booking experience or online booking portal. Not having a website is a huge missed opportunity to capture and automate high-paying memberships/bookings.
+4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally. Connect it smoothly into the conversation. The portfolio sample is already a complete, conversational sentence describing our work (e.g., "maine haal hi mein ek GYM website banayi hai..."). Simply integrate it smoothly as its own short paragraph, or weave it in with a simple transition.
    E.g., "{project_sample}"
 5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible and low-friction. Instead of asking for a boring call, offer a free draft/mockup!
    - IF the mockup link is provided above (i.e. "{mockup_link}" is not empty), you MUST naturally weave this link into your CTA (e.g., "Maine aapke business details ke sath ek premium live *homepage mockup layout* sketch kiya hai, aap is link par check kar sakte hain: {mockup_link} ...").
    - IF the mockup link is not provided, ask to share (e.g. "Maine aapke business details ke sath ek *chota sa premium homepage mockup / raw design layout* sketch kiya hai. Kya main uska ek quick link ya screen recording video yahan share karu? Let me know if that sounds good.").
-6. FORMATTING:
-   - Language must be ultra-premium, modern, natural Hinglish (how young entrepreneurs talk on WhatsApp).
-   - Use bold text for key numbers and phrases using asterisks (e.g., *4.8 rating*, *70%+ premium customers*, *free mockup design*).
-   - Keep emojis limited to 3 or 4 maximum (e.g. 👋, 🔥, 📈, 💬). No emoji spam.
+6. FORMATTING & LANGUAGE STYLE (CRITICAL FOR HUMAN FEEL):
+   - LANGUAGE: Must be highly natural, conversational Hinglish (how modern young founders and entrepreneurs talk on WhatsApp in India). Ditch textbook formal vocabulary. Use words like: *setup*, *vibe*, *fuss*, *traffic*, *leads*, *look*, *draft*, *leakage*, *switch*.
+   - Keep paragraphs short (maximum 2-3 sentences per paragraph) with clean spacing to look great on WhatsApp mobile screens.
+   - Use bold text for key numbers and phrases using asterisks (e.g., *{lead_data.get('rating')} rating*, *leads*, *free mockup design*).
+   - EMOJIS: Keep emojis limited to 3 or 4 maximum (e.g. 👋, 🔥, 📈, 💬). Do NOT spam emojis at the end of every sentence.
    - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc. Output must be 100% ready to copy-paste.
 {signoff_directive}
 """
