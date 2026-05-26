@@ -276,6 +276,36 @@ const UI = {
             bulkProgressLabel: document.getElementById('bulkProgressLabel'),
             bulkProgressPercentage: document.getElementById('bulkProgressPercentage'),
             bulkProgressBar: document.getElementById('bulkProgressBar'),
+            bulkEmailCampaignBtn: document.getElementById('bulkEmailCampaignBtn'),
+            
+            // Campaign modal elements
+            emailCampaignModal: document.getElementById('emailCampaignModal'),
+            campaignStatLeads: document.getElementById('campaignStatLeads'),
+            campaignStatEmails: document.getElementById('campaignStatEmails'),
+            campaignStatDrafts: document.getElementById('campaignStatDrafts'),
+            campaignStatSent: document.getElementById('campaignStatSent'),
+            campaignBulkScanBtn: document.getElementById('campaignBulkScanBtn'),
+            campaignBulkDraftBtn: document.getElementById('campaignBulkDraftBtn'),
+            campaignBulkSendBtn: document.getElementById('campaignBulkSendBtn'),
+            campaignProgressContainer: document.getElementById('campaignProgressContainer'),
+            campaignProgressLabel: document.getElementById('campaignProgressLabel'),
+            campaignProgressPercentage: document.getElementById('campaignProgressPercentage'),
+            campaignProgressBar: document.getElementById('campaignProgressBar'),
+            campaignTableBody: document.getElementById('campaignTableBody'),
+            campaignOutboxReviewPanel: document.getElementById('campaignOutboxReviewPanel'),
+            campaignOutboxEmptyState: document.getElementById('campaignOutboxEmptyState'),
+            campaignOutboxWorkspace: document.getElementById('campaignOutboxWorkspace'),
+            campaignSelectedName: document.getElementById('campaignSelectedName'),
+            campaignSelectedEmail: document.getElementById('campaignSelectedEmail'),
+            campaignSelectedPriority: document.getElementById('campaignSelectedPriority'),
+            campaignSubjectInput: document.getElementById('campaignSubjectInput'),
+            campaignBodyInput: document.getElementById('campaignBodyInput'),
+            campaignSelectedAIGenBtn: document.getElementById('campaignSelectedAIGenBtn'),
+            campaignSelectedSkipBtn: document.getElementById('campaignSelectedSkipBtn'),
+            campaignSelectedSendBtn: document.getElementById('campaignSelectedSendBtn'),
+            previewBusinessName: document.getElementById('previewBusinessName'),
+            previewDeveloperBrand: document.getElementById('previewDeveloperBrand'),
+            campaignEmailVisualPreview: document.getElementById('campaignEmailVisualPreview'),
             
             // Kanban elements
             listViewBtn: document.getElementById('listViewBtn'),
@@ -976,6 +1006,50 @@ const App = {
         // Bulk Scan Socials
         UI.el.bulkScanSocialsBtn?.addEventListener('click', () => {
             this.handleBulkScanSocials();
+        });
+
+        // Launch Email Outreach Campaign
+        UI.el.bulkEmailCampaignBtn?.addEventListener('click', () => {
+            this.openEmailCampaign();
+        });
+
+        // Bulk Scan Campaign Emails
+        UI.el.campaignBulkScanBtn?.addEventListener('click', () => {
+            this.bulkScanCampaignEmails();
+        });
+
+        // Bulk Draft Campaign AI Emails
+        UI.el.campaignBulkDraftBtn?.addEventListener('click', () => {
+            this.bulkDraftCampaignAI();
+        });
+
+        // Bulk Send Campaign Emails
+        UI.el.campaignBulkSendBtn?.addEventListener('click', () => {
+            this.bulkSendCampaignSMTP();
+        });
+
+        // Selected campaign lead AI generate pitch button
+        UI.el.campaignSelectedAIGenBtn?.addEventListener('click', () => {
+            this.generateCampaignLeadAIDraft();
+        });
+
+        // Selected campaign lead Skip button
+        UI.el.campaignSelectedSkipBtn?.addEventListener('click', () => {
+            this.skipCampaignLead();
+        });
+
+        // Selected campaign lead Send button
+        UI.el.campaignSelectedSendBtn?.addEventListener('click', () => {
+            this.sendCampaignLeadSMTP();
+        });
+
+        // Interactive Live Preview text change listeners
+        UI.el.campaignSubjectInput?.addEventListener('input', () => {
+            this.updateCampaignLivePreview();
+        });
+
+        UI.el.campaignBodyInput?.addEventListener('input', () => {
+            this.updateCampaignLivePreview();
         });
 
         // Clear Database
@@ -2729,6 +2803,676 @@ const App = {
         setTimeout(() => {
             this.openEmail(lead);
         }, 300);
+    },
+
+    // ============================================================
+    // Bulk Email Campaign Center Logic & Outbox
+    // ============================================================
+    openEmailCampaign() {
+        // Gathers all leads that have websites
+        const campaignLeads = AppState.leads.filter(lead => lead.website);
+        
+        if (campaignLeads.length === 0) {
+            UI.showToast('Search results me aisi koi lead nahi hai jiske paas website ho! Pehle search settings me "Show businesses with websites" check karke search karein.', 'warning');
+            return;
+        }
+
+        AppState.campaignLeads = campaignLeads.map(lead => ({
+            ...lead,
+            campaign_email_status: lead.email ? 'scraped' : 'missing', // scraped, missing, scanning
+            campaign_draft_status: lead.custom_pitch ? 'ready' : 'not-drafted', // ready, not-drafted
+            campaign_send_status: 'pending', // pending, sending, sent, failed
+            campaign_subject: lead.email ? 'Digital Storefront Design Proposal' : '',
+            campaign_body: lead.custom_pitch || ''
+        }));
+
+        AppState.selectedCampaignLeadId = null;
+
+        // Render everything
+        this.renderCampaignList();
+        this.updateCampaignStats();
+        
+        // Hide review workspace empty state by default
+        if (UI.el.campaignOutboxWorkspace) UI.el.campaignOutboxWorkspace.style.display = 'none';
+        if (UI.el.campaignOutboxEmptyState) UI.el.campaignOutboxEmptyState.style.display = 'flex';
+        if (UI.el.campaignProgressContainer) UI.el.campaignProgressContainer.style.display = 'none';
+
+        UI.openModal('emailCampaignModal');
+    },
+
+    updateCampaignStats() {
+        const leads = AppState.campaignLeads || [];
+        const total = leads.length;
+        const emails = leads.filter(l => l.email || l.campaign_email_status === 'scraped').length;
+        const drafts = leads.filter(l => l.campaign_draft_status === 'ready').length;
+        const sent = leads.filter(l => l.campaign_send_status === 'sent').length;
+
+        if (UI.el.campaignStatLeads) UI.el.campaignStatLeads.textContent = total;
+        if (UI.el.campaignStatEmails) UI.el.campaignStatEmails.textContent = emails;
+        if (UI.el.campaignStatDrafts) UI.el.campaignStatDrafts.textContent = drafts;
+        if (UI.el.campaignStatSent) UI.el.campaignStatSent.textContent = sent;
+    },
+
+    renderCampaignList() {
+        const body = UI.el.campaignTableBody;
+        if (!body) return;
+
+        const leads = AppState.campaignLeads || [];
+        
+        body.innerHTML = leads.map((lead, index) => {
+            const activeClass = lead.id === AppState.selectedCampaignLeadId ? 'active' : '';
+            const safeName = UI.escapeHtml(lead.name);
+            const safeWebsite = UI.escapeHtml(lead.website);
+            const priorityClass = `priority-${lead.priority.toLowerCase()}`;
+            const priorityEmoji = { HIGH: '🔴', MEDIUM: '🟡', LOW: '🟢', IGNORE: '⚪' }[lead.priority] || '';
+
+            // Email Status layout
+            let emailHtml = '';
+            if (lead.email) {
+                emailHtml = `<span style="font-weight: 600; color: var(--accent-cyan); font-family: monospace;">${UI.escapeHtml(lead.email)}</span>`;
+            } else if (lead.campaign_email_status === 'scanning') {
+                emailHtml = `<span style="color: var(--accent-cyan); font-style: italic;">⏳ Scanning website...</span>`;
+            } else {
+                emailHtml = `
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="color: var(--accent-red); font-size: 0.8rem;">No email</span>
+                        <button class="campaign-table-btn scan" onclick="event.stopPropagation(); App.scanCampaignLeadEmailOnDemand(${lead.id}, ${index})">🔍 Scan</button>
+                    </div>
+                `;
+            }
+
+            // Draft Status layout
+            let draftBadge = '';
+            if (lead.campaign_send_status === 'sent') {
+                draftBadge = `<span class="campaign-status-badge delivered">Delivered ✅</span>`;
+            } else if (lead.campaign_send_status === 'failed') {
+                draftBadge = `<span class="campaign-status-badge failed">Failed ❌</span>`;
+            } else if (lead.campaign_send_status === 'sending') {
+                draftBadge = `<span class="campaign-status-badge not-drafted">Sending...</span>`;
+            } else if (lead.campaign_draft_status === 'ready') {
+                draftBadge = `<span class="campaign-status-badge draft-ready">Draft Ready 🟢</span>`;
+            } else {
+                draftBadge = `<span class="campaign-status-badge not-drafted">No Draft ⚪</span>`;
+            }
+
+            // Action triggers
+            let actionBtn = '';
+            if (lead.campaign_send_status === 'sent') {
+                actionBtn = `<span style="color: var(--accent-green); font-weight: bold; font-size: 0.8rem;">✓ Sent</span>`;
+            } else if (lead.campaign_draft_status === 'ready') {
+                actionBtn = `<button class="btn btn-whatsapp btn-sm" onclick="event.stopPropagation(); App.selectCampaignLead(${lead.id}); App.sendCampaignLeadSMTPImmediate(${lead.id}, ${index})" style="font-size: 0.7rem; padding: 4px 8px; background: var(--gradient-primary); color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: 600;">🚀 Send</button>`;
+            } else if (lead.email) {
+                actionBtn = `<button class="campaign-table-btn draft" onclick="event.stopPropagation(); App.selectCampaignLead(${lead.id}); App.generateCampaignLeadAIDraftImmediate(${lead.id}, ${index})">✨ Draft AI</button>`;
+            } else {
+                actionBtn = `<span style="color: var(--text-muted); font-size: 0.75rem;">Need Email</span>`;
+            }
+
+            return `
+                <tr id="campaign-row-${lead.id}" class="${activeClass}" onclick="App.selectCampaignLead(${lead.id})">
+                    <td style="padding: 10px 12px;">
+                        <div style="font-weight: 700; color: var(--text-primary); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${safeName}">${safeName}</div>
+                        <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                            <a href="${safeWebsite}" target="_blank" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: none;">🌐 Website</a>
+                            <span class="priority-badge ${priorityClass}" style="font-size: 0.65rem; padding: 1px 4px; border-radius: 3px;">${priorityEmoji} ${lead.priority}</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 12px;">${emailHtml}</td>
+                    <td style="padding: 10px 12px; text-align: center;">${draftBadge}</td>
+                    <td style="padding: 10px 12px; text-align: right;">${actionBtn}</td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    selectCampaignLead(leadId) {
+        AppState.selectedCampaignLeadId = leadId;
+        
+        // Highlight active table row
+        document.querySelectorAll('#campaignTableBody tr').forEach(tr => tr.classList.remove('active'));
+        const activeRow = document.getElementById(`campaign-row-${leadId}`);
+        if (activeRow) activeRow.classList.add('active');
+
+        const lead = (AppState.campaignLeads || []).find(l => l.id === leadId);
+        if (!lead) return;
+
+        // Toggle review panels display
+        if (UI.el.campaignOutboxEmptyState) UI.el.campaignOutboxEmptyState.style.display = 'none';
+        if (UI.el.campaignOutboxWorkspace) UI.el.campaignOutboxWorkspace.style.display = 'flex';
+
+        // Load details in pane inputs
+        if (UI.el.campaignSelectedName) UI.el.campaignSelectedName.textContent = lead.name;
+        if (UI.el.campaignSelectedEmail) {
+            UI.el.campaignSelectedEmail.textContent = lead.email || 'No email scanned yet.';
+            UI.el.campaignSelectedEmail.style.color = lead.email ? 'var(--accent-cyan)' : 'var(--accent-red)';
+        }
+        
+        const priorityBadge = UI.el.campaignSelectedPriority;
+        if (priorityBadge) {
+            priorityBadge.className = `priority-badge priority-${lead.priority.toLowerCase()}`;
+            priorityBadge.textContent = lead.priority;
+        }
+
+        // Set subject and body
+        if (UI.el.campaignSubjectInput) {
+            UI.el.campaignSubjectInput.value = lead.campaign_subject || '';
+        }
+        if (UI.el.campaignBodyInput) {
+            UI.el.campaignBodyInput.value = lead.campaign_body || '';
+        }
+
+        this.updateCampaignLivePreview();
+    },
+
+    updateCampaignLivePreview() {
+        const leadId = AppState.selectedCampaignLeadId;
+        const lead = (AppState.campaignLeads || []).find(l => l.id === leadId);
+        if (!lead) return;
+
+        // Sync inputs values back to state so edits are persistent
+        lead.campaign_subject = UI.el.campaignSubjectInput?.value || '';
+        lead.campaign_body = UI.el.campaignBodyInput?.value || '';
+
+        // Live Preview visual card mappings
+        if (UI.el.previewBusinessName) UI.el.previewBusinessName.textContent = lead.name;
+        
+        const brandName = localStorage.getItem('sender_brand') || 'WebScale Studio';
+        if (UI.el.previewDeveloperBrand) UI.el.previewDeveloperBrand.textContent = brandName;
+        
+        if (UI.el.campaignEmailVisualPreview) {
+            UI.el.campaignEmailVisualPreview.textContent = lead.campaign_body || 'Please draft or type a message...';
+        }
+    },
+
+    async scanCampaignLeadEmailOnDemand(leadId, index) {
+        const lead = (AppState.campaignLeads || []).find(l => l.id === leadId);
+        if (!lead) return;
+
+        lead.campaign_email_status = 'scanning';
+        this.renderCampaignList();
+
+        try {
+            const data = await API.request(`/api/leads/${lead.id}/scan-email`, {
+                method: 'POST'
+            });
+
+            if (data.success && data.email) {
+                lead.email = data.email;
+                lead.campaign_email_status = 'scraped';
+                lead.campaign_subject = 'Digital Storefront Design Proposal';
+                
+                // Update active lead details inside workspace if currently selected
+                if (AppState.selectedCampaignLeadId === leadId) {
+                    this.selectCampaignLead(leadId);
+                }
+                
+                UI.showToast(`📧 Found email: ${data.email} for ${lead.name}`, 'success');
+            } else {
+                lead.campaign_email_status = 'failed';
+                UI.showToast(`✗ No email found for ${lead.name}`, 'info');
+            }
+        } catch (error) {
+            lead.campaign_email_status = 'failed';
+            UI.showToast(error.message, 'error');
+        } finally {
+            this.renderCampaignList();
+            this.updateCampaignStats();
+        }
+    },
+
+    async generateCampaignLeadAIDraftImmediate(leadId, index) {
+        const lead = (AppState.campaignLeads || []).find(l => l.id === leadId);
+        if (!lead) return;
+
+        const geminiKey = localStorage.getItem('gemini_api_key');
+        if (!geminiKey) {
+            UI.showToast('Gemini API key set karein pehle Settings me!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        try {
+            UI.showLoading(`Gemini writing email for ${lead.name}...`);
+            const projectSample = this.getBestPortfolioProjectSample(lead);
+            const tone = UI.el.emailToneSelect?.value || 'elite';
+
+            const data = await API.request('/api/outreach/generate-email-ai', {
+                method: 'POST',
+                headers: { 'X-Gemini-API-Key': geminiKey },
+                body: JSON.stringify({
+                    lead: lead,
+                    project_sample: projectSample,
+                    tone: tone,
+                    sender: {
+                        name: localStorage.getItem('sender_name') || '',
+                        brand: localStorage.getItem('sender_brand') || '',
+                        role: localStorage.getItem('sender_role') || ''
+                    },
+                    custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
+                })
+            });
+
+            if (data.success) {
+                lead.campaign_subject = data.subject || 'Digital Storefront Design Proposal';
+                lead.campaign_body = data.body || '';
+                lead.campaign_draft_status = 'ready';
+                
+                // Refresh selection editor if active
+                if (AppState.selectedCampaignLeadId === leadId) {
+                    this.selectCampaignLead(leadId);
+                }
+                UI.showToast(`✨ Generated draft for ${lead.name}!`, 'success');
+            } else {
+                UI.showToast(data.error || 'AI Drafting failed', 'error');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+            this.renderCampaignList();
+            this.updateCampaignStats();
+        }
+    },
+
+    async generateCampaignLeadAIDraft() {
+        const leadId = AppState.selectedCampaignLeadId;
+        if (!leadId) return;
+        
+        const idx = AppState.campaignLeads.findIndex(l => l.id === leadId);
+        if (idx === -1) return;
+
+        await this.generateCampaignLeadAIDraftImmediate(leadId, idx);
+    },
+
+    skipCampaignLead() {
+        const leads = AppState.campaignLeads || [];
+        const currentIndex = leads.findIndex(l => l.id === AppState.selectedCampaignLeadId);
+        
+        if (currentIndex === -1) return;
+        
+        // Load next lead in list if exists
+        if (currentIndex + 1 < leads.length) {
+            this.selectCampaignLead(leads[currentIndex + 1].id);
+        } else {
+            UI.showToast('Campaign Directory list finished! You are at the end.', 'info');
+        }
+    },
+
+    async sendCampaignLeadSMTPImmediate(leadId, index) {
+        const lead = (AppState.campaignLeads || []).find(l => l.id === leadId);
+        if (!lead) return;
+
+        const toEmail = lead.email || '';
+        const subject = lead.campaign_subject || '';
+        const body = lead.campaign_body || '';
+
+        if (!toEmail) {
+            UI.showToast('Lead email address missing! Pehle website scan karein.', 'warning');
+            return;
+        }
+        if (!subject || !body) {
+            UI.showToast('Please AI draft or write email content first!', 'warning');
+            return;
+        }
+
+        const host = localStorage.getItem('smtp_host');
+        const port = localStorage.getItem('smtp_port');
+        const email = localStorage.getItem('smtp_email');
+        const password = localStorage.getItem('smtp_password');
+        const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
+
+        if (!host || !port || !email || !password) {
+            UI.showToast('Direct dispatch SMTP settings NOT configured! Open settings and set them first.', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        try {
+            UI.showLoading(`Sending SMTP outreach email to ${toEmail}...`);
+            lead.campaign_send_status = 'sending';
+            this.renderCampaignList();
+
+            const data = await API.request('/api/outreach/send-smtp-email', {
+                method: 'POST',
+                body: JSON.stringify({
+                    to_email: toEmail,
+                    subject: subject,
+                    body: body,
+                    lead_id: lead.id,
+                    smtp_config: {
+                        host: host,
+                        port: parseInt(port),
+                        email: email,
+                        password: password,
+                        use_ssl: useSSL
+                    }
+                })
+            });
+
+            if (data.success) {
+                lead.campaign_send_status = 'sent';
+                
+                // Locally mark contacted in primary leads list as well to keep in sync
+                const mainIdx = AppState.leads.findIndex(l => l.id === lead.id);
+                if (mainIdx !== -1) {
+                    AppState.leads[mainIdx].contacted = 1;
+                    AppState.leads[mainIdx].contact_date = new Date().toISOString();
+                    AppState.leads[mainIdx].pipeline_stage = 'PITCHED';
+                }
+                UI.renderLeads(AppState.leads);
+                UI.showToast(`Outreach email successfully sent to ${toEmail}!`, 'success');
+                
+                // Skip to next lead automatically after successful send!
+                this.skipCampaignLead();
+            } else {
+                lead.campaign_send_status = 'failed';
+                UI.showToast(data.error || 'SMTP Delivery failed', 'error');
+            }
+        } catch (error) {
+            lead.campaign_send_status = 'failed';
+            UI.showToast('Outreach failed: ' + error.message, 'error');
+        } finally {
+            UI.hideLoading();
+            this.renderCampaignList();
+            this.updateCampaignStats();
+        }
+    },
+
+    async sendCampaignLeadSMTP() {
+        const leadId = AppState.selectedCampaignLeadId;
+        if (!leadId) return;
+
+        const idx = AppState.campaignLeads.findIndex(l => l.id === leadId);
+        if (idx === -1) return;
+
+        await this.sendCampaignLeadSMTPImmediate(leadId, idx);
+    },
+
+    // ============================================================
+    // Bulk Sequences Runners
+    // ============================================================
+    async bulkScanCampaignEmails() {
+        const leads = AppState.campaignLeads || [];
+        const missingLeads = leads.filter(l => !l.email && l.campaign_email_status !== 'scraped');
+        
+        if (missingLeads.length === 0) {
+            UI.showToast('Scraping process complete! Directory me aisi koi lead nahi hai jise email scan ki zaroorat ho.', 'info');
+            return;
+        }
+
+        if (!confirm(`Kya aap sabhi ${missingLeads.length} leads ke websites se email automatic deep extract karna chahte hain?`)) {
+            return;
+        }
+
+        // Toggle bulk progress loaders
+        const container = UI.el.campaignProgressContainer;
+        const label = UI.el.campaignProgressLabel;
+        const bar = UI.el.campaignProgressBar;
+        const percentage = UI.el.campaignProgressPercentage;
+
+        if (container) container.style.display = 'block';
+        if (label) label.textContent = 'Auto-Scanning websites for contact emails...';
+
+        // Disable all bulk control buttons during run
+        this.toggleCampaignBulkButtons(true);
+
+        let processed = 0;
+        const total = missingLeads.length;
+
+        for (const lead of missingLeads) {
+            const idx = AppState.campaignLeads.findIndex(l => l.id === lead.id);
+            if (idx === -1) continue;
+
+            // Mark row as scanning
+            lead.campaign_email_status = 'scanning';
+            this.renderCampaignList();
+
+            try {
+                const data = await API.request(`/api/leads/${lead.id}/scan-email`, {
+                    method: 'POST'
+                });
+
+                if (data.success && data.email) {
+                    lead.email = data.email;
+                    lead.campaign_email_status = 'scraped';
+                    lead.campaign_subject = 'Digital Storefront Design Proposal';
+                    
+                    if (AppState.selectedCampaignLeadId === lead.id) {
+                        this.selectCampaignLead(lead.id);
+                    }
+                } else {
+                    lead.campaign_email_status = 'failed';
+                }
+            } catch (err) {
+                lead.campaign_email_status = 'failed';
+            }
+
+            processed++;
+            const pct = Math.round((processed / total) * 100);
+            
+            if (percentage) percentage.textContent = `${pct}%`;
+            if (bar) bar.style.width = `${pct}%`;
+            
+            this.renderCampaignList();
+            this.updateCampaignStats();
+            
+            // Add a small 200ms delay to keep UI animations smooth
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+        // Completed! Re-enable controls and close progress bar
+        this.toggleCampaignBulkButtons(false);
+        UI.showToast(`Auto-Scan finished! Processed ${total} websites successfully.`, 'success');
+        
+        setTimeout(() => {
+            if (container) container.style.display = 'none';
+        }, 3000);
+    },
+
+    async bulkDraftCampaignAI() {
+        const geminiKey = localStorage.getItem('gemini_api_key');
+        if (!geminiKey) {
+            UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        const leads = AppState.campaignLeads || [];
+        const eligibleLeads = leads.filter(l => l.email && l.campaign_draft_status !== 'ready');
+
+        if (eligibleLeads.length === 0) {
+            UI.showToast('Drafting complete! Aisi koi lead nahi hai jiske paas email address ho aur draft tayyar na ho.', 'info');
+            return;
+        }
+
+        if (!confirm(`Kya aap Gemini AI ke through sabhi ${eligibleLeads.length} leads ke liye automatically 100% unique personalized pitches write karna chahte hain?`)) {
+            return;
+        }
+
+        const container = UI.el.campaignProgressContainer;
+        const label = UI.el.campaignProgressLabel;
+        const bar = UI.el.campaignProgressBar;
+        const percentage = UI.el.campaignProgressPercentage;
+
+        if (container) container.style.display = 'block';
+        if (label) label.textContent = 'Gemini AI generating personalized outbox pitches...';
+        if (bar) bar.style.width = '0%';
+        if (percentage) percentage.textContent = '0%';
+
+        this.toggleCampaignBulkButtons(true);
+
+        let processed = 0;
+        const total = eligibleLeads.length;
+
+        for (const lead of eligibleLeads) {
+            try {
+                const projectSample = this.getBestPortfolioProjectSample(lead);
+                const tone = UI.el.emailToneSelect?.value || 'elite';
+
+                const data = await API.request('/api/outreach/generate-email-ai', {
+                    method: 'POST',
+                    headers: { 'X-Gemini-API-Key': geminiKey },
+                    body: JSON.stringify({
+                        lead: lead,
+                        project_sample: projectSample,
+                        tone: tone,
+                        sender: {
+                            name: localStorage.getItem('sender_name') || '',
+                            brand: localStorage.getItem('sender_brand') || '',
+                            role: localStorage.getItem('sender_role') || ''
+                        },
+                        custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
+                    })
+                });
+
+                if (data.success) {
+                    lead.campaign_subject = data.subject || 'Digital Storefront Design Proposal';
+                    lead.campaign_body = data.body || '';
+                    lead.campaign_draft_status = 'ready';
+                    
+                    if (AppState.selectedCampaignLeadId === lead.id) {
+                        this.selectCampaignLead(lead.id);
+                    }
+                }
+            } catch (err) {
+                console.error(`AI generating failed for lead ${lead.name}:`, err);
+            }
+
+            processed++;
+            const pct = Math.round((processed / total) * 100);
+            
+            if (percentage) percentage.textContent = `${pct}%`;
+            if (bar) bar.style.width = `${pct}%`;
+            
+            this.renderCampaignList();
+            this.updateCampaignStats();
+            
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+        this.toggleCampaignBulkButtons(false);
+        UI.showToast(`✨ Auto-Drafting complete! Ready to send: ${processed} campaign emails.`, 'success');
+        
+        setTimeout(() => {
+            if (container) container.style.display = 'none';
+        }, 3000);
+    },
+
+    async bulkSendCampaignSMTP() {
+        const host = localStorage.getItem('smtp_host');
+        const port = localStorage.getItem('smtp_port');
+        const email = localStorage.getItem('smtp_email');
+        const password = localStorage.getItem('smtp_password');
+        const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
+
+        if (!host || !port || !email || !password) {
+            UI.showToast('Please configure your Direct SMTP Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        const leads = AppState.campaignLeads || [];
+        const sendableLeads = leads.filter(l => l.campaign_draft_status === 'ready' && l.campaign_send_status !== 'sent');
+
+        if (sendableLeads.length === 0) {
+            UI.showToast('Campaign complete! Aisi koi lead nahi hai jiske paas "Draft Ready" state ho.', 'warning');
+            return;
+        }
+
+        if (!confirm(`🚀 WARNING (Mass Dispatching Campaign!)\n\nKya aap sabhi ${sendableLeads.length} leads ke liye instant SMTP direct cold emails launch karna chahte hain?`)) {
+            return;
+        }
+
+        const container = UI.el.campaignProgressContainer;
+        const label = UI.el.campaignProgressLabel;
+        const bar = UI.el.campaignProgressBar;
+        const percentage = UI.el.campaignProgressPercentage;
+
+        if (container) container.style.display = 'block';
+        if (label) label.textContent = '🚀 Dispatching cold campaign outreach emails...';
+        if (bar) bar.style.width = '0%';
+        if (percentage) percentage.textContent = '0%';
+
+        this.toggleCampaignBulkButtons(true);
+
+        let processed = 0;
+        const total = sendableLeads.length;
+
+        for (const lead of sendableLeads) {
+            const idx = AppState.campaignLeads.findIndex(l => l.id === lead.id);
+            if (idx === -1) continue;
+
+            lead.campaign_send_status = 'sending';
+            this.renderCampaignList();
+
+            try {
+                const data = await API.request('/api/outreach/send-smtp-email', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        to_email: lead.email,
+                        subject: lead.campaign_subject,
+                        body: lead.campaign_body,
+                        lead_id: lead.id,
+                        smtp_config: {
+                            host: host,
+                            port: parseInt(port),
+                            email: email,
+                            password: password,
+                            use_ssl: useSSL
+                        }
+                    })
+                });
+
+                if (data.success) {
+                    lead.campaign_send_status = 'sent';
+                    
+                    // Update main results list contacted state in local memory
+                    const mainIdx = AppState.leads.findIndex(l => l.id === lead.id);
+                    if (mainIdx !== -1) {
+                        AppState.leads[mainIdx].contacted = 1;
+                        AppState.leads[mainIdx].contact_date = new Date().toISOString();
+                        AppState.leads[mainIdx].pipeline_stage = 'PITCHED';
+                    }
+                } else {
+                    lead.campaign_send_status = 'failed';
+                }
+            } catch (err) {
+                lead.campaign_send_status = 'failed';
+            }
+
+            processed++;
+            const pct = Math.round((processed / total) * 100);
+            
+            if (percentage) percentage.textContent = `${pct}%`;
+            if (bar) bar.style.width = `${pct}%`;
+            
+            this.renderCampaignList();
+            this.updateCampaignStats();
+
+            // Anti-Spam mass delivery delay: 1.5 seconds wait interval between SMTP requests
+            await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+
+        this.toggleCampaignBulkButtons(false);
+        UI.renderLeads(AppState.leads);
+        UI.showToast(`Campaign finished! Delivered successfully: ${processed} outreach cold emails.`, 'success');
+        
+        setTimeout(() => {
+            if (container) container.style.display = 'none';
+        }, 3000);
+    },
+
+    toggleCampaignBulkButtons(disabled) {
+        if (UI.el.campaignBulkScanBtn) UI.el.campaignBulkScanBtn.disabled = disabled;
+        if (UI.el.campaignBulkDraftBtn) UI.el.campaignBulkDraftBtn.disabled = disabled;
+        if (UI.el.campaignBulkSendBtn) UI.el.campaignBulkSendBtn.disabled = disabled;
+        if (UI.el.campaignSelectedSendBtn) UI.el.campaignSelectedSendBtn.disabled = disabled;
+        if (UI.el.campaignSelectedAIGenBtn) UI.el.campaignSelectedAIGenBtn.disabled = disabled;
+        
+        // Visual indicator adjustments
+        const btns = [UI.el.campaignBulkScanBtn, UI.el.campaignBulkDraftBtn, UI.el.campaignBulkSendBtn];
+        btns.forEach(btn => {
+            if (btn) btn.style.opacity = disabled ? '0.5' : '1';
+        });
     }
 };
 

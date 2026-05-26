@@ -1665,3 +1665,116 @@ body::before {
 .row-btn.mockup:hover {
     transform: scale(1.08);
 }
+
+/* ======== Cold Email Campaign Center Styles ======== */
+.campaign-stat {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.campaign-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.campaign-table th {
+    background: rgba(20, 20, 35, 0.95);
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 12px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.campaign-table tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.campaign-table tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.campaign-table tr.active {
+    background: rgba(0, 212, 255, 0.08);
+    border-left: 3px solid var(--accent-cyan);
+}
+
+.campaign-table td {
+    padding: 10px 12px;
+    vertical-align: middle;
+}
+
+.campaign-table-btn {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.campaign-table-btn:hover {
+    transform: scale(1.05);
+}
+
+.campaign-table-btn.scan {
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.campaign-table-btn.draft {
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid var(--accent-violet);
+    color: var(--accent-violet);
+}
+
+.campaign-status-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.campaign-status-badge.not-drafted {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.campaign-status-badge.draft-ready {
+    background: rgba(139, 92, 246, 0.15);
+    color: var(--accent-violet);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.campaign-status-badge.delivered {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent-green);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.campaign-status-badge.failed {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--accent-red);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.campaign-live-preview-card {
+    transition: all var(--transition-base);
+}
+
+.campaign-live-preview-card:hover {
+    box-shadow: 0 15px 25px -5px rgba(0, 212, 255, 0.15), 0 10px 15px -3px rgba(0,0,0,0.3);
+}
+

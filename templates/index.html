@@ -172,6 +172,9 @@
                         <button id="bulkScanSocialsBtn" class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; font-size: 0.85rem; padding: 8px 16px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
                             🔍 Auto-Scan All Socials (50% Credits Saved)
                         </button>
+                        <button id="bulkEmailCampaignBtn" class="btn btn-primary" style="background: var(--gradient-primary); border: none; font-size: 0.85rem; padding: 8px 16px; display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: var(--shadow-glow-cyan); font-weight: 600;">
+                            🚀 Launch Email Campaign
+                        </button>
                     </div>
                 </div>
                 
@@ -330,6 +333,19 @@
                     </div>
 
                     <div class="settings-group">
+                        <div class="settings-group-title">💡 How to get an API Key</div>
+                        <ol style="font-size: 0.85rem; color: var(--text-secondary); padding-left: 20px; line-height: 2;">
+                            <li>Go to <a href="https://serpapi.com" target="_blank" style="color: var(--accent-cyan);">SerpApi.com</a></li>
+                            <li>Sign up with your email (Takes 1 minute)</li>
+                            <li>Go to your Dashboard to copy the API Key</li>
+                            <li>Paste the key above</li>
+                        </ol>
+                        <p style="font-size: 0.8rem; color: var(--accent-amber); margin-top: 8px;">
+                            💰 Best alternative to Google Maps API. No billing setup needed!
+                        </p>
+                    </div>
+
+                    <div class="settings-group">
                         <div class="settings-group-title">🌐 Your Portfolio Link (For Smart Pitching)</div>
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
                             Enter your portfolio URL (e.g. <code>https://raunaksharmaq64.github.io/portfolio/</code>).
@@ -345,6 +361,19 @@
                     </div>
 
                     <div class="settings-group">
+                        <div class="settings-group-title">💡 How to prepare your Portfolio for Scanning</div>
+                        <ol style="font-size: 0.85rem; color: var(--text-secondary); padding-left: 20px; line-height: 2;">
+                            <li>Ensure your portfolio site is publicly live (e.g. GitHub Pages or your custom domain)</li>
+                            <li>Structure your project HTML with the <code>class="project-card"</code> attribute</li>
+                            <li>Add project title inside <code>&lt;h3&gt;</code>, description in <code>class="project-desc"</code>, and tech stack in <code>class="tech-stack"</code></li>
+                            <li>Save the link below and click <strong>Save & Scan</strong> to load your projects</li>
+                        </ol>
+                        <p style="font-size: 0.8rem; color: var(--accent-cyan); margin-top: 8px;">
+                            🚀 Gemini will auto-match these scanned projects to your lead's category!
+                        </p>
+                    </div>
+
+                    <div class="settings-group">
                         <div class="settings-group-title">🤖 Gemini API Key (Optional for AI Writer)</div>
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
                             Allows generating 100% unique, human-like sales pitches for each client. Get a free key from 
@@ -357,6 +386,19 @@
                         <div style="margin-top: 12px;">
                             <span id="geminiApiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
                         </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <div class="settings-group-title">💡 How to get a free Gemini API Key</div>
+                        <ol style="font-size: 0.85rem; color: var(--text-secondary); padding-left: 20px; line-height: 2;">
+                            <li>Go to <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-cyan);">Google AI Studio</a></li>
+                            <li>Log in with your standard Google/Gmail account</li>
+                            <li>Click the <strong>Get API key</strong> button in the top left</li>
+                            <li>Create a new API Key, copy it, and paste it below</li>
+                        </ol>
+                        <p style="font-size: 0.8rem; color: var(--accent-amber); margin-top: 8px;">
+                            ⚡ 100% Free! No billing card required. Best way to generate custom AI messages.
+                        </p>
                     </div>
 
                     <div class="settings-group">
@@ -434,17 +476,18 @@
                             <span id="smtpStatus" class="api-key-status inactive">✗ Not Set</span>
                         </div>
                     </div>
-                    
+
                     <div class="settings-group">
-                        <div class="settings-group-title">💡 How to get an API Key</div>
+                        <div class="settings-group-title">💡 How to configure Gmail SMTP (100% Free)</div>
                         <ol style="font-size: 0.85rem; color: var(--text-secondary); padding-left: 20px; line-height: 2;">
-                            <li>Go to <a href="https://serpapi.com" target="_blank" style="color: var(--accent-cyan);">SerpApi.com</a></li>
-                            <li>Sign up with your email (Takes 1 minute)</li>
-                            <li>Go to your Dashboard to copy the API Key</li>
-                            <li>Paste the key above</li>
+                            <li>Set SMTP Host to <code>smtp.gmail.com</code> and Port to <code>465</code> (Check <strong>Use SSL</strong>)</li>
+                            <li>Go to your <a href="https://myaccount.google.com/" target="_blank" style="color: var(--accent-cyan);">Google Account</a> Security page</li>
+                            <li>Enable <strong>2-Step Verification</strong> if not already enabled</li>
+                            <li>Search for <strong>App Passwords</strong>, create one (e.g. "AI Lead Agent")</li>
+                            <li>Copy the 16-digit password generated and paste it as your <strong>App Password</strong> below</li>
                         </ol>
-                        <p style="font-size: 0.8rem; color: var(--accent-amber); margin-top: 8px;">
-                            💰 Best alternative to Google Maps API. No billing setup needed!
+                        <p style="font-size: 0.8rem; color: var(--accent-cyan); margin-top: 8px;">
+                            🔒 Extremely Secure! Stored statelessly in your local browser only.
                         </p>
                     </div>
                     
@@ -597,6 +640,147 @@
                         🚀 Send Direct (SMTP)
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- ======== Email Campaign Modal ======== -->
+    <div id="emailCampaignModal" class="modal-overlay">
+        <div class="modal campaign-modal" style="max-width: 95vw; width: 1200px; height: 85vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.5rem;">🚀</span>
+                    <h3 class="modal-title">Cold Email Campaign Center</h3>
+                </div>
+                <button class="modal-close">✕</button>
+            </div>
+            
+            <!-- Modal Body (Flex Column) -->
+            <div class="modal-body campaign-modal-body" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 16px; padding: 16px;">
+                
+                <!-- Campaign Stats Bar & Bulk Action Buttons -->
+                <div class="campaign-top-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0;">
+                    <!-- Left: Stats -->
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <div class="campaign-stat"><span style="color: var(--text-secondary); font-size: 0.8rem;">Campaign Leads:</span> <strong id="campaignStatLeads" style="color: var(--accent-cyan);">0</strong></div>
+                        <div class="campaign-stat"><span style="color: var(--text-secondary); font-size: 0.8rem;">Emails Scraped:</span> <strong id="campaignStatEmails" style="color: var(--accent-green);">0</strong></div>
+                        <div class="campaign-stat"><span style="color: var(--text-secondary); font-size: 0.8rem;">Drafts Ready:</span> <strong id="campaignStatDrafts" style="color: var(--accent-violet);">0</strong></div>
+                        <div class="campaign-stat"><span style="color: var(--text-secondary); font-size: 0.8rem;">Delivered:</span> <strong id="campaignStatSent" style="color: var(--accent-orange);">0</strong></div>
+                    </div>
+                    
+                    <!-- Right: Bulk Actions -->
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button id="campaignBulkScanBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; cursor: pointer;">🔍 Scan All Emails</button>
+                        <button id="campaignBulkDraftBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-violet); color: var(--accent-violet); background: transparent; cursor: pointer;">✨ Auto-Draft All (Gemini)</button>
+                        <button id="campaignBulkSendBtn" class="btn btn-primary btn-sm" style="background: var(--gradient-primary); border: none; box-shadow: var(--shadow-glow-cyan); cursor: pointer; font-weight: 600;">🚀 Send All Drafts (SMTP)</button>
+                    </div>
+                </div>
+
+                <!-- Live Progress Bar -->
+                <div id="campaignProgressContainer" style="display: none; padding: 12px; background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: var(--radius-md); flex-shrink: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span id="campaignProgressLabel" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-cyan);">Bulk Scan Progress...</span>
+                        <span id="campaignProgressPercentage" style="font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan);">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden;">
+                        <div id="campaignProgressBar" style="width: 0%; height: 100%; background: var(--gradient-primary); transition: width 0.2s ease;"></div>
+                    </div>
+                </div>
+
+                <!-- Main Split-Pane Workspace -->
+                <div class="campaign-split-pane" style="flex: 1; display: flex; gap: 16px; overflow: hidden; height: 100%;">
+                    
+                    <!-- Left Pane: Eligible Leads Table Directory -->
+                    <div class="campaign-left-pane" style="flex: 1.2; display: flex; flex-direction: column; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: rgba(0, 0, 0, 0.1); overflow: hidden; height: 100%;">
+                        <div class="campaign-pane-header" style="padding: 10px 12px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 0.85rem; color: var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;">
+                            <span>📇 Campaign Directory</span>
+                            <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-secondary);">Leads with Websites</span>
+                        </div>
+                        <div style="flex: 1; overflow-y: auto; position: relative;">
+                            <table class="campaign-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                                <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 10; border-bottom: 1px solid var(--border-color);">
+                                    <tr>
+                                        <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Lead Details</th>
+                                        <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Email Address</th>
+                                        <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: center;">AI Status</th>
+                                        <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="campaignTableBody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Right Pane: Active Email Outbox Editor & Live HTML Preview -->
+                    <div class="campaign-right-pane" id="campaignOutboxReviewPanel" style="flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: rgba(0, 0, 0, 0.15); overflow: hidden; height: 100%;">
+                        <!-- Empty state when no lead selected -->
+                        <div id="campaignOutboxEmptyState" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-secondary); padding: 32px; text-align: center;">
+                            <span style="font-size: 2.5rem;">📬</span>
+                            <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Select a lead to review</div>
+                            <p style="font-size: 0.8rem; line-height: 1.4; margin: 0; max-width: 250px;">Click on any row in the directory list to load details, edit subject/body, and check the live preview card.</p>
+                        </div>
+
+                        <!-- Active Review Editor Workspace -->
+                        <div id="campaignOutboxWorkspace" style="display: none; flex: 1; flex-direction: column; overflow: hidden; height: 100%;">
+                            <!-- Selected Lead Header -->
+                            <div style="padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div id="campaignSelectedName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Hair Salon</div>
+                                    <div id="campaignSelectedEmail" style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 600; margin-top: 2px;">name@domain.com</div>
+                                </div>
+                                <span id="campaignSelectedPriority" class="priority-badge priority-high" style="font-size: 0.7rem; padding: 2px 6px;">HIGH</span>
+                            </div>
+
+                            <!-- Workspace Scrollable Body -->
+                            <div style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px;">
+                                <!-- Subject Line Input -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="campaignSubjectInput">Subject Line</label>
+                                    <input type="text" id="campaignSubjectInput" class="form-input" style="font-size: 0.85rem; padding: 8px 10px;" placeholder="Email subject line...">
+                                </div>
+
+                                <!-- Message Body Textarea -->
+                                <div class="form-group" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0;" for="campaignBodyInput">Email Message Body</label>
+                                        <button id="campaignSelectedAIGenBtn" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px; border: 1px solid var(--accent-violet); color: var(--accent-violet); background: transparent; cursor: pointer;">✨ Draft AI</button>
+                                    </div>
+                                    <textarea id="campaignBodyInput" class="form-textarea" style="font-size: 0.82rem; line-height: 1.4; padding: 10px; flex: 1; min-height: 160px; font-family: inherit; resize: vertical;" placeholder="Personalized cold outreach message body..."></textarea>
+                                </div>
+
+                                <!-- Live Visual Mockup Preview Card -->
+                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0;">👁️ Live Preview Card (What they see)</label>
+                                    <div class="campaign-live-preview-card" style="padding: 16px; background: white; color: #1e293b; border-radius: var(--radius-md); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                        <!-- Mockup Top Bar -->
+                                        <div style="padding: 8px 12px; background: #f1f5f9; border-radius: 6px; border-left: 4px solid #00d4ff; margin-bottom: 12px; font-size: 0.75rem; color: #475569; line-height: 1.4;">
+                                            📢 <strong>Preview Sticky Banner:</strong><br>
+                                            "This is a premium online preview designed for <span id="previewBusinessName" style="font-weight:700;">Salon</span> by <span id="previewDeveloperBrand" style="font-weight:600;color:#0f172a;">WebScale Studio</span>... [Let's Connect]"
+                                        </div>
+                                        <!-- Email Content Visual mockup -->
+                                        <div style="font-size: 0.8rem; line-height: 1.5; color: #334155; white-space: pre-wrap; max-height: 180px; overflow-y: auto; padding: 6px; background: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9;" id="campaignEmailVisualPreview">
+                                            Hello there!
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Selected Lead Workspace Footer Actions -->
+                            <div style="padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-top: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: flex-end; gap: 8px;">
+                                <button id="campaignSelectedSkipBtn" class="btn btn-ghost btn-sm">Skip</button>
+                                <button id="campaignSelectedSendBtn" class="btn btn-whatsapp btn-sm" style="background: var(--gradient-primary); box-shadow: var(--shadow-glow-cyan); font-weight: 600; cursor: pointer;">🚀 Send SMTP</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="flex-shrink: 0; border-top: 1px solid var(--border-color); padding: 12px 16px; display: flex; justify-content: flex-end;">
+                <button class="btn btn-secondary modal-close">Close Campaign Center</button>
             </div>
         </div>
     </div>
