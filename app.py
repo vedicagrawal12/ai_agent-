@@ -698,33 +698,92 @@ def live_preview_mockup(lead_id):
 
 @app.route("/api/leads/<int:lead_id>/scan-email", methods=["POST"])
 def scan_lead_email(lead_id):
-    """Trigger email scraper for a lead website on demand."""
+    """Trigger email scraper with direct website scan and smart SerpApi Google search snippet fallback."""
     lead = db.get_lead_by_id(lead_id)
     if not lead:
         return jsonify({"error": "Lead not found"}), 404
         
     website = lead.get("website", "").strip()
-    if not website:
-        return jsonify({"error": "Lead does not have a website URL listed."}), 400
-        
-    try:
-        from utils.email_scraper import EmailScraper
-        email = EmailScraper.deep_scrape_business_emails(website)
-        
-        if email:
-            db.update_lead_email(lead_id, email)
-            return jsonify({
-                "success": True,
-                "email": email,
-                "message": f"Successfully extracted email: {email}"
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "message": "No public email addresses found on website."
-            })
-    except Exception as e:
-        return jsonify({"error": f"Scraping failed: {str(e)}"}), 500
+    api_key = request.headers.get("X-SerpApi-Key") or API_KEY_STORE.get("serpapi", "")
+    
+    email = None
+    scraped_via = "direct_website"
+    
+    # 1. First Pass: If website is listed, try free deep crawling
+    if website:
+        try:
+            from utils.email_scraper import EmailScraper
+            email = EmailScraper.deep_scrape_business_emails(website)
+        except Exception as e:
+            print(f"Direct website email scraping failed for {website}: {e}")
+            
+    # 2. Second Pass: If no email found or no website exists, try SerpApi Fallback Search
+    if not email:
+        if not api_key:
+            # If no API key configured, we cannot proceed with web search fallback
+            if not website:
+                return jsonify({
+                    "success": False,
+                    "error": "Lead does not have a website URL listed. Configure your SerpApi Key in Settings to enable Web-Search Fallback."
+                }), 400
+            else:
+                return jsonify({
+                    "success": False,
+                    "message": "No email found via website scraper. Configure SerpApi Key in Settings to try Web-Search Fallback."
+                })
+                
+        try:
+            from serpapi import GoogleSearch
+            from utils.email_scraper import EmailScraper
+            import re
+            
+            # Formulate highly focused Google search query for the business's email
+            query = f'"{lead.get("name")}" "{lead.get("city")}" email'
+            print(f"Running Smart SerpApi Fallback Email Search: {query}...")
+            
+            params = {
+                "engine": "google",
+                "q": query,
+                "api_key": api_key,
+                "num": 8  # Top 8 results to maximize search breadth while keeping delay small
+            }
+            search = GoogleSearch(params)
+            results = search.get_dict()
+            organic = results.get("organic_results", [])
+            
+            found_emails = []
+            for item in organic:
+                # Scan snippet, title, and destination link for any matching emails
+                text_to_scan = f"{item.get('title', '')} {item.get('snippet', '')} {item.get('link', '')}"
+                matches = re.findall(EmailScraper.EMAIL_REGEX, text_to_scan)
+                for m in matches:
+                    cleaned = EmailScraper.clean_email(m)
+                    if EmailScraper.is_valid_email(cleaned) and cleaned not in found_emails:
+                        found_emails.append(cleaned)
+            
+            if found_emails:
+                email = found_emails[0]
+                scraped_via = "serpapi_fallback"
+                print(f"SerpApi Fallback found email for {lead.get('name')}: {email}")
+        except Exception as serp_err:
+            print(f"SerpApi Fallback Email search failed: {serp_err}")
+            
+    if email:
+        db.update_lead_email(lead_id, email)
+        via_msg = "direct website crawling" if scraped_via == "direct_website" else "Google directory fallback search"
+        return jsonify({
+            "success": True,
+            "email": email,
+            "message": f"Successfully extracted email via {via_msg}: {email}"
+        })
+    else:
+        msg = "No public email addresses found on website or via web directory searches."
+        if not website:
+            msg = "No public email addresses listed on online directories for this business."
+        return jsonify({
+            "success": False,
+            "message": msg
+        })
 
 
 @app.route("/api/outreach/generate-email-ai", methods=["POST"])

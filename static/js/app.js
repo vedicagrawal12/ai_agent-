@@ -440,8 +440,9 @@ const UI = {
         let emailBtn = '';
         if (lead.email) {
             emailBtn = `<button class="row-btn email" data-tooltip="Send Email Outreach" onclick="App.openEmail(${index})">📧</button>`;
-        } else if (lead.website) {
-            emailBtn = `<button class="row-btn scan-email-btn" id="scanEmailBtn-${index}" data-tooltip="Scan Website for Email" onclick="App.scanEmail(${lead.id}, ${index})">🔍📧</button>`;
+        } else {
+            const tooltip = lead.website ? "Scan Website/Web for Email" : "Search Web for Email (SerpApi)";
+            emailBtn = `<button class="row-btn scan-email-btn" id="scanEmailBtn-${index}" data-tooltip="${tooltip}" onclick="App.scanEmail(${lead.id}, ${index})">🔍📧</button>`;
         }
         
         // Build Google Maps search link
@@ -598,8 +599,9 @@ const UI = {
         let emailBtnHtml = '';
         if (lead.email) {
             emailBtnHtml = `<button class="kanban-card-btn email" title="Send Email Pitch" onclick="App.openEmail(${idx})" style="background: var(--gradient-primary); color: white; border: none; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">📧 Email</button>`;
-        } else if (lead.website) {
-            emailBtnHtml = `<button class="kanban-card-btn scan-email" id="kanbanScanEmailBtn-${idx}" onclick="App.scanEmail(${lead.id}, ${idx})" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(0,240,255,0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 4px; cursor: pointer;">🔍 Email</button>`;
+        } else {
+            const btnTitle = lead.website ? "Scan Website/Web for Email" : "Search Web for Email (SerpApi)";
+            emailBtnHtml = `<button class="kanban-card-btn scan-email" id="kanbanScanEmailBtn-${idx}" onclick="App.scanEmail(${lead.id}, ${idx})" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(0,240,255,0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 4px; cursor: pointer;" title="${btnTitle}">🔍 Email</button>`;
         }
         
         card.innerHTML = `
@@ -2809,11 +2811,11 @@ const App = {
     // Bulk Email Campaign Center Logic & Outbox
     // ============================================================
     openEmailCampaign() {
-        // Gathers all leads that have websites
-        const campaignLeads = AppState.leads.filter(lead => lead.website);
+        // Gathers all leads currently in the search results
+        const campaignLeads = AppState.leads || [];
         
         if (campaignLeads.length === 0) {
-            UI.showToast('Search results me aisi koi lead nahi hai jiske paas website ho! Pehle search settings me "Show businesses with websites" check karke search karein.', 'warning');
+            UI.showToast('Search results me aisi koi lead nahi hai! Pehle search run karein.', 'warning');
             return;
         }
 
@@ -2862,16 +2864,24 @@ const App = {
         body.innerHTML = leads.map((lead, index) => {
             const activeClass = lead.id === AppState.selectedCampaignLeadId ? 'active' : '';
             const safeName = UI.escapeHtml(lead.name);
-            const safeWebsite = UI.escapeHtml(lead.website);
+            const safeWebsite = lead.website ? UI.escapeHtml(lead.website) : '';
             const priorityClass = `priority-${lead.priority.toLowerCase()}`;
             const priorityEmoji = { HIGH: '🔴', MEDIUM: '🟡', LOW: '🟢', IGNORE: '⚪' }[lead.priority] || '';
+
+            // Website pill display
+            let websiteLinkHtml = '';
+            if (lead.website) {
+                websiteLinkHtml = `<a href="${safeWebsite}" target="_blank" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: none;">🌐 Website</a>`;
+            } else {
+                websiteLinkHtml = `<span style="font-size: 0.72rem; color: var(--text-muted);">❌ No Website</span>`;
+            }
 
             // Email Status layout
             let emailHtml = '';
             if (lead.email) {
                 emailHtml = `<span style="font-weight: 600; color: var(--accent-cyan); font-family: monospace;">${UI.escapeHtml(lead.email)}</span>`;
             } else if (lead.campaign_email_status === 'scanning') {
-                emailHtml = `<span style="color: var(--accent-cyan); font-style: italic;">⏳ Scanning website...</span>`;
+                emailHtml = `<span style="color: var(--accent-cyan); font-style: italic;">⏳ Scanning...</span>`;
             } else {
                 emailHtml = `
                     <div style="display: flex; align-items: center; gap: 6px;">
@@ -2912,7 +2922,7 @@ const App = {
                     <td style="padding: 10px 12px;">
                         <div style="font-weight: 700; color: var(--text-primary); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${safeName}">${safeName}</div>
                         <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                            <a href="${safeWebsite}" target="_blank" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: none;">🌐 Website</a>
+                            ${websiteLinkHtml}
                             <span class="priority-badge ${priorityClass}" style="font-size: 0.65rem; padding: 1px 4px; border-radius: 3px;">${priorityEmoji} ${lead.priority}</span>
                         </div>
                     </td>
