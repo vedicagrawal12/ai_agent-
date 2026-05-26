@@ -220,6 +220,15 @@ const UI = {
             senderRoleInput: document.getElementById('senderRoleInput'),
             saveSenderProfileBtn: document.getElementById('saveSenderProfileBtn'),
             
+            // SMTP Settings elements
+            smtpHostInput: document.getElementById('smtpHostInput'),
+            smtpPortInput: document.getElementById('smtpPortInput'),
+            smtpEmailInput: document.getElementById('smtpEmailInput'),
+            smtpPasswordInput: document.getElementById('smtpPasswordInput'),
+            smtpUseSSL: document.getElementById('smtpUseSSL'),
+            saveSmtpSettingsBtn: document.getElementById('saveSmtpSettingsBtn'),
+            smtpStatus: document.getElementById('smtpStatus'),
+            
             whatsappModal: document.getElementById('whatsappModal'),
             templateOptions: document.getElementById('templateOptions'),
             pitchToneSelect: document.getElementById('pitchToneSelect'),
@@ -231,6 +240,18 @@ const UI = {
             pitchRefineInput: document.getElementById('pitchRefineInput'),
             refinePitchBtn: document.getElementById('refinePitchBtn'),
             sendWhatsAppBtn: document.getElementById('sendWhatsAppBtn'),
+            
+            // Email Modal elements
+            emailModal: document.getElementById('emailModal'),
+            emailBusinessName: document.getElementById('emailBusinessName'),
+            emailAddressText: document.getElementById('emailAddressText'),
+            scanEmailOnDemandBtn: document.getElementById('scanEmailOnDemandBtn'),
+            emailToneSelect: document.getElementById('emailToneSelect'),
+            aiGenerateEmailBtn: document.getElementById('aiGenerateEmailBtn'),
+            emailSubjectInput: document.getElementById('emailSubjectInput'),
+            emailBodyInput: document.getElementById('emailBodyInput'),
+            openMailClientBtn: document.getElementById('openMailClientBtn'),
+            sendSmtpEmailBtn: document.getElementById('sendSmtpEmailBtn'),
             
             // Bulk Actions Elements
             bulkScanSocialsBtn: document.getElementById('bulkScanSocialsBtn'),
@@ -366,6 +387,13 @@ const UI = {
                 whatsappBtn = `<button class="row-btn whatsapp" data-tooltip="Send WhatsApp" onclick="App.openWhatsApp(${index})">💬</button>`;
             }
         }
+
+        let emailBtn = '';
+        if (lead.email) {
+            emailBtn = `<button class="row-btn email" data-tooltip="Send Email Outreach" onclick="App.openEmail(${index})">📧</button>`;
+        } else if (lead.website) {
+            emailBtn = `<button class="row-btn scan-email-btn" id="scanEmailBtn-${index}" data-tooltip="Scan Website for Email" onclick="App.scanEmail(${lead.id}, ${index})">🔍📧</button>`;
+        }
         
         // Build Google Maps search link
         const mapsQuery = encodeURIComponent(`${lead.name} ${lead.address || lead.city}`);
@@ -389,7 +417,7 @@ const UI = {
                 socialsDisplay = `<span style="color: var(--text-muted); font-size: 0.8rem;">Save first to Scan</span>`;
             }
         }
-
+ 
         return `
             <tr>
                 <td>
@@ -415,6 +443,7 @@ const UI = {
                     <div class="row-actions">
                         <a href="${mapsLink}" target="_blank" class="row-btn" data-tooltip="View on Google Maps">📍</a>
                         ${whatsappBtn}
+                        ${emailBtn}
                         <button class="row-btn mockup" data-tooltip="Copy Mockup Link" onclick="App.copyMockupLink(${lead.id})">📱</button>
                         <button class="row-btn" data-tooltip="Copy Phone" onclick="App.copyPhone(${index})">📋</button>
                     </div>
@@ -516,6 +545,13 @@ const UI = {
                 whatsappBtnHtml = `<button class="kanban-card-btn whatsapp" title="Personalized WhatsApp Pitch" onclick="App.openWhatsApp(${idx})" style="background: var(--gradient-whatsapp); color: white; border-radius: 4px; padding: 4px 8px; border: none; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 4px; cursor: pointer;">💬 Pitch</button>`;
             }
         }
+
+        let emailBtnHtml = '';
+        if (lead.email) {
+            emailBtnHtml = `<button class="kanban-card-btn email" title="Send Email Pitch" onclick="App.openEmail(${idx})" style="background: var(--gradient-primary); color: white; border: none; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">📧 Email</button>`;
+        } else if (lead.website) {
+            emailBtnHtml = `<button class="kanban-card-btn scan-email" id="kanbanScanEmailBtn-${idx}" onclick="App.scanEmail(${lead.id}, ${idx})" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(0,240,255,0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 4px; cursor: pointer;">🔍 Email</button>`;
+        }
         
         card.innerHTML = `
             <div class="kanban-card-title" title="${lead.name}">${lead.name}</div>
@@ -532,6 +568,7 @@ const UI = {
             <div class="kanban-card-actions" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                 <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                     ${actionsHtml}
+                    ${emailBtnHtml}
                     <button class="kanban-card-btn mockup" title="Copy Live Mockup Link" onclick="App.copyMockupLink(${lead.id})">📱 Mockup</button>
                 </div>
                 ${whatsappBtnHtml}
@@ -659,6 +696,12 @@ const UI = {
     showToast(message, type = 'info') {
         const icons = { success: '✅', error: '❌', info: 'ℹ️' };
         
+        // Intercept SerpApi search quota limits exhaustion
+        if (message && (message.includes('run out of searches') || message.includes('quota') || message.includes('SerpApi Error'))) {
+            message = "⚠️ Aapka SerpApi Free Search Limit khatm ho gaya hai! Please Settings Panel (⚙️) me jakar naya free API key update karein.";
+            type = 'error';
+        }
+        
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         toast.innerHTML = `
@@ -671,7 +714,7 @@ const UI = {
         setTimeout(() => {
             toast.classList.add('toast-exit');
             setTimeout(() => toast.remove(), 300);
-        }, 4000);
+        }, 6000); // Extended duration to 6s so the user can easily read the instruction
     },
 
     // ---- Modals ----
@@ -721,6 +764,7 @@ const App = {
         this.checkPortfolio();
         this.checkGeminiConfig();
         this.checkSenderProfile();
+        this.checkSmtpConfig();
         await this.loadTemplates();
     },
 
@@ -805,6 +849,31 @@ const App = {
         // Save Sender Profile
         UI.el.saveSenderProfileBtn?.addEventListener('click', () => {
             this.saveSenderProfile();
+        });
+
+        // Save SMTP Settings
+        UI.el.saveSmtpSettingsBtn?.addEventListener('click', () => {
+            this.saveSmtpSettings();
+        });
+
+        // AI Generate Email Pitch Button
+        UI.el.aiGenerateEmailBtn?.addEventListener('click', () => {
+            this.generateAIEmail();
+        });
+
+        // Native Mail Client (mailto:) Button
+        UI.el.openMailClientBtn?.addEventListener('click', () => {
+            this.openMailClient();
+        });
+
+        // Send Direct (SMTP) Email Button
+        UI.el.sendSmtpEmailBtn?.addEventListener('click', () => {
+            this.sendSMTPEmail();
+        });
+
+        // Scan Email on Demand button in modal
+        UI.el.scanEmailOnDemandBtn?.addEventListener('click', () => {
+            this.scanEmailOnDemand();
         });
 
         // AI Generate Pitch Button
@@ -1960,6 +2029,357 @@ const App = {
         UI.el.cityInput.value = city;
         UI.closeModal('historyModal');
         this.handleSearch();
+    },
+
+    checkSmtpConfig() {
+        const host = localStorage.getItem('smtp_host') || '';
+        const port = localStorage.getItem('smtp_port') || '';
+        const email = localStorage.getItem('smtp_email') || '';
+        const password = localStorage.getItem('smtp_password') || '';
+        const useSSL = localStorage.getItem('smtp_use_ssl') !== 'false';
+
+        if (UI.el.smtpHostInput) UI.el.smtpHostInput.value = host;
+        if (UI.el.smtpPortInput) UI.el.smtpPortInput.value = port;
+        if (UI.el.smtpEmailInput) UI.el.smtpEmailInput.value = email;
+        if (UI.el.smtpPasswordInput) UI.el.smtpPasswordInput.value = password;
+        if (UI.el.smtpUseSSL) UI.el.smtpUseSSL.checked = useSSL;
+
+        const statusEl = UI.el.smtpStatus;
+        if (statusEl) {
+            if (host && port && email && password) {
+                statusEl.className = 'api-key-status active';
+                statusEl.textContent = '✓ Configured';
+            } else {
+                statusEl.className = 'api-key-status inactive';
+                statusEl.textContent = '✗ Not Set';
+            }
+        }
+    },
+
+    saveSmtpSettings() {
+        const host = UI.el.smtpHostInput?.value.trim() || '';
+        const port = UI.el.smtpPortInput?.value.trim() || '';
+        const email = UI.el.smtpEmailInput?.value.trim() || '';
+        const password = UI.el.smtpPasswordInput?.value.trim() || '';
+        const useSSL = UI.el.smtpUseSSL ? UI.el.smtpUseSSL.checked : true;
+
+        if (!host || !port || !email || !password) {
+            UI.showToast('Please fill in all SMTP fields before saving.', 'warning');
+            return;
+        }
+
+        localStorage.setItem('smtp_host', host);
+        localStorage.setItem('smtp_port', port);
+        localStorage.setItem('smtp_email', email);
+        localStorage.setItem('smtp_password', password);
+        localStorage.setItem('smtp_use_ssl', useSSL ? 'true' : 'false');
+
+        this.checkSmtpConfig();
+        UI.showToast('SMTP credentials saved securely to your browser!', 'success');
+    },
+
+    async scanEmail(leadId, index) {
+        const tableBtn = document.getElementById(`scanEmailBtn-${index}`);
+        const kanbanBtn = document.getElementById(`kanbanScanEmailBtn-${index}`);
+        
+        if (tableBtn) {
+            tableBtn.innerHTML = '⏳ Scanning...';
+            tableBtn.disabled = true;
+        }
+        if (kanbanBtn) {
+            kanbanBtn.innerHTML = '⏳ Scanning...';
+            kanbanBtn.disabled = true;
+        }
+
+        try {
+            const data = await API.request(`/api/leads/${leadId}/scan-email`, {
+                method: 'POST'
+            });
+
+            if (data.success && data.email) {
+                AppState.leads[index].email = data.email;
+                UI.showToast(`📧 Found public email: ${data.email}!`, 'success');
+                UI.renderLeads(AppState.leads);
+            } else {
+                UI.showToast(data.message || 'No public email found for this website.', 'info');
+                if (tableBtn) {
+                    tableBtn.innerHTML = '🔍📧';
+                    tableBtn.disabled = false;
+                }
+                if (kanbanBtn) {
+                    kanbanBtn.innerHTML = '🔍 Email';
+                    kanbanBtn.disabled = false;
+                }
+            }
+        } catch (error) {
+            UI.showToast('Email scan failed: ' + error.message, 'error');
+            if (tableBtn) {
+                tableBtn.innerHTML = '🔍📧';
+                tableBtn.disabled = false;
+            }
+            if (kanbanBtn) {
+                kanbanBtn.innerHTML = '🔍 Email';
+                kanbanBtn.disabled = false;
+            }
+        }
+    },
+
+    openEmail(index) {
+        const lead = AppState.leads[index];
+        if (!lead) return;
+
+        AppState.currentEmailIndex = index;
+        AppState.currentEmailLead = lead;
+
+        if (UI.el.emailBusinessName) UI.el.emailBusinessName.textContent = lead.name;
+        
+        if (UI.el.emailSubjectInput) UI.el.emailSubjectInput.value = '';
+        if (UI.el.emailBodyInput) UI.el.emailBodyInput.value = '';
+
+        const addressText = document.getElementById('emailAddressText');
+        const scanBtn = UI.el.scanEmailOnDemandBtn;
+
+        if (lead.email) {
+            if (addressText) {
+                addressText.textContent = lead.email;
+                addressText.style.color = 'var(--accent-cyan)';
+            }
+            if (scanBtn) scanBtn.style.display = 'none';
+        } else {
+            if (addressText) {
+                addressText.textContent = 'No email scanned yet.';
+                addressText.style.color = 'var(--accent-red)';
+            }
+            if (scanBtn) {
+                scanBtn.style.display = 'inline-block';
+                scanBtn.innerHTML = '🔍 Scan Website';
+                scanBtn.disabled = false;
+            }
+        }
+
+        UI.openModal('emailModal');
+    },
+
+    async scanEmailOnDemand() {
+        const lead = AppState.currentEmailLead;
+        const index = AppState.currentEmailIndex;
+        if (!lead) return;
+
+        const scanBtn = UI.el.scanEmailOnDemandBtn;
+        const addressText = document.getElementById('emailAddressText');
+
+        if (scanBtn) {
+            scanBtn.innerHTML = '⏳ Scanning...';
+            scanBtn.disabled = true;
+        }
+        if (addressText) {
+            addressText.textContent = 'Deep crawling website for contact emails...';
+            addressText.style.color = 'var(--accent-cyan)';
+        }
+
+        try {
+            const data = await API.request(`/api/leads/${lead.id}/scan-email`, {
+                method: 'POST'
+            });
+
+            if (data.success && data.email) {
+                lead.email = data.email;
+                AppState.leads[index].email = data.email;
+                
+                if (addressText) {
+                    addressText.textContent = data.email;
+                    addressText.style.color = 'var(--accent-cyan)';
+                }
+                if (scanBtn) scanBtn.style.display = 'none';
+                
+                UI.showToast(`📧 Successfully extracted: ${data.email}!`, 'success');
+                UI.renderLeads(AppState.leads);
+            } else {
+                UI.showToast('No public email addresses could be discovered.', 'info');
+                if (addressText) {
+                    addressText.textContent = 'Scanned: No emails found.';
+                    addressText.style.color = 'var(--accent-red)';
+                }
+                if (scanBtn) {
+                    scanBtn.innerHTML = '🔍 Scan Website';
+                    scanBtn.disabled = false;
+                }
+            }
+        } catch (error) {
+            UI.showToast('Scanning failed: ' + error.message, 'error');
+            if (addressText) {
+                addressText.textContent = 'Scan error. Please try again.';
+                addressText.style.color = 'var(--accent-red)';
+            }
+            if (scanBtn) {
+                scanBtn.innerHTML = '🔍 Scan Website';
+                scanBtn.disabled = false;
+            }
+        }
+    },
+
+    async generateAIEmail() {
+        const lead = AppState.currentEmailLead;
+        if (!lead) return;
+
+        const geminiKey = localStorage.getItem('gemini_api_key');
+        if (!geminiKey) {
+            UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        const projectSample = this.getBestPortfolioProjectSample(lead);
+        const tone = UI.el.emailToneSelect?.value || 'elite';
+
+        try {
+            UI.showLoading('AI Writer compiling professional email...');
+            
+            const data = await API.request('/api/outreach/generate-email-ai', {
+                method: 'POST',
+                headers: {
+                    'X-Gemini-API-Key': geminiKey
+                },
+                body: JSON.stringify({
+                    lead: lead,
+                    project_sample: projectSample,
+                    tone: tone,
+                    sender: {
+                        name: localStorage.getItem('sender_name') || '',
+                        brand: localStorage.getItem('sender_brand') || '',
+                        role: localStorage.getItem('sender_role') || ''
+                    }
+                })
+            });
+
+            if (data.success) {
+                if (UI.el.emailSubjectInput) UI.el.emailSubjectInput.value = data.subject || '';
+                if (UI.el.emailBodyInput) UI.el.emailBodyInput.value = data.body || '';
+                UI.showToast('✨ High-converting AI cold email generated!', 'success');
+            } else {
+                UI.showToast(data.error || 'Failed to generate email pitch.', 'error');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    openMailClient() {
+        const lead = AppState.currentEmailLead;
+        if (!lead) return;
+
+        const toEmail = lead.email || '';
+        const subject = UI.el.emailSubjectInput?.value.trim() || '';
+        const body = UI.el.emailBodyInput?.value.trim() || '';
+
+        if (!toEmail) {
+            UI.showToast('Recipient email is missing! Try scanning the website first.', 'warning');
+            return;
+        }
+        if (!subject || !body) {
+            UI.showToast('Please type or generate a subject and body first!', 'warning');
+            return;
+        }
+
+        const mailtoUrl = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        
+        const a = document.createElement('a');
+        a.href = mailtoUrl;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        UI.closeModal('emailModal');
+        UI.showToast('Native mail client opened!', 'success');
+        
+        this.markLeadPitched(lead);
+    },
+
+    async sendSMTPEmail() {
+        const lead = AppState.currentEmailLead;
+        if (!lead) return;
+
+        const toEmail = lead.email || '';
+        const subject = UI.el.emailSubjectInput?.value.trim() || '';
+        const body = UI.el.emailBodyInput?.value.trim() || '';
+
+        if (!toEmail) {
+            UI.showToast('Recipient email is missing! Try scanning the website first.', 'warning');
+            return;
+        }
+        if (!subject || !body) {
+            UI.showToast('Please type or generate a subject and body first!', 'warning');
+            return;
+        }
+
+        const host = localStorage.getItem('smtp_host') || '';
+        const port = localStorage.getItem('smtp_port') || '';
+        const email = localStorage.getItem('smtp_email') || '';
+        const password = localStorage.getItem('smtp_password') || '';
+        const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
+
+        if (!host || !port || !email || !password) {
+            UI.showToast('Direct dispatch is disabled. Configure your SMTP Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        try {
+            UI.showLoading('Connecting to SMTP server and sending mail...');
+            
+            const data = await API.request('/api/outreach/send-smtp-email', {
+                method: 'POST',
+                body: JSON.stringify({
+                    to_email: toEmail,
+                    subject: subject,
+                    body: body,
+                    lead_id: lead.id,
+                    smtp_config: {
+                        host: host,
+                        port: parseInt(port),
+                        email: email,
+                        password: password,
+                        use_ssl: useSSL
+                    }
+                })
+            });
+
+            if (data.success) {
+                UI.showToast(data.message || 'Email successfully sent!', 'success');
+                UI.closeModal('emailModal');
+                
+                this.markLeadPitched(lead);
+            } else {
+                UI.showToast(data.error || 'Direct dispatch failed.', 'error');
+            }
+        } catch (error) {
+            UI.showToast('SMTP Direct Send failed: ' + error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    async markLeadPitched(lead) {
+        const index = AppState.leads.findIndex(l => l.id === lead.id);
+        if (index === -1) return;
+
+        try {
+            AppState.leads[index].contacted = 1;
+            AppState.leads[index].contact_date = new Date().toISOString();
+            AppState.leads[index].pipeline_stage = 'PITCHED';
+            
+            UI.renderLeads(AppState.leads);
+            
+            await API.request(`/api/leads/${lead.id}/contact`, {
+                method: 'POST',
+                body: JSON.stringify({ notes: 'Contacted via Cold Email' })
+            });
+            await API.updateLeadPipelineStage(lead.id, 'PITCHED');
+        } catch (err) {
+            console.error('Error syncing pipeline stage to Pitched:', err);
+        }
     }
 };
 

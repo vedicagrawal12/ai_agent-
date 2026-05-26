@@ -77,6 +77,8 @@ class Database:
                 cursor.execute("ALTER TABLE leads ADD COLUMN line_type TEXT DEFAULT ''")
             if 'pipeline_stage' not in columns:
                 cursor.execute("ALTER TABLE leads ADD COLUMN pipeline_stage TEXT DEFAULT 'NEW'")
+            if 'email' not in columns:
+                cursor.execute("ALTER TABLE leads ADD COLUMN email TEXT DEFAULT ''")
         except Exception as alter_err:
             print(f"Error altering table for dynamic columns: {alter_err}")
 
@@ -450,6 +452,25 @@ class Database:
             return True
         except Exception as e:
             print(f"Error updating pipeline stage for lead {lead_id}: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def update_lead_email(self, lead_id: int, email: str) -> bool:
+        """Update the scraped email address for a lead."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE leads
+                SET email = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (email, lead_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating email for lead {lead_id}: {e}")
             return False
         finally:
             conn.close()

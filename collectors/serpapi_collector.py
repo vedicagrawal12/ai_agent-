@@ -39,6 +39,10 @@ class SerpApiCollector(BaseCollector):
             try:
                 search = GoogleSearch(params)
                 results = search.get_dict()
+                
+                if "error" in results:
+                    raise Exception(f"SerpApi Error: {results['error']}")
+                    
                 local_results = results.get("local_results", [])
                 
                 if not local_results:
@@ -92,7 +96,7 @@ class SerpApiCollector(BaseCollector):
                         
             except Exception as e:
                 print(f"Error fetching from SerpApi at start {start}: {e}")
-                break
+                raise e
                 
         return leads[:max_results]
 

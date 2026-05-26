@@ -217,6 +217,112 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
 {signoff_directive}
 """
 
+        return AIOutreachWriter._call_gemini_api(prompt, api_key)
+
+    @staticmethod
+    def generate_email_pitch(
+        lead_data: dict, 
+        project_sample: str, 
+        api_key: str,
+        tone: str = "elite",
+        sender_info: dict = None,
+        mockup_link: str = ""
+    ) -> str:
+        """
+        Generates a highly personalized, human-like sales cold email with a Subject Line and Body.
+        """
+        if not api_key:
+            raise Exception("Gemini API key is required for AI generation.")
+
+        # Resolve tone directives
+        tone_directives = ""
+        if tone == "friendly":
+            tone_directives = """
+- PERSONA: A super friendly, enthusiastic local freelance developer in India who loves building gorgeous websites.
+- TONE: Warm, extremely conversational, casual, very helpful. Speak like an excited developer partner in natural Hinglish.
+- VALUE ADD: Focus on helping them stand out and look extremely good. Avoid aggressive hard-selling.
+"""
+        elif tone == "direct":
+            tone_directives = """
+- PERSONA: A sharp, growth-minded digital consultant.
+- TONE: Professional, casual but direct, value-heavy, metric-conscious. Speak founder-to-founder Hinglish.
+- VALUE ADD: Highlight booking/appointment leaks, customer conversions, and the credibility lost from not having a functioning site.
+"""
+        else: # elite
+            tone_directives = """
+- PERSONA: Premium Web Strategy Expert & Digital Growth Partner.
+- TONE: Elite, polished, warm, growth-focused, highly professional yet super friendly.
+- VALUE ADD: Contrast their amazing real-world popularity (Google reviews count) with their missed online capability to automate bookings.
+"""
+
+        # Resolve smart reviews count hook
+        try:
+            reviews_count = int(lead_data.get('reviews', 0))
+        except (ValueError, TypeError):
+            reviews_count = 0
+            
+        is_broken = int(lead_data.get('is_broken_website', 0)) == 1
+        website_url = lead_data.get('website', '')
+
+        # Resolve sender profile sign-off
+        name = sender_info.get("name", "").strip() if sender_info else ""
+        brand = sender_info.get("brand", "").strip() if sender_info else ""
+        role = sender_info.get("role", "").strip() if sender_info else ""
+        
+        signoff_parts = []
+        if name:
+            signoff_parts.append(name)
+        if role:
+            signoff_parts.append(f"({role})")
+        if brand:
+            signoff_parts.append(f"at {brand}")
+        
+        signoff_str = " ".join(signoff_parts) if signoff_parts else "Your B2B Growth Partner"
+
+        # Build prompt
+        prompt = f"""
+You are an Elite B2B Growth Strategy Copywriter in India. Your task is to write a highly personalized, warm, and 100% human-sounding B2B Cold Email for a local business to pitch them custom premium web design services.
+
+Here are the details of the business:
+- Business Name: {lead_data.get('name', 'Business')}
+- Category: {lead_data.get('category', 'Business')}
+- Location: {lead_data.get('city', 'your city')}
+- Google Maps Rating: {lead_data.get('rating', '0')}
+- Google Maps Reviews: {lead_data.get('reviews', '0')}
+- Website State: {"Broken/Down listed URL: " + website_url if is_broken else "DOES NOT HAVE A WEBSITE YET"}
+
+Best matching project proof to mention in the email body:
+{project_sample}
+
+Dynamic live draft mockup link designed specifically for them (if provided, weave it naturally as a key highlight, otherwise offer to make one):
+{mockup_link}
+
+TONE DIRECTIVES:
+{tone_directives}
+
+Strict Copywriting Guidelines for Cold Email:
+1. SUBJECT LINE: Write a short, highly curiosity-driven, and personalized subject line under 7 words. Never use spammy clickbait or all caps. It should feel like a genuine observation (e.g. "Question about {lead_data.get('name')}'s listed site" or "Quick design layout for {lead_data.get('name')} setup in {lead_data.get('city')}").
+2. STRUCTURE: 
+   - Warm, casual human greeting (e.g. "Hi {lead_data.get('name')} team," or "Hi there,").
+   - Hook: Casually appreciate their amazing Google rating ({lead_data.get('rating')}) and reviews ({lead_data.get('reviews')}) which shows how popular they are.
+   - The Gap: Pivot into the conversion/booking leak naturally. If broken, point out that their listed site is throwing errors which kills trust. If missing, mention that premium clients expect online bookings.
+   - The Solution: Weave in the matched project sample ({project_sample}) cleanly as social proof.
+   - Call to Action: Mention that you sketched a custom live preview mockup styled perfectly for them. If mockup link is provided ({mockup_link}), include it clearly as: "Aap is link par iska live look dekh sakte hain: {mockup_link} ...".
+   - Conclude with a very soft, low-pressure question asking if they'd be open to seeing it or chatting.
+3. LANGUAGE: Natural conversational Hinglish/English. Speak like a real human partner. No textbook jargon or formal vocabulary.
+4. SIGN OFF: End with "Best," or "Warm regards," followed by "{signoff_str}".
+5. FORMATTING: You MUST separate the Subject Line and the Body cleanly using the exact identifiers "SUBJECT:" and "BODY:". Do not put any formatting tags like markdown in the SUBJECT line. Keep the body in short, clean paragraphs. No placeholders or brackets anywhere!
+
+OUTPUT FORMAT (YOU MUST FOLLOW THIS EXACTLY):
+SUBJECT: [Curiosity-driven Subject Line]
+BODY:
+[Email Body Paragraphs here]
+"""
+        return AIOutreachWriter._call_gemini_api(prompt, api_key)
+
+    @staticmethod
+    def _call_gemini_api(prompt: str, api_key: str) -> str:
+        """Helper method to handle the stateless requests to the Google Gemini API."""
         # 1. Quick validation: Google API Keys ALWAYS start with "AIza"
         if not api_key.startswith("AIza"):
             raise Exception("Invalid Gemini API Key format. Google API keys must start with 'AIza' (e.g. 'AIzaSy...'). Please make sure you copied the correct key from Google AI Studio and did not paste your SerpApi key here.")
@@ -234,14 +340,13 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
                     name = m.get("name", "")
                     methods = m.get("supportedGenerationMethods", [])
                     if "generateContent" in methods:
-                        # Extract short name (e.g. "models/gemini-1.5-flash" -> "gemini-1.5-flash")
                         model_id = name.split("/")[-1] if "/" in name else name
                         discovered_models.append(("v1", model_id))
                 print(f"Dynamically discovered models: {discovered_models}")
         except Exception as list_err:
             print(f"Model discovery query failed: {list_err}. Falling back to default list.")
 
-        # 3. Compile final models list to try (discovered models first, then hardcoded fallbacks)
+        # 3. Compile final models list to try
         models_to_try = discovered_models + [
             ("v1", "gemini-1.5-flash"),
             ("v1beta", "gemini-1.5-flash"),
@@ -250,7 +355,6 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
             ("v1beta", "gemini-pro")
         ]
 
-        # Remove duplicates while preserving order
         seen = set()
         final_models = []
         for ver, mod in models_to_try:
@@ -291,7 +395,6 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
                             print(f"Success with Gemini model: {model}!")
                             return text.strip()
                 
-                # Fetch detailed error response if available
                 try:
                     error_data = response.json()
                     last_error = error_data.get("error", {}).get("message", f"Status {response.status_code}")
@@ -306,7 +409,6 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
                 last_error = str(e)
                 print(f"Network error with model {model}: {last_error}")
 
-        # Check if the error is the common Google Cloud "API not enabled" or "Not found/supported" issue
         if "not found for API version" in last_error or "not supported for generateContent" in last_error:
             raise Exception(
                 "Your API key is a valid Google Cloud key, but the Gemini API (Generative Language API) "
