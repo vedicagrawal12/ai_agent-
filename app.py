@@ -359,6 +359,7 @@ def export_excel():
                 "Contacted": "Yes" if lead.get("contacted") == 1 or lead.get("contacted") is True else "No",
                 "Contact Date": lead.get("contact_date", ""),
                 "Notes": lead.get("notes", ""),
+                "Custom Pitch": lead.get("custom_pitch", ""),
                 "Source": lead.get("source", "google_maps")
             })
             
