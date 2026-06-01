@@ -528,6 +528,22 @@
 
                 <div style="margin-top: 16px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
                     <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">⚙️ Pitch Personalization Options</div>
+                    <!-- Service Select Row -->
+                    <div style="margin-bottom: 12px; width: 100%;">
+                        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchServiceSelect">Service to Pitch</label>
+                        <select id="pitchServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                            <option value="web_design" selected>Website Design & Development</option>
+                            <option value="seo">Search Engine Optimization (SEO)</option>
+                            <option value="social_media">Social Media Management (SMM)</option>
+                            <option value="gmb">Google Business Profile (GMB) Optimization</option>
+                            <option value="custom">Custom Niche Service</option>
+                        </select>
+                    </div>
+                    <!-- Custom Service Input (Hidden by default) -->
+                    <div id="pitchCustomServiceContainer" style="display: none; margin-bottom: 12px; width: 100%;">
+                        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchCustomServiceInput">Specify Niche Service</label>
+                        <input type="text" id="pitchCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                    </div>
                     <div style="display: flex; gap: 12px; margin-bottom: 8px;">
                         <div style="flex: 1;">
                             <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchToneSelect">Tone</label>
@@ -542,6 +558,15 @@
                             <select id="pitchLengthSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
                                 <option value="detailed" selected>Detailed Value Pitch</option>
                                 <option value="short">Short & Punchy (DM-friendly)</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchMinWordsSelect">Min Words</label>
+                            <select id="pitchMinWordsSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                <option value="150" selected>150 words</option>
+                                <option value="250">250 words</option>
+                                <option value="350">350 words</option>
+                                <option value="450">450 words</option>
                             </select>
                         </div>
                     </div>
@@ -602,18 +627,44 @@
 
                 <div style="margin-top: 16px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
                     <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">⚙️ Pitch Personalization Options</div>
-                    <div style="display: flex; gap: 12px; align-items: flex-end;">
-                        <div style="flex: 1;">
-                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailToneSelect">Outreach Tone</label>
-                            <select id="emailToneSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                                <option value="elite" selected>Elite Growth Consultant</option>
-                                <option value="friendly">Friendly Local Freelancer</option>
-                                <option value="direct">Direct Growth Partner</option>
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px;">
+                        <div style="width: 100%;">
+                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailServiceSelect">Service to Pitch</label>
+                            <select id="emailServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                <option value="web_design" selected>Website Design & Development</option>
+                                <option value="seo">Search Engine Optimization (SEO)</option>
+                                <option value="social_media">Social Media Management (SMM)</option>
+                                <option value="gmb">Google Business Profile (GMB) Optimization</option>
+                                <option value="custom">Custom Niche Service</option>
                             </select>
                         </div>
-                        <button id="aiGenerateEmailBtn" class="btn btn-primary" style="background: var(--gradient-primary); border: none; font-size: 0.85rem; padding: 8px 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; height: 32px;">
-                            ✨ AI Generate Pitch
-                        </button>
+                        <!-- Custom Service Input (Hidden by default) -->
+                        <div id="emailCustomServiceContainer" style="display: none; width: 100%; margin-bottom: 4px;">
+                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailCustomServiceInput">Specify Niche Service</label>
+                            <input type="text" id="emailCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                        </div>
+                        <div style="display: flex; gap: 12px; align-items: flex-end; width: 100%;">
+                            <div style="flex: 1;">
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailToneSelect">Outreach Tone</label>
+                                <select id="emailToneSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                    <option value="elite" selected>Elite Growth Consultant</option>
+                                    <option value="friendly">Friendly Local Freelancer</option>
+                                    <option value="direct">Direct Growth Partner</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailMinWordsSelect">Min Words</label>
+                                <select id="emailMinWordsSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                    <option value="150" selected>150 words</option>
+                                    <option value="250">250 words</option>
+                                    <option value="350">350 words</option>
+                                    <option value="450">450 words</option>
+                                </select>
+                            </div>
+                            <button id="aiGenerateEmailBtn" class="btn btn-primary" style="background: var(--gradient-primary); border: none; font-size: 0.85rem; padding: 8px 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; height: 32px;">
+                                ✨ AI Generate Pitch
+                            </button>
+                        </div>
                     </div>
                 </div>
 

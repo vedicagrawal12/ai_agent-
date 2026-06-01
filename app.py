@@ -548,10 +548,12 @@ def generate_ai_pitch():
     project_sample = data.get("project_sample", "")
     tone = data.get("tone", "elite")
     length = data.get("length", "detailed")
+    service = data.get("service", "web_design")
     sender = data.get("sender", {})
     refine_feedback = data.get("refine_feedback")
     previous_pitch = data.get("previous_pitch")
     custom_pitch_rules = data.get("custom_pitch_rules", "")
+    min_words = data.get("min_words", 150)
     
     if not lead_data:
         return jsonify({"error": "Lead data is required"}), 400
@@ -573,11 +575,13 @@ def generate_ai_pitch():
             api_key=gemini_key,
             tone=tone,
             length=length,
+            service=service,
             sender_info=sender,
             refine_feedback=refine_feedback,
             previous_pitch=previous_pitch,
             mockup_link=mockup_link,
-            custom_pitch_rules=custom_pitch_rules
+            custom_pitch_rules=custom_pitch_rules,
+            min_words=min_words
         )
         
         
@@ -800,8 +804,10 @@ def generate_email_ai_pitch():
     lead_data = data.get("lead", {})
     project_sample = data.get("project_sample", "")
     tone = data.get("tone", "elite")
+    service = data.get("service", "web_design")
     sender = data.get("sender", {})
     custom_pitch_rules = data.get("custom_pitch_rules", "")
+    min_words = data.get("min_words", 150)
     
     if not lead_data:
         return jsonify({"error": "Lead data is required"}), 400
@@ -821,9 +827,11 @@ def generate_email_ai_pitch():
             project_sample=project_sample,
             api_key=gemini_key,
             tone=tone,
+            service=service,
             sender_info=sender,
             mockup_link=mockup_link,
-            custom_pitch_rules=custom_pitch_rules
+            custom_pitch_rules=custom_pitch_rules,
+            min_words=min_words
         )
         
         # Parse SUBJECT and BODY

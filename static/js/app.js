@@ -248,8 +248,12 @@ const UI = {
             
             whatsappModal: document.getElementById('whatsappModal'),
             templateOptions: document.getElementById('templateOptions'),
+            pitchServiceSelect: document.getElementById('pitchServiceSelect'),
+            pitchCustomServiceContainer: document.getElementById('pitchCustomServiceContainer'),
+            pitchCustomServiceInput: document.getElementById('pitchCustomServiceInput'),
             pitchToneSelect: document.getElementById('pitchToneSelect'),
             pitchLengthSelect: document.getElementById('pitchLengthSelect'),
+            pitchMinWordsSelect: document.getElementById('pitchMinWordsSelect'),
             aiGenerateBtn: document.getElementById('aiGenerateBtn'),
             messagePreview: document.getElementById('messagePreview'),
             customMessageArea: document.getElementById('customMessageArea'),
@@ -263,7 +267,11 @@ const UI = {
             emailBusinessName: document.getElementById('emailBusinessName'),
             emailAddressText: document.getElementById('emailAddressText'),
             scanEmailOnDemandBtn: document.getElementById('scanEmailOnDemandBtn'),
+            emailServiceSelect: document.getElementById('emailServiceSelect'),
+            emailCustomServiceContainer: document.getElementById('emailCustomServiceContainer'),
+            emailCustomServiceInput: document.getElementById('emailCustomServiceInput'),
             emailToneSelect: document.getElementById('emailToneSelect'),
+            emailMinWordsSelect: document.getElementById('emailMinWordsSelect'),
             aiGenerateEmailBtn: document.getElementById('aiGenerateEmailBtn'),
             emailSubjectInput: document.getElementById('emailSubjectInput'),
             emailBodyInput: document.getElementById('emailBodyInput'),
@@ -419,10 +427,11 @@ const UI = {
         let websiteDisplay = '';
         if (lead.website) {
             const safeWebsite = this.escapeHtml(lead.website);
+            const sanitizedWebsite = this.sanitizeUrl(lead.website);
             if (lead.is_broken_website === 1) {
-                websiteDisplay = `<a href="${safeWebsite}" target="_blank" class="broken-website-badge" data-tooltip="BROKEN SITE: ${safeWebsite}">⚠️ Broken Site</a>`;
+                websiteDisplay = `<a href="${sanitizedWebsite}" target="_blank" class="broken-website-badge" data-tooltip="BROKEN SITE: ${safeWebsite}">⚠️ Broken Site</a>`;
             } else {
-                websiteDisplay = `<a href="${safeWebsite}" target="_blank" class="website-link" data-tooltip="${safeWebsite}">🌐 Visit Site</a>`;
+                websiteDisplay = `<a href="${sanitizedWebsite}" target="_blank" class="website-link" data-tooltip="${safeWebsite}">🌐 Visit Site</a>`;
             }
         } else {
             websiteDisplay = `<span class="no-website">❌ No Website</span>`;
@@ -457,7 +466,8 @@ const UI = {
                 socialsDisplay += `<button class="row-btn instagram" data-tooltip="Instagram DM & Auto-Copy" onclick="App.openInstagram(${index})" style="background: var(--gradient-primary); color: white; border: none; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; margin-right: 4px; cursor: pointer;">📸 DM</button>`;
             }
             if (lead.facebook) {
-                socialsDisplay += `<a href="${lead.facebook}" target="_blank" class="row-btn facebook" data-tooltip="Facebook Profile" style="background: var(--accent-blue); color: white; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 23px;">📘 Page</a>`;
+                const sanitizedFacebook = this.sanitizeUrl(lead.facebook);
+                socialsDisplay += `<a href="${sanitizedFacebook}" target="_blank" class="row-btn facebook" data-tooltip="Facebook Profile" style="background: var(--accent-blue); color: white; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 23px;">📘 Page</a>`;
             }
         } else {
             const scanId = lead.id || '';
@@ -580,7 +590,8 @@ const UI = {
                 actionsHtml += `<button class="kanban-card-btn instagram" title="Instagram DM & Auto-Copy" onclick="App.openInstagram(${idx})" style="background: var(--gradient-primary); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; border: none; display: flex; align-items: center; gap: 4px; cursor: pointer;">📸 DM</button>`;
             }
             if (lead.facebook) {
-                actionsHtml += `<a href="${lead.facebook}" target="_blank" class="kanban-card-btn facebook" title="Facebook Profile" style="background: var(--accent-blue); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 25px;">📘 Page</a>`;
+                const sanitizedFacebook = this.sanitizeUrl(lead.facebook);
+                actionsHtml += `<a href="${sanitizedFacebook}" target="_blank" class="kanban-card-btn facebook" title="Facebook Profile" style="background: var(--accent-blue); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 25px;">📘 Page</a>`;
             }
         } else if (lead.id) {
             actionsHtml += `<button class="kanban-card-btn scan-social" onclick="App.scanSocials(${lead.id}, ${idx})" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(0,212,255,0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 4px; cursor: pointer;">🔍 Scan Socials</button>`;
@@ -800,6 +811,15 @@ const UI = {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    },
+
+    sanitizeUrl(url) {
+        if (!url) return '#';
+        const trimmed = String(url).trim();
+        if (/^https?:\/\//i.test(trimmed)) {
+            return this.escapeHtml(trimmed);
+        }
+        return '#';
     }
 };
 
@@ -1003,6 +1023,25 @@ const App = {
         // Refine Pitch Button
         UI.el.refinePitchBtn?.addEventListener('click', () => {
             this.refineAIPitch();
+        });
+
+        // Custom Service selection toggles
+        UI.el.pitchServiceSelect?.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                if (UI.el.pitchCustomServiceContainer) UI.el.pitchCustomServiceContainer.style.display = 'block';
+                if (UI.el.pitchCustomServiceInput) UI.el.pitchCustomServiceInput.focus();
+            } else {
+                if (UI.el.pitchCustomServiceContainer) UI.el.pitchCustomServiceContainer.style.display = 'none';
+            }
+        });
+
+        UI.el.emailServiceSelect?.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                if (UI.el.emailCustomServiceContainer) UI.el.emailCustomServiceContainer.style.display = 'block';
+                if (UI.el.emailCustomServiceInput) UI.el.emailCustomServiceInput.focus();
+            } else {
+                if (UI.el.emailCustomServiceContainer) UI.el.emailCustomServiceContainer.style.display = 'none';
+            }
         });
 
         // Bulk Scan Socials
@@ -1283,6 +1322,12 @@ const App = {
             return;
         }
 
+        // Validate Google API Key prefix format (supports both older 'AIza' and newer 'AQ.' prefixes)
+        if (!geminiKey.startsWith('AIza') && !geminiKey.startsWith('AQ.')) {
+            UI.showToast('Invalid format! Gemini API keys must start with "AIza" or "AQ." (e.g. AIzaSy... or AQ.Ab8...). Please check your key.', 'error');
+            return;
+        }
+
         // Save key in localStorage
         localStorage.setItem('gemini_api_key', geminiKey);
         this.checkGeminiConfig();
@@ -1348,6 +1393,11 @@ const App = {
         const projectSample = this.getBestPortfolioProjectSample(lead);
         const tone = UI.el.pitchToneSelect?.value || 'elite';
         const length = UI.el.pitchLengthSelect?.value || 'detailed';
+        const minWords = parseInt(UI.el.pitchMinWordsSelect?.value) || 150;
+        let service = UI.el.pitchServiceSelect?.value || 'web_design';
+        if (service === 'custom') {
+            service = UI.el.pitchCustomServiceInput?.value.trim() || 'Custom Service';
+        }
 
         try {
             UI.showLoading('AI Writer generating pitch...');
@@ -1363,6 +1413,8 @@ const App = {
                     project_sample: projectSample,
                     tone: tone,
                     length: length,
+                    service: service,
+                    min_words: minWords,
                     sender: {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
@@ -1431,6 +1483,11 @@ const App = {
         const projectSample = this.getBestPortfolioProjectSample(lead);
         const tone = UI.el.pitchToneSelect?.value || 'elite';
         const length = UI.el.pitchLengthSelect?.value || 'detailed';
+        const minWords = parseInt(UI.el.pitchMinWordsSelect?.value) || 150;
+        let service = UI.el.pitchServiceSelect?.value || 'web_design';
+        if (service === 'custom') {
+            service = UI.el.pitchCustomServiceInput?.value.trim() || 'Custom Service';
+        }
 
         try {
             UI.showLoading('AI Writer refining pitch...');
@@ -1445,6 +1502,8 @@ const App = {
                     project_sample: projectSample,
                     tone: tone,
                     length: length,
+                    service: service,
+                    min_words: minWords,
                     sender: {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
@@ -1604,7 +1663,10 @@ const App = {
             // Open direct message window if possible, else open profile
             // Instagram profile link looks like: https://www.instagram.com/username/
             // Direct message is opened in /direct/inbox/ or direct message url
-            window.open(lead.instagram, '_blank');
+            const sanitizedInstagram = UI.sanitizeUrl(lead.instagram);
+            if (sanitizedInstagram !== '#') {
+                window.open(sanitizedInstagram, '_blank');
+            }
         }, 800);
     },
 
@@ -1808,60 +1870,55 @@ const App = {
         // Update modal header with business name
         document.getElementById('whatsappBusinessName').textContent = lead.name;
         document.getElementById('whatsappPhoneNumber').textContent = lead.phone || lead.whatsapp_number;
+
+        // Sync Custom Service selection input display
+        if (UI.el.pitchServiceSelect) {
+            if (UI.el.pitchServiceSelect.value === 'custom') {
+                if (UI.el.pitchCustomServiceContainer) UI.el.pitchCustomServiceContainer.style.display = 'block';
+            } else {
+                if (UI.el.pitchCustomServiceContainer) UI.el.pitchCustomServiceContainer.style.display = 'none';
+            }
+        }
         
         // Check if custom_pitch is already available for this lead
         const customMessageInput = document.getElementById('customMessageInput');
         const customArea = document.getElementById('customMessageArea');
         
+        // Preload custom pitch if it exists, but don't force select the "custom" template by default
         if (lead.custom_pitch) {
             if (customMessageInput) {
                 customMessageInput.value = lead.custom_pitch;
             }
-            if (customArea) {
-                customArea.style.display = 'block';
-            }
-            
-            // Programmatically select "custom" template
-            setTimeout(() => {
-                const customRadio = document.querySelector('input[name="template"][value="custom"]');
-                if (customRadio) {
-                    customRadio.checked = true;
-                    AppState.selectedTemplate = 'custom';
-                    
-                    const container = UI.el.templateOptions;
-                    if (container) {
-                        container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
-                        customRadio.closest('.template-option')?.classList.add('selected');
-                    }
-                    this.updateMessagePreview();
-                }
-            }, 50);
-            UI.showToast('✨ Custom AI Pitch preloaded from database!', 'success');
         } else {
-            // Reset to default
             if (customMessageInput) {
                 customMessageInput.value = '';
             }
-            if (customArea) {
-                customArea.style.display = 'none';
-            }
-            
-            // Re-select first template
-            setTimeout(() => {
-                const firstRadio = document.querySelector('input[name="template"]');
-                if (firstRadio) {
-                    firstRadio.checked = true;
-                    AppState.selectedTemplate = firstRadio.value;
-                    
-                    const container = UI.el.templateOptions;
-                    if (container) {
-                        container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
-                        firstRadio.closest('.template-option')?.classList.add('selected');
-                    }
-                    this.updateMessagePreview();
-                }
-            }, 50);
         }
+
+        // Always default to the first standard template when opening the modal,
+        // so the user gets a high-converting, beautifully formatted preview by default.
+        if (customArea) {
+            customArea.style.display = 'none';
+        }
+        
+        // Re-select first template
+        setTimeout(() => {
+            const firstRadio = document.querySelector('input[name="template"]:not([value="custom"])') || document.querySelector('input[name="template"]');
+            if (firstRadio) {
+                firstRadio.checked = true;
+                AppState.selectedTemplate = firstRadio.value;
+                
+                const container = UI.el.templateOptions;
+                if (container) {
+                    container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
+                    firstRadio.closest('.template-option')?.classList.add('selected');
+                }
+                this.updateMessagePreview();
+            }
+            if (lead.custom_pitch) {
+                UI.showToast('✨ Custom AI Pitch preloaded (select "✏️ Custom Message" to view/use it)', 'info');
+            }
+        }, 50);
         
         this.updateMessagePreview();
         UI.openModal('whatsappModal');
@@ -2199,10 +2256,12 @@ const App = {
                     if (socialCell) {
                         let links = [];
                         if (data.instagram) {
-                            links.push(`<a href="${data.instagram}" target="_blank" class="social-icon instagram" title="Instagram">📸</a>`);
+                            const sanitizedInstagram = UI.sanitizeUrl(data.instagram);
+                            links.push(`<a href="${sanitizedInstagram}" target="_blank" class="social-icon instagram" title="Instagram">📸</a>`);
                         }
                         if (data.facebook) {
-                            links.push(`<a href="${data.facebook}" target="_blank" class="social-icon facebook" title="Facebook">👥</a>`);
+                            const sanitizedFacebook = UI.sanitizeUrl(data.facebook);
+                            links.push(`<a href="${sanitizedFacebook}" target="_blank" class="social-icon facebook" title="Facebook">👥</a>`);
                         }
                         socialCell.innerHTML = links.length > 0 ? links.join(' ') : '<span style="color: var(--text-secondary); font-size: 0.85rem;">✗ Not found</span>';
                     }
@@ -2349,6 +2408,15 @@ const App = {
         if (UI.el.emailSubjectInput) UI.el.emailSubjectInput.value = '';
         if (UI.el.emailBodyInput) UI.el.emailBodyInput.value = '';
 
+        // Sync Custom Service selection input display
+        if (UI.el.emailServiceSelect) {
+            if (UI.el.emailServiceSelect.value === 'custom') {
+                if (UI.el.emailCustomServiceContainer) UI.el.emailCustomServiceContainer.style.display = 'block';
+            } else {
+                if (UI.el.emailCustomServiceContainer) UI.el.emailCustomServiceContainer.style.display = 'none';
+            }
+        }
+
         const addressText = document.getElementById('emailAddressText');
         const scanBtn = UI.el.scanEmailOnDemandBtn;
 
@@ -2444,6 +2512,11 @@ const App = {
 
         const projectSample = this.getBestPortfolioProjectSample(lead);
         const tone = UI.el.emailToneSelect?.value || 'elite';
+        const minWords = parseInt(UI.el.emailMinWordsSelect?.value) || 150;
+        let service = UI.el.emailServiceSelect?.value || 'web_design';
+        if (service === 'custom') {
+            service = UI.el.emailCustomServiceInput?.value.trim() || 'Custom Service';
+        }
 
         try {
             UI.showLoading('AI Writer compiling professional email...');
@@ -2457,6 +2530,8 @@ const App = {
                     lead: lead,
                     project_sample: projectSample,
                     tone: tone,
+                    service: service,
+                    min_words: minWords,
                     sender: {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
@@ -2871,7 +2946,8 @@ const App = {
             // Website pill display
             let websiteLinkHtml = '';
             if (lead.website) {
-                websiteLinkHtml = `<a href="${safeWebsite}" target="_blank" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: none;">🌐 Website</a>`;
+                const sanitizedWebsite = UI.sanitizeUrl(lead.website);
+                websiteLinkHtml = `<a href="${sanitizedWebsite}" target="_blank" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: none;">🌐 Website</a>`;
             } else {
                 websiteLinkHtml = `<span style="font-size: 0.72rem; color: var(--text-muted);">❌ No Website</span>`;
             }
@@ -3044,6 +3120,11 @@ const App = {
             UI.showLoading(`Gemini writing email for ${lead.name}...`);
             const projectSample = this.getBestPortfolioProjectSample(lead);
             const tone = UI.el.emailToneSelect?.value || 'elite';
+            const minWords = parseInt(UI.el.emailMinWordsSelect?.value) || 150;
+            let service = UI.el.emailServiceSelect?.value || 'web_design';
+            if (service === 'custom') {
+                service = UI.el.emailCustomServiceInput?.value.trim() || 'Custom Service';
+            }
 
             const data = await API.request('/api/outreach/generate-email-ai', {
                 method: 'POST',
@@ -3052,6 +3133,8 @@ const App = {
                     lead: lead,
                     project_sample: projectSample,
                     tone: tone,
+                    service: service,
+                    min_words: minWords,
                     sender: {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
@@ -3317,6 +3400,11 @@ const App = {
             try {
                 const projectSample = this.getBestPortfolioProjectSample(lead);
                 const tone = UI.el.emailToneSelect?.value || 'elite';
+                const minWords = parseInt(UI.el.emailMinWordsSelect?.value) || 150;
+                let service = UI.el.emailServiceSelect?.value || 'web_design';
+                if (service === 'custom') {
+                    service = UI.el.emailCustomServiceInput?.value.trim() || 'Custom Service';
+                }
 
                 const data = await API.request('/api/outreach/generate-email-ai', {
                     method: 'POST',
@@ -3325,6 +3413,8 @@ const App = {
                         lead: lead,
                         project_sample: projectSample,
                         tone: tone,
+                        service: service,
+                        min_words: minWords,
                         sender: {
                             name: localStorage.getItem('sender_name') || '',
                             brand: localStorage.getItem('sender_brand') || '',
