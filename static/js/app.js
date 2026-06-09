@@ -200,6 +200,7 @@ const UI = {
             tableContainer: document.getElementById('tableContainer'),
             loadMoreContainer: document.getElementById('loadMoreContainer'),
             loadMoreBtn: document.getElementById('loadMoreBtn'),
+            welcomeHero: document.getElementById('welcomeHero'),
             
             loadingOverlay: document.getElementById('loadingOverlay'),
             loadingText: document.getElementById('loadingText'),
@@ -344,7 +345,12 @@ const UI = {
     // ---- Stats ----
     updateStats(stats) {
         this.el.statsBar.style.display = 'grid';
-        this.el.statsBar.classList.add('fade-in');
+        if (window.gsap) {
+            window.gsap.fromTo('.stat-card', 
+                { opacity: 0, y: 15 }, 
+                { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: 'power2.out', overwrite: 'auto' }
+            );
+        }
         
         this.animateNumber(this.el.statTotalFound, stats.total_found || 0);
         this.animateNumber(this.el.statLeadsCount, stats.leads_count || 0);
@@ -380,16 +386,23 @@ const UI = {
         AppState.leads = leads;
         
         this.el.resultsSection.style.display = 'block';
-        this.el.resultsSection.classList.add('slide-up');
+        if (window.gsap) {
+            window.gsap.fromTo(this.el.resultsSection, 
+                { opacity: 0, y: 20 }, 
+                { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', overwrite: 'auto' }
+            );
+        }
         
         if (leads.length === 0) {
             this.el.emptyState.style.display = 'block';
             this.el.tableContainer.style.display = 'none';
             if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
             if (this.el.loadMoreContainer) this.el.loadMoreContainer.style.display = 'none';
+            if (this.el.welcomeHero) this.el.welcomeHero.style.display = 'block';
             return;
         }
         
+        if (this.el.welcomeHero) this.el.welcomeHero.style.display = 'none';
         this.el.emptyState.style.display = 'none';
         
         // Show/hide container based on active view state
@@ -397,10 +410,26 @@ const UI = {
             this.el.tableContainer.style.display = 'none';
             if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'block';
             this.renderKanbanBoard(leads);
+            if (window.gsap) {
+                window.gsap.fromTo('.kanban-column', 
+                    { opacity: 0, y: 15 }, 
+                    { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power2.out', overwrite: 'auto' }
+                );
+                window.gsap.fromTo('.kanban-card', 
+                    { opacity: 0, y: 10 }, 
+                    { opacity: 1, y: 0, duration: 0.3, stagger: 0.02, ease: 'power1.out', delay: 0.15, overwrite: 'auto' }
+                );
+            }
         } else {
             this.el.tableContainer.style.display = 'block';
             if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
             this.el.leadsTableBody.innerHTML = leads.map((lead, i) => this.createLeadRow(lead, i)).join('');
+            if (window.gsap) {
+                window.gsap.fromTo('.leads-table tbody tr', 
+                    { opacity: 0, x: -8 }, 
+                    { opacity: 1, x: 0, duration: 0.35, stagger: 0.015, ease: 'power1.out', overwrite: 'auto' }
+                );
+            }
         }
         
         // Show/hide Load More button based on if we fetched any results
@@ -442,7 +471,7 @@ const UI = {
             if (lead.line_type === 'LANDLINE') {
                 whatsappBtn = `<button class="row-btn whatsapp disabled-landline" data-tooltip="Landline Number (No WhatsApp)" disabled>💬</button>`;
             } else {
-                whatsappBtn = `<button class="row-btn whatsapp" data-tooltip="Send WhatsApp" onclick="App.openWhatsApp(${index})">💬</button>`;
+                whatsappBtn = `<button class="row-btn whatsapp" data-tooltip="Send WhatsApp Message" onclick="App.openWhatsApp(${index})">💬</button>`;
             }
         }
 
@@ -463,7 +492,7 @@ const UI = {
         let socialsDisplay = '';
         if (lead.instagram || lead.facebook) {
             if (lead.instagram) {
-                socialsDisplay += `<button class="row-btn instagram" data-tooltip="Instagram DM & Auto-Copy" onclick="App.openInstagram(${index})" style="background: var(--gradient-primary); color: white; border: none; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; margin-right: 4px; cursor: pointer;">📸 DM</button>`;
+                socialsDisplay += `<button class="row-btn instagram" data-tooltip="Instagram DM & Auto-Copy" onclick="App.openInstagram(${index})" style="background: var(--accent-blue); color: white; border: none; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; margin-right: 4px; cursor: pointer;">📸 DM</button>`;
             }
             if (lead.facebook) {
                 const sanitizedFacebook = this.sanitizeUrl(lead.facebook);
@@ -479,7 +508,7 @@ const UI = {
         }
  
         return `
-            <tr>
+            <tr data-lead-id="${lead.id || ''}" onclick="App.handleRowClick(event, ${index})" style="cursor: pointer;">
                 <td>
                     <div style="font-weight: 600;">${this.escapeHtml(lead.name)}</div>
                     <div class="category-pill" style="margin-top: 4px;">${this.escapeHtml(lead.category || 'Business')}</div>
@@ -583,11 +612,13 @@ const UI = {
         
         let actionsHtml = '';
         const idx = AppState.leads.findIndex(l => l.id === lead.id);
+        card.setAttribute('onclick', `App.handleRowClick(event, ${idx})`);
+        card.style.cursor = 'pointer';
         
         // Scan or show Socials
         if (lead.instagram || lead.facebook) {
             if (lead.instagram) {
-                actionsHtml += `<button class="kanban-card-btn instagram" title="Instagram DM & Auto-Copy" onclick="App.openInstagram(${idx})" style="background: var(--gradient-primary); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; border: none; display: flex; align-items: center; gap: 4px; cursor: pointer;">📸 DM</button>`;
+                actionsHtml += `<button class="kanban-card-btn instagram" title="Instagram DM & Auto-Copy" onclick="App.openInstagram(${idx})" style="background: var(--accent-blue); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; border: none; display: flex; align-items: center; gap: 4px; cursor: pointer;">📸 DM</button>`;
             }
             if (lead.facebook) {
                 const sanitizedFacebook = this.sanitizeUrl(lead.facebook);
@@ -603,13 +634,13 @@ const UI = {
             if (lead.line_type === 'LANDLINE') {
                 whatsappBtnHtml = `<button class="kanban-card-btn whatsapp disabled-landline" title="Landline Number (No WhatsApp)" style="background: rgba(255,255,255,0.05); color: var(--text-muted); border-radius: 4px; padding: 4px 8px; border: 1px solid var(--border-color); font-size: 0.75rem; cursor: not-allowed;" disabled>💬 Pitch</button>`;
             } else {
-                whatsappBtnHtml = `<button class="kanban-card-btn whatsapp" title="Personalized WhatsApp Pitch" onclick="App.openWhatsApp(${idx})" style="background: var(--gradient-whatsapp); color: white; border-radius: 4px; padding: 4px 8px; border: none; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 4px; cursor: pointer;">💬 Pitch</button>`;
+                whatsappBtnHtml = `<button class="kanban-card-btn whatsapp" title="Personalized WhatsApp Pitch" onclick="App.openWhatsApp(${idx})" style="background: #25d366; color: white; border-radius: 4px; padding: 4px 8px; border: none; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 4px; cursor: pointer;">💬 Pitch</button>`;
             }
         }
 
         let emailBtnHtml = '';
         if (lead.email) {
-            emailBtnHtml = `<button class="kanban-card-btn email" title="Send Email Pitch" onclick="App.openEmail(${idx})" style="background: var(--gradient-primary); color: white; border: none; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">📧 Email</button>`;
+            emailBtnHtml = `<button class="kanban-card-btn email" title="Send Email Pitch" onclick="App.openEmail(${idx})" style="background: var(--accent-blue); color: white; border: none; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">📧 Email</button>`;
         } else {
             const btnTitle = lead.website ? "Scan Website/Web for Email" : "Search Web for Email (SerpApi)";
             emailBtnHtml = `<button class="kanban-card-btn scan-email" id="kanbanScanEmailBtn-${idx}" onclick="App.scanEmail(${lead.id}, ${idx})" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(0,240,255,0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 4px; cursor: pointer;" title="${btnTitle}">🔍 Email</button>`;
@@ -815,11 +846,58 @@ const UI = {
 
     sanitizeUrl(url) {
         if (!url) return '#';
-        const trimmed = String(url).trim();
-        if (/^https?:\/\//i.test(trimmed)) {
+        let trimmed = String(url).trim();
+        if (trimmed.startsWith('//')) {
+            trimmed = 'https:' + trimmed;
+        }
+        if (/^(https?|ftp):\/\//i.test(trimmed)) {
             return this.escapeHtml(trimmed);
         }
         return '#';
+    },
+
+    initTiltEffects() {
+        // Event delegation for 3D card tilt on mouse move
+        document.body.addEventListener('mousemove', (e) => {
+            const card = e.target.closest('.stat-card, .kanban-card');
+            if (!card) return;
+            
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const tiltX = ((y - centerY) / centerY) * -10;
+            const tiltY = ((x - centerX) / centerX) * 10;
+            
+            if (window.gsap) {
+                window.gsap.to(card, {
+                    rotateX: tiltX,
+                    rotateY: tiltY,
+                    transformPerspective: 800,
+                    ease: 'power1.out',
+                    duration: 0.15,
+                    overwrite: 'auto'
+                });
+            }
+        });
+        
+        document.body.addEventListener('mouseleave', (e) => {
+            const card = e.target.closest('.stat-card, .kanban-card');
+            if (card) {
+                if (window.gsap) {
+                    window.gsap.to(card, {
+                        rotateX: 0,
+                        rotateY: 0,
+                        ease: 'power2.out',
+                        duration: 0.35,
+                        overwrite: 'auto'
+                    });
+                }
+            }
+        }, true);
     }
 };
 
@@ -854,6 +932,16 @@ const App = {
         this.checkSmtpConfig();
         this.loadReminders();
         await this.loadTemplates();
+        
+        // Initialize GSAP 3D card tilt hover effects
+        UI.initTiltEffects();
+        
+        // Initial entry stagger animations
+        if (window.gsap) {
+            window.gsap.from('.app-header', { opacity: 0, y: -20, duration: 0.6, ease: 'power2.out' });
+            window.gsap.from('.search-section', { opacity: 0, y: 30, duration: 0.7, delay: 0.15, ease: 'power2.out' });
+            window.gsap.from('.search-form > *', { opacity: 0, y: 15, duration: 0.4, delay: 0.35, stagger: 0.08, ease: 'power1.out' });
+        }
     },
 
     suggestZones() {
@@ -909,7 +997,7 @@ const App = {
         document.querySelectorAll('.modal-close').forEach(btn => {
             btn.addEventListener('click', () => {
                 const modal = btn.closest('.modal-overlay');
-                modal.classList.remove('active');
+                if (modal) modal.classList.remove('active');
             });
         });
 
@@ -917,6 +1005,29 @@ const App = {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) overlay.classList.remove('active');
             });
+        });
+
+        // Detail Pane Close
+        document.getElementById('closeDetailPaneBtn')?.addEventListener('click', () => {
+            this.closeDetailPane();
+        });
+
+        // Detail Pane Tab Switcher
+        document.querySelectorAll('.detail-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.getAttribute('data-tab');
+                this.switchDetailTab(tab);
+            });
+        });
+
+        // Copy Mockup Link from Detail Pane
+        document.getElementById('detailCopyMockupLinkBtn')?.addEventListener('click', () => {
+            const lead = AppState.selectedLead;
+            if (lead && lead.id) {
+                this.copyMockupLink(lead.id);
+            } else {
+                UI.showToast('Select a lead to copy mockup link.', 'warning');
+            }
         });
 
         // Save API key
@@ -1159,6 +1270,7 @@ const App = {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+                this.closeDetailPane();
             }
             // Ctrl+K to focus search
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -1858,6 +1970,127 @@ const App = {
 
     },
 
+    handleRowClick(event, index) {
+        // Prevent opening drawer if clicking links/buttons inside rows
+        if (event.target.closest('a') || event.target.closest('button')) {
+            return;
+        }
+        const lead = AppState.leads[index];
+        if (lead) {
+            this.selectLead(lead.id);
+            this.switchDetailTab('whatsapp'); // Default to WhatsApp pitch tab
+        }
+    },
+
+    selectLead(leadId) {
+        const lead = AppState.leads.find(l => l.id === leadId) || AppState.leads.find(l => l.place_id === leadId);
+        if (!lead) return;
+
+        AppState.currentWhatsAppLead = lead;
+        AppState.currentEmailLead = lead;
+        AppState.selectedLead = lead;
+
+        // Set business name and category in pane header
+        const detailBusinessName = document.getElementById('detailBusinessName');
+        const detailBusinessCategory = document.getElementById('detailBusinessCategory');
+        if (detailBusinessName) detailBusinessName.textContent = lead.name;
+        if (detailBusinessCategory) detailBusinessCategory.textContent = lead.category || 'Local Business';
+
+        // Set WhatsApp specific data
+        const waBizName = document.getElementById('whatsappBusinessName');
+        const waPhoneNum = document.getElementById('whatsappPhoneNumber');
+        if (waBizName) waBizName.textContent = lead.name;
+        if (waPhoneNum) waPhoneNum.textContent = lead.phone || lead.whatsapp_number || 'N/A';
+
+        // Set Email specific data
+        if (UI.el.emailBusinessName) UI.el.emailBusinessName.textContent = lead.name;
+        const addressText = document.getElementById('emailAddressText');
+        const scanBtn = UI.el.scanEmailOnDemandBtn;
+
+        if (lead.email) {
+            if (addressText) {
+                addressText.textContent = lead.email;
+                addressText.style.color = 'var(--accent-cyan)';
+            }
+            if (scanBtn) scanBtn.style.display = 'none';
+        } else {
+            if (addressText) {
+                addressText.textContent = 'No email scanned yet.';
+                addressText.style.color = 'var(--accent-red)';
+            }
+            if (scanBtn) {
+                scanBtn.style.display = 'inline-block';
+                scanBtn.innerHTML = '🔍 Scan Website';
+                scanBtn.disabled = false;
+            }
+        }
+
+        // Load virtual mockup preview iframe
+        const mockupIframe = document.getElementById('mockupIframe');
+        if (mockupIframe) {
+            if (lead.id) {
+                const senderName = localStorage.getItem('sender_name') || '';
+                const senderBrand = localStorage.getItem('sender_brand') || '';
+                const previewUrl = `/preview/${lead.id}?sender_name=${encodeURIComponent(senderName)}&sender_brand=${encodeURIComponent(senderBrand)}`;
+                mockupIframe.src = previewUrl;
+            } else {
+                mockupIframe.src = 'about:blank';
+            }
+        }
+
+        // Animate detail pane sliding into view using GSAP
+        const detailPane = document.getElementById('detailPane');
+        if (detailPane) {
+            detailPane.classList.add('active');
+            if (window.gsap) {
+                if (window.innerWidth < 1024) {
+                    window.gsap.to(detailPane, { y: 0, x: 0, duration: 0.45, ease: 'power2.out', overwrite: 'auto' });
+                } else {
+                    window.gsap.to(detailPane, { x: 0, y: 0, duration: 0.45, ease: 'power2.out', overwrite: 'auto' });
+                }
+            }
+        }
+    },
+
+    switchDetailTab(tabId) {
+        // Toggle active visual class on tab buttons
+        document.querySelectorAll('.detail-tab-btn').forEach(btn => {
+            if (btn.getAttribute('data-tab') === tabId) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Toggle active visual class on content wrappers
+        document.querySelectorAll('.detail-tab-content').forEach(wrapper => {
+            if (wrapper.id === `detailTab-${tabId}`) {
+                wrapper.classList.add('active');
+            } else {
+                wrapper.classList.remove('active');
+            }
+        });
+    },
+
+    closeDetailPane() {
+        const detailPane = document.getElementById('detailPane');
+        if (detailPane) {
+            if (window.gsap) {
+                if (window.innerWidth < 1024) {
+                    window.gsap.to(detailPane, { y: '100%', duration: 0.4, ease: 'power2.in', overwrite: 'auto', onComplete: () => {
+                        detailPane.classList.remove('active');
+                    }});
+                } else {
+                    window.gsap.to(detailPane, { x: '100%', duration: 0.4, ease: 'power2.in', overwrite: 'auto', onComplete: () => {
+                        detailPane.classList.remove('active');
+                    }});
+                }
+            } else {
+                detailPane.classList.remove('active');
+            }
+        }
+    },
+
     openWhatsApp(indexOrLead) {
         const lead = typeof indexOrLead === 'object' ? indexOrLead : AppState.leads[indexOrLead];
         if (!lead || !lead.whatsapp_number) {
@@ -1865,11 +2098,8 @@ const App = {
             return;
         }
         
-        AppState.currentWhatsAppLead = lead;
-        
-        // Update modal header with business name
-        document.getElementById('whatsappBusinessName').textContent = lead.name;
-        document.getElementById('whatsappPhoneNumber').textContent = lead.phone || lead.whatsapp_number;
+        this.selectLead(lead.id);
+        this.switchDetailTab('whatsapp');
 
         // Sync Custom Service selection input display
         if (UI.el.pitchServiceSelect) {
@@ -1921,7 +2151,6 @@ const App = {
         }, 50);
         
         this.updateMessagePreview();
-        UI.openModal('whatsappModal');
     },
 
     updateMessagePreview() {
@@ -1963,7 +2192,7 @@ const App = {
         const projectsStr = localStorage.getItem('portfolio_projects');
         
         if (!portfolioUrl) {
-            return "hamare work samples hamare portfolio par dekh sakte hain: https://raunaksharmaq64.github.io/portfolio/";
+            return "hamare dynamic work samples aur website templates ke liye humein contact karein.";
         }
         
         let projects = [];
@@ -2043,7 +2272,7 @@ const App = {
                 a.click();
                 document.body.removeChild(a);
                 
-                UI.closeModal('whatsappModal');
+                this.closeDetailPane();
                 UI.showToast(`WhatsApp opened for ${lead.name}`, 'success');
                 
                 // Automatically mark lead as contacted and transition pipeline to PITCHED
@@ -2226,6 +2455,12 @@ const App = {
             return;
         }
 
+        if (!confirm(`Kya aap sabhi ${leadsToScan.length} leads ke socials scan karna chahte hain?\n\nIs bulk operation se aapke SerpApi search credits consume honge (har lead ke liye 1 search credit).`)) {
+            UI.el.bulkScanSocialsBtn.disabled = false;
+            UI.el.bulkProgressBanner.style.display = 'none';
+            return;
+        }
+
         let completed = 0;
         const total = leadsToScan.length;
 
@@ -2235,8 +2470,8 @@ const App = {
                 const idx = AppState.leads.findIndex(l => l.id === lead.id);
                 if (idx === -1) continue;
 
-                // Show spinner in UI row (add active scanning indicator)
-                const socialCell = document.querySelector(`#leadsTableBody tr:nth-child(${idx + 1}) td:nth-child(9)`);
+                // BUG-H9 fix: Use data-lead-id attribute instead of fragile nth-child
+                const socialCell = document.querySelector(`#leadsTableBody tr[data-lead-id="${lead.id}"] td:nth-child(9)`);
                 if (socialCell) {
                     socialCell.innerHTML = '<span style="font-size: 0.85rem; color: var(--accent-cyan); animation: pulse 1s infinite;">⏳ Scanning...</span>';
                 }
@@ -2403,8 +2638,9 @@ const App = {
         AppState.currentEmailIndex = index;
         AppState.currentEmailLead = lead;
 
-        if (UI.el.emailBusinessName) UI.el.emailBusinessName.textContent = lead.name;
-        
+        this.selectLead(lead.id);
+        this.switchDetailTab('email');
+
         if (UI.el.emailSubjectInput) UI.el.emailSubjectInput.value = '';
         if (UI.el.emailBodyInput) UI.el.emailBodyInput.value = '';
 
@@ -2416,34 +2652,10 @@ const App = {
                 if (UI.el.emailCustomServiceContainer) UI.el.emailCustomServiceContainer.style.display = 'none';
             }
         }
-
-        const addressText = document.getElementById('emailAddressText');
-        const scanBtn = UI.el.scanEmailOnDemandBtn;
-
-        if (lead.email) {
-            if (addressText) {
-                addressText.textContent = lead.email;
-                addressText.style.color = 'var(--accent-cyan)';
-            }
-            if (scanBtn) scanBtn.style.display = 'none';
-        } else {
-            if (addressText) {
-                addressText.textContent = 'No email scanned yet.';
-                addressText.style.color = 'var(--accent-red)';
-            }
-            if (scanBtn) {
-                scanBtn.style.display = 'inline-block';
-                scanBtn.innerHTML = '🔍 Scan Website';
-                scanBtn.disabled = false;
-            }
-        }
-
-        UI.openModal('emailModal');
     },
 
     async scanEmailOnDemand() {
         const lead = AppState.currentEmailLead;
-        const index = AppState.currentEmailIndex;
         if (!lead) return;
 
         const scanBtn = UI.el.scanEmailOnDemandBtn;
@@ -2465,7 +2677,11 @@ const App = {
 
             if (data.success && data.email) {
                 lead.email = data.email;
-                AppState.leads[index].email = data.email;
+                // BUG-H8 fix: Use findIndex by ID instead of stale cached index
+                const safeIndex = AppState.leads.findIndex(l => l.id === lead.id);
+                if (safeIndex !== -1) {
+                    AppState.leads[safeIndex].email = data.email;
+                }
                 
                 if (addressText) {
                     addressText.textContent = data.email;
@@ -2580,7 +2796,7 @@ const App = {
         a.click();
         document.body.removeChild(a);
 
-        UI.closeModal('emailModal');
+        this.closeDetailPane();
         UI.showToast('Native mail client opened!', 'success');
         
         this.markLeadPitched(lead);
@@ -2637,7 +2853,7 @@ const App = {
 
             if (data.success) {
                 UI.showToast(data.message || 'Email successfully sent!', 'success');
-                UI.closeModal('emailModal');
+                this.closeDetailPane();
                 
                 this.markLeadPitched(lead);
             } else {
@@ -2866,6 +3082,12 @@ const App = {
         const lead = (AppState.reminders || []).find(r => r.id === leadId);
         if (!lead) return;
         
+        // BUG-H10 fix: Inject reminder lead into AppState.leads if not present
+        // so that openWhatsApp/selectLead can find it by ID
+        if (!AppState.leads.find(l => l.id === leadId)) {
+            AppState.leads.push(lead);
+        }
+        
         UI.closeModal('followupsModal');
         setTimeout(() => {
             this.openWhatsApp(lead);
@@ -2875,6 +3097,11 @@ const App = {
     triggerEmailReminder(leadId) {
         const lead = (AppState.reminders || []).find(r => r.id === leadId);
         if (!lead) return;
+        
+        // BUG-H10 fix: Same injection for email reminders
+        if (!AppState.leads.find(l => l.id === leadId)) {
+            AppState.leads.push(lead);
+        }
         
         UI.closeModal('followupsModal');
         setTimeout(() => {
@@ -2958,6 +3185,13 @@ const App = {
                 emailHtml = `<span style="font-weight: 600; color: var(--accent-cyan); font-family: monospace;">${UI.escapeHtml(lead.email)}</span>`;
             } else if (lead.campaign_email_status === 'scanning') {
                 emailHtml = `<span style="color: var(--accent-cyan); font-style: italic;">⏳ Scanning...</span>`;
+            } else if (lead.campaign_email_status === 'failed') {
+                emailHtml = `
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="color: var(--accent-red); font-size: 0.8rem;">Scan failed</span>
+                        <button class="campaign-table-btn scan" onclick="event.stopPropagation(); App.scanCampaignLeadEmailOnDemand(${lead.id}, ${index})" title="Retry Email Scan">🔄 Retry</button>
+                    </div>
+                `;
             } else {
                 emailHtml = `
                     <div style="display: flex; align-items: center; gap: 6px;">
@@ -3292,7 +3526,7 @@ const App = {
             return;
         }
 
-        if (!confirm(`Kya aap sabhi ${missingLeads.length} leads ke websites se email automatic deep extract karna chahte hain?`)) {
+        if (!confirm(`Kya aap sabhi ${missingLeads.length} leads ke websites se email automatic deep extract karna chahte hain?\n\nIs process mein website crawling ke sath fallback web searches run honge, jisse aapke SerpApi search credits consume ho sakte hain (har lead ke liye up to 1 search credit).`)) {
             return;
         }
 

@@ -32,6 +32,7 @@ htmlcov/
 # Exports & Report Caches
 *.xlsx
 *.csv
+pitches_output*.txt
 
 # Editor & IDE Configs
 .vscode/

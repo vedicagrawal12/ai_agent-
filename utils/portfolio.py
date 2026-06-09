@@ -36,7 +36,8 @@ class PortfolioParser:
                     is_ssl_issue = True
                 
                 if is_ssl_issue:
-                    print(f"SSL verification failed for {url}, falling back to disabling SSL check: {ssl_err}")
+                    print(f"⚠️  [SECURITY WARNING] SSL verification failed for {url}. Falling back to unverified connection: {ssl_err}")
+                    print(f"⚠️  This means the connection is vulnerable to MITM attacks. Consider updating the site's SSL certificate.")
                     ctx = ssl.create_default_context()
                     ctx.check_hostname = False
                     ctx.verify_mode = ssl.CERT_NONE

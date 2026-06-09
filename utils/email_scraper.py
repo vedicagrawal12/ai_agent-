@@ -1,11 +1,16 @@
 import requests
 import re
+import socket
+import ipaddress
 from urllib.parse import urljoin, urlparse
 
 class EmailScraper:
     """Robust utility to extract public business email addresses from websites."""
     
     EMAIL_REGEX = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+    
+    # Blocked internal/private hostnames and IP ranges (BUG-M9 SSRF protection)
+    BLOCKED_HOSTNAMES = {'localhost', '127.0.0.1', '0.0.0.0', '::1', 'metadata.google.internal'}
     
     # Exclude common false positives and static assets
     EXCLUDE_PATTERNS = [
@@ -41,6 +46,38 @@ class EmailScraper:
         return True
 
     @classmethod
+    def _is_safe_url(cls, url: str) -> bool:
+        """
+        BUG-M9 fix: SSRF protection — block requests to internal/private IPs.
+        Returns True if URL is safe to fetch, False if it targets an internal resource.
+        """
+        try:
+            parsed = urlparse(url)
+            hostname = parsed.hostname
+            if not hostname:
+                return False
+            
+            # Block known dangerous hostnames
+            if hostname in cls.BLOCKED_HOSTNAMES:
+                print(f"[SSRF Block] Blocked request to internal hostname: {hostname}")
+                return False
+            
+            # Resolve hostname to IP and check if it's private
+            try:
+                resolved_ip = socket.gethostbyname(hostname)
+                ip_obj = ipaddress.ip_address(resolved_ip)
+                if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
+                    print(f"[SSRF Block] Blocked request to private IP: {hostname} -> {resolved_ip}")
+                    return False
+            except socket.gaierror:
+                # DNS resolution failed — probably safe (external), let requests handle the error
+                pass
+            
+            return True
+        except Exception:
+            return False
+
+    @classmethod
     def scrape_emails_from_url(cls, url: str) -> list:
         """
         Scrape public emails from a given webpage URL.
@@ -53,6 +90,10 @@ class EmailScraper:
         url = url.strip()
         if not url.startswith(('http://', 'https://')):
             url = 'https://' + url
+        
+        # BUG-M9 fix: SSRF protection
+        if not cls._is_safe_url(url):
+            return []
             
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -63,7 +104,7 @@ class EmailScraper:
         try:
             print(f"Fetching website for email scraping: {url}...")
             response = requests.get(url, headers=headers, timeout=5)
-            if response.status_code != 200:
+            if not response.ok:
                 print(f"Failed to fetch {url} - Status: {response.status_code}")
                 return []
                 

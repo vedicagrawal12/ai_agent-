@@ -5,7 +5,10 @@ Ensures all collected lead data is clean, consistent, and ready for outreach.
 """
 
 import re
+import concurrent.futures
 from typing import List
+import phonenumbers
+from phonenumbers import PhoneNumberType
 from collectors.base_collector import Lead
 
 
@@ -99,21 +102,21 @@ class DataCleaner:
             return "LOW"
 
     @staticmethod
-    def validate_and_classify_phone(phone: str) -> dict:
+    def validate_and_classify_phone(phone: str, default_region: str = "IN") -> dict:
         """
         Validate and classify a phone number using phonenumbers library.
+        Args:
+            phone: Raw phone string
+            default_region: ISO country code for parsing ambiguous numbers (default: 'IN' for India)
         Returns:
             {"is_valid": bool, "whatsapp_number": str, "line_type": str}
         """
-        import phonenumbers
-        from phonenumbers import PhoneNumberType
-        
         if not phone:
             return {"is_valid": False, "whatsapp_number": "", "line_type": "UNKNOWN"}
             
         try:
-            # Parse number with default country code "IN" for India
-            parsed = phonenumbers.parse(phone, "IN")
+            # BUG-L2 fix: Use configurable region instead of hardcoded "IN"
+            parsed = phonenumbers.parse(phone, default_region)
             is_valid = phonenumbers.is_valid_number(parsed)
             
             if not is_valid:
@@ -171,6 +174,9 @@ class DataCleaner:
             if response.status_code < 500:
                 return True
             # 5xx means server error — try GET to confirm
+        except requests.exceptions.SSLError:
+            # BUG-H6 fix: SSL cert issues mean server IS alive, just misconfigured cert
+            return True
         except requests.exceptions.ConnectionError:
             return False  # DNS/network failure = broken
         except requests.exceptions.Timeout:
@@ -184,6 +190,9 @@ class DataCleaner:
             response.close()  # Close immediately — we only need the status code
             if response.status_code < 500:
                 return True
+        except requests.exceptions.SSLError:
+            # BUG-H6 fix: Same as above — server is alive
+            return True
         except Exception:
             pass
             
@@ -238,8 +247,6 @@ class DataCleaner:
         3. Clean names, addresses, cities, and categories
         4. Assign priority scores based on website health & review volumes
         """
-        import concurrent.futures
-        
         # 1. Parse and standardize phone numbers using phonenumbers
         for lead in leads:
             # Clean name, address, city, category
@@ -264,15 +271,20 @@ class DataCleaner:
         # 2. Parallel Website status check (Only test leads that HAVE a website listed)
         leads_with_websites = [l for l in leads if l.website]
         if leads_with_websites:
+            # BUG-M5 fix: Cap at 20 websites to check — beyond that, skip (not worth the delay)
+            if len(leads_with_websites) > 20:
+                print(f"Limiting website health checks to 20 of {len(leads_with_websites)} leads")
+                leads_with_websites = leads_with_websites[:20]
             print(f"Checking health of {len(leads_with_websites)} websites in parallel...")
-            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 # Map futures
                 future_to_lead = {
                     executor.submit(DataCleaner.check_website_health, l.website): l 
                     for l in leads_with_websites
                 }
                 try:
-                    for future in concurrent.futures.as_completed(future_to_lead):
+                    # BUG-M5 fix: Reduced global timeout from 30s to 15s for faster search responses
+                    for future in concurrent.futures.as_completed(future_to_lead, timeout=15):
                         lead = future_to_lead[future]
                         try:
                             is_online = future.result()
@@ -281,6 +293,12 @@ class DataCleaner:
                         except Exception as e:
                             print(f"Error checking website for {lead.name}: {e}")
                             lead.is_broken_website = 1 # Treat failures as broken
+                except concurrent.futures.TimeoutError:
+                    print("Warning: Website health check timed out after 30s. Marking remaining as broken.")
+                    for future, lead in future_to_lead.items():
+                        if not future.done():
+                            lead.is_broken_website = 1
+                            future.cancel()
                 except Exception as loop_err:
                     print(f"Error during parallel website checks: {loop_err}")
 

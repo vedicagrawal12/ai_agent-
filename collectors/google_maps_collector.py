@@ -1,6 +1,10 @@
 """
 Google Maps Collector — Extracts business leads from Google Places API (New).
 
+⚠️  DEPRECATED / UNUSED: This collector is NOT used anywhere in the application.
+    The app uses SerpApiCollector instead. This module requires a separate Google
+    Cloud Platform API key (not the SerpApi key). Kept for potential future use.
+
 Uses the official Google Places API Text Search endpoint to find businesses,
 then fetches detailed information for each result including phone numbers,
 addresses, websites, ratings, and reviews.

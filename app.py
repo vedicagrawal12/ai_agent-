@@ -15,10 +15,14 @@ Usage:
 """
 
 import os
-from datetime import datetime
-from flask import Flask, request, jsonify, render_template, Response, send_file
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime, date
+from flask import Flask, request, jsonify, render_template, Response, send_file, session, redirect, url_for, flash, g
 from flask_cors import CORS
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from collectors.serpapi_collector import SerpApiCollector
 from utils.data_cleaner import DataCleaner
@@ -36,6 +40,20 @@ collector = SerpApiCollector()
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(32).hex()
+
+# BUG-M7 fix: CSRF protection via SameSite cookies
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+# BUG-M3 fix: Custom JSON encoder to handle datetime objects from PostgreSQL
+import json
+class SafeJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, (datetime, date)):
+            return o.isoformat()
+        return super().default(o)
+app.json_encoder = SafeJSONEncoder
 
 # Initialize database
 db = Database()
@@ -47,7 +65,31 @@ API_KEY_STORE = {
 
 
 # ============================================================
-# Page Routes
+# Authentication Middleware
+# ============================================================
+
+@app.before_request
+def handle_authentication():
+    # 1. Load current user into g.user
+    user_id = session.get('user_id')
+    g.user = {"id": user_id, "username": session.get('username')} if user_id else None
+    
+    # 2. Check path / endpoint permission
+    # Public endpoints (allowing 'index' root route and 'verify_db' diagnostics to be accessed without login)
+    if request.endpoint in ['login', 'signup', 'live_preview_mockup', 'static', 'index']:
+        return
+        
+    if request.path == '/' or request.path.startswith('/login') or request.path.startswith('/signup') or request.path.startswith('/preview/') or request.path.startswith('/static/'):
+        return
+        
+    if not g.user:
+        if request.path.startswith('/api/'):
+            return jsonify({"error": "Unauthorized. Please login."}), 401
+        return redirect(url_for('login'))
+
+
+# ============================================================
+# Page Routes & Auth Handlers
 # ============================================================
 
 @app.route("/")
@@ -56,9 +98,177 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/verify-db")
+def verify_db():
+    """Check database connection and schemas, and render diagnostic dashboard."""
+    status_info = {}
+    try:
+        conn = db._get_connection()
+        cursor = conn.cursor()
+        
+        # Get server version
+        cursor.execute("SELECT version();")
+        version = cursor.fetchone()[0]
+        status_info["version"] = version
+        status_info["connection"] = "HEALTHY"
+        
+        # Check tables existence and count rows
+        tables = ["users", "leads", "search_history", "message_log"]
+        table_statuses = {}
+        
+        for table in tables:
+            try:
+                cursor.execute(f"SELECT COUNT(*) FROM {table};")
+                count = cursor.fetchone()[0]
+                table_statuses[table] = {
+                    "exists": True,
+                    "status": "HEALTHY",
+                    "rows": count
+                }
+            except Exception as tbl_err:
+                conn.rollback() # reset aborted transaction block
+                table_statuses[table] = {
+                    "exists": False,
+                    "status": "ERROR",
+                    "error": str(tbl_err)
+                }
+                
+        status_info["tables"] = table_statuses
+        
+        # Fetch registered users list safely
+        users_list = []
+        if table_statuses.get("users", {}).get("exists"):
+            try:
+                cursor.execute("SELECT id, username, email, created_at FROM users ORDER BY created_at DESC;")
+                for row in cursor.fetchall():
+                    user_dict = dict(row)
+                    if user_dict.get("created_at"):
+                        user_dict["created_at_str"] = user_dict["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+                    else:
+                        user_dict["created_at_str"] = "N/A"
+                    users_list.append(user_dict)
+            except Exception as users_err:
+                conn.rollback()
+                print(f"Error fetching users list: {users_err}")
+        status_info["users_list"] = users_list
+        
+        status_info["error"] = None
+        conn.close()
+    except Exception as e:
+        status_info["connection"] = "FAILED"
+        status_info["error"] = str(e)
+        status_info["tables"] = {}
+        status_info["version"] = "N/A"
+        status_info["users_list"] = []
+        
+    return render_template("db_status.html", status=status_info)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if g.user:
+        return redirect(url_for('index'))
+        
+    if request.method == "POST":
+        username = request.form.get("username", "").strip().lower()
+        password = request.form.get("password", "")
+        
+        if not username or not password:
+            flash("Username and password are required.", "error")
+            return render_template("login.html")
+            
+        user = db.get_user_by_username(username)
+        if user and check_password_hash(user["password_hash"], password):
+            session.clear()
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            return redirect(url_for('index'))
+        else:
+            flash("Invalid username or password.", "error")
+            
+    return render_template("login.html")
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if g.user:
+        return redirect(url_for('index'))
+        
+    if request.method == "POST":
+        username = request.form.get("username", "").strip().lower()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        
+        if not username or not email or not password:
+            flash("Username, email, and password are required.", "error")
+            return render_template("signup.html")
+        
+        # BUG-H2 fix: Validate email format
+        import re
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, email):
+            flash("Please enter a valid email address (e.g. name@example.com).", "error")
+            return render_template("signup.html")
+        
+        # BUG-H3 fix: Enforce password strength
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return render_template("signup.html")
+            
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template("signup.html")
+            
+        # Check if user already exists
+        existing_user = db.get_user_by_username(username)
+        if existing_user:
+            flash("Username already exists.", "error")
+            return render_template("signup.html")
+            
+        # Create user
+        password_hash = generate_password_hash(password)
+        success = db.create_user(username, email, password_hash)
+        if success:
+            flash("Account created successfully. Please log in.", "success")
+            return redirect(url_for('login'))
+        else:
+            flash("Failed to create account. Please try again.", "error")
+            
+    return render_template("signup.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been logged out.", "success")
+    return redirect(url_for('login'))
+
+
 # ============================================================
 # API Routes — Search & Leads
 # ============================================================
+
+def enrich_lead_dict(lead, db_leads_dict):
+    lead_dict = lead.to_dict()
+    db_lead = db_leads_dict.get(lead.place_id)
+    if db_lead:
+        lead_dict['id'] = db_lead['id']
+        lead_dict['instagram'] = db_lead.get('instagram') or ''
+        lead_dict['facebook'] = db_lead.get('facebook') or ''
+        lead_dict['custom_pitch'] = db_lead.get('custom_pitch') or ''
+        # Prefer in-memory values for freshly-scanned fields, fall back to DB
+        if not lead_dict.get('is_broken_website'):
+            lead_dict['is_broken_website'] = db_lead.get('is_broken_website', 0) or 0
+        if not lead_dict.get('line_type'):
+            lead_dict['line_type'] = db_lead.get('line_type') or ''
+    else:
+        lead_dict['id'] = None
+        lead_dict['instagram'] = ''
+        lead_dict['facebook'] = ''
+        lead_dict['custom_pitch'] = ''
+    return lead_dict
+
 
 @app.route("/api/search", methods=["POST"])
 def search_businesses():
@@ -87,6 +297,11 @@ def search_businesses():
     hide_saved = data.get("hide_saved", False)
     deep_scan = data.get("deep_scan", False)
     zones = data.get("zones", [])
+    if isinstance(zones, list):
+        # Limit to max 10 zones to prevent API credit abuse (BUG-L8)
+        zones = zones[:10]
+    else:
+        zones = []
     start_offset = data.get("start_offset", 0)
     
     if not query:
@@ -104,15 +319,17 @@ def search_businesses():
         # Get already saved place IDs if hide_saved is enabled
         exclude_place_ids = set()
         if hide_saved:
+            conn = None
             try:
                 conn = db._get_connection()
                 cursor = conn.cursor()
-                cursor.execute("SELECT place_id FROM leads WHERE place_id IS NOT NULL AND place_id != ''")
+                cursor.execute("SELECT place_id FROM leads WHERE user_id = %s AND place_id IS NOT NULL AND place_id != ''", (g.user['id'],))
                 exclude_place_ids = {row[0] for row in cursor.fetchall()}
             except Exception as db_err:
                 print(f"Error fetching saved place IDs: {db_err}")
             finally:
-                conn.close()
+                if conn:
+                    conn.close()
 
         # Search for businesses
         all_leads = []
@@ -125,9 +342,15 @@ def search_businesses():
                 zone = zone.strip()
                 if not zone:
                     continue
-                # Search using zone name combined with city
-                zone_leads = collector.search(query, f"{zone}, {city}", leads_per_zone, exclude_place_ids, start_offset, api_key=api_key)
+                # BUG-H1 fix: Always start at offset 0 for each zone in deep scan
+                # (pagination offset only applies to single-city search)
+                zone_leads = collector.search(query, f"{zone}, {city}", leads_per_zone, exclude_place_ids, 0, api_key=api_key)
                 all_leads.extend(zone_leads)
+                # BUG-H3 fix: Update exclude set with newly found place_ids
+                # to avoid fetching the same business across zone boundaries
+                for zl in zone_leads:
+                    if zl.place_id:
+                        exclude_place_ids.add(zl.place_id)
         else:
             # Standard single-city search
             all_leads = collector.search(query, city, max_results, exclude_place_ids, start_offset, api_key=api_key)
@@ -138,72 +361,36 @@ def search_businesses():
         # Filter out businesses with websites (unless requested)
         filtered_leads = DataCleaner.filter_leads(all_leads, include_with_website)
         
-        # Cap to max_results to match the requested amount
+        # BUG-H2 fix: Save ALL discovered leads to database BEFORE capping the response
+        db.save_leads(all_leads, user_id=g.user['id'])
+        
+        # Cap to max_results to match the requested amount for the API response
         filtered_leads = filtered_leads[:max_results]
         all_leads = all_leads[:max_results]
         
-        # Save to database
-        db.save_leads(all_leads)
-        
         search_query_log = f"{query} (Deep Scan)" if deep_scan else query
-        db.save_search(search_query_log, city, len(all_leads), len(filtered_leads))
+        db.save_search(search_query_log, city, len(all_leads), len(filtered_leads), user_id=g.user['id'])
         
         # Fetch the saved leads from DB to get database IDs and social links
         db_leads_dict = {}
+        conn = None
         try:
             conn = db._get_connection()
             cursor = conn.cursor()
             place_ids = [l.place_id for l in all_leads if l.place_id]
             if place_ids:
-                placeholders = ",".join("?" for _ in place_ids)
-                cursor.execute(f"SELECT * FROM leads WHERE place_id IN ({placeholders})", place_ids)
+                placeholders = ",".join("%s" for _ in place_ids)
+                cursor.execute(f"SELECT * FROM leads WHERE user_id = %s AND place_id IN ({placeholders})", [g.user['id']] + place_ids)
                 db_leads_dict = {row['place_id']: dict(row) for row in cursor.fetchall()}
         except Exception as db_err:
             print(f"Error fetching database IDs for search response: {db_err}")
         finally:
-            conn.close()
+            if conn:
+                conn.close()
 
-        # Build response
-        leads_data = []
-        for lead in filtered_leads:
-            lead_dict = lead.to_dict()
-            db_lead = db_leads_dict.get(lead.place_id)
-            if db_lead:
-                lead_dict['id'] = db_lead['id']
-                lead_dict['instagram'] = db_lead.get('instagram') or ''
-                lead_dict['facebook'] = db_lead.get('facebook') or ''
-                lead_dict['custom_pitch'] = db_lead.get('custom_pitch') or ''
-                # Prefer in-memory values for freshly-scanned fields, fall back to DB
-                if not lead_dict.get('is_broken_website'):
-                    lead_dict['is_broken_website'] = db_lead.get('is_broken_website', 0) or 0
-                if not lead_dict.get('line_type'):
-                    lead_dict['line_type'] = db_lead.get('line_type') or ''
-            else:
-                lead_dict['id'] = None
-                lead_dict['instagram'] = ''
-                lead_dict['facebook'] = ''
-                lead_dict['custom_pitch'] = ''
-            leads_data.append(lead_dict)
-
-        all_data = []
-        for lead in all_leads:
-            lead_dict = lead.to_dict()
-            db_lead = db_leads_dict.get(lead.place_id)
-            if db_lead:
-                lead_dict['id'] = db_lead['id']
-                lead_dict['instagram'] = db_lead.get('instagram') or ''
-                lead_dict['facebook'] = db_lead.get('facebook') or ''
-                lead_dict['custom_pitch'] = db_lead.get('custom_pitch') or ''
-                if not lead_dict.get('is_broken_website'):
-                    lead_dict['is_broken_website'] = db_lead.get('is_broken_website', 0) or 0
-                if not lead_dict.get('line_type'):
-                    lead_dict['line_type'] = db_lead.get('line_type') or ''
-            else:
-                lead_dict['id'] = None
-                lead_dict['instagram'] = ''
-                lead_dict['facebook'] = ''
-                lead_dict['custom_pitch'] = ''
-            all_data.append(lead_dict)
+        # Build response (BUG-L4)
+        leads_data = [enrich_lead_dict(l, db_leads_dict) for l in filtered_leads]
+        all_data = [enrich_lead_dict(l, db_leads_dict) for l in all_leads]
         
         # Calculate stats
         stats = {
@@ -236,7 +423,7 @@ def get_saved_leads():
     priority = request.args.get("priority")
     city = request.args.get("city")
     
-    leads = db.get_all_leads(priority_filter=priority, city_filter=city)
+    leads = db.get_all_leads(priority_filter=priority, city_filter=city, user_id=g.user['id'])
     return jsonify({"success": True, "leads": leads})
 
 
@@ -246,7 +433,7 @@ def mark_lead_contacted(lead_id):
     data = request.get_json() or {}
     notes = data.get("notes", "")
     
-    db.mark_contacted(lead_id, notes)
+    db.mark_contacted(lead_id, notes, user_id=g.user['id'])
     return jsonify({"success": True, "message": "Lead marked as contacted"})
 
 
@@ -259,7 +446,7 @@ def update_lead_pipeline(lead_id):
     if stage not in ["NEW", "PITCHED", "INTERESTED", "CONVERTED", "IGNORED"]:
         return jsonify({"error": "Invalid pipeline stage"}), 400
         
-    success = db.update_lead_pipeline_stage(lead_id, stage)
+    success = db.update_lead_pipeline_stage(lead_id, stage, user_id=g.user['id'])
     if success:
         return jsonify({"success": True, "message": f"Lead pipeline updated to {stage}", "stage": stage})
     else:
@@ -269,7 +456,7 @@ def update_lead_pipeline(lead_id):
 @app.route("/api/leads/<int:lead_id>", methods=["DELETE"])
 def delete_lead(lead_id):
     """Delete a lead."""
-    db.delete_lead(lead_id)
+    db.delete_lead(lead_id, user_id=g.user['id'])
     return jsonify({"success": True, "message": "Lead deleted"})
 
 
@@ -287,11 +474,17 @@ def schedule_lead_reminder(lead_id):
         except Exception as date_err:
             return jsonify({"error": f"Invalid days value: {date_err}"}), 400
     elif custom_date:
+        # Validate date format to prevent arbitrary string injection (BUG-C5 fix)
+        try:
+            from datetime import date as date_cls
+            date_cls.fromisoformat(custom_date)
+        except (ValueError, TypeError):
+            return jsonify({"error": f"Invalid date format: '{custom_date}'. Expected YYYY-MM-DD."}), 400
         remind_date = custom_date
     else:
         return jsonify({"error": "Either days or custom_date is required"}), 400
         
-    success = db.schedule_reminder(lead_id, remind_date)
+    success = db.schedule_reminder(lead_id, remind_date, user_id=g.user['id'])
     if success:
         return jsonify({
             "success": True, 
@@ -305,14 +498,14 @@ def schedule_lead_reminder(lead_id):
 @app.route("/api/reminders", methods=["GET"])
 def get_pending_reminders():
     """Get all active pending reminders from the database."""
-    reminders = db.get_pending_reminders()
+    reminders = db.get_pending_reminders(user_id=g.user['id'])
     return jsonify({"success": True, "reminders": reminders})
 
 
 @app.route("/api/leads/<int:lead_id>/dismiss-reminder", methods=["POST"])
 def dismiss_lead_reminder(lead_id):
     """Dismiss a pending follow-up reminder for a lead."""
-    success = db.dismiss_reminder(lead_id)
+    success = db.dismiss_reminder(lead_id, user_id=g.user['id'])
     if success:
         return jsonify({"success": True, "message": "Reminder dismissed successfully"})
     else:
@@ -375,6 +568,14 @@ def generate_whatsapp_link():
     # Generate link
     link = WhatsAppMessenger.generate_whatsapp_link(phone, message)
     
+    # Save message log if lead has an ID (BUG-M12)
+    lead_id = lead_data.get("id")
+    if lead_id:
+        try:
+            db.log_message(lead_id, template_key, message, user_id=g.user['id'])
+        except Exception as log_err:
+            print(f"Error logging WhatsApp message to DB: {log_err}")
+            
     return jsonify({
         "success": True,
         "whatsapp_link": link,
@@ -490,9 +691,9 @@ def validate_config():
     
     try:
         import requests as req
-        # Test SerpApi Key
-        test_url = "https://serpapi.com/search"
-        params = {"engine": "google", "q": "test", "api_key": api_key}
+        # Test SerpApi Key (use account endpoint to avoid consuming credits)
+        test_url = "https://serpapi.com/account"
+        params = {"api_key": api_key}
         
         response = req.get(test_url, params=params, timeout=10)
         
@@ -588,7 +789,7 @@ def generate_ai_pitch():
         # Save generated pitch persistently in database
         lead_id = lead_data.get("id")
         if lead_id:
-            db.update_lead_pitch(lead_id, pitch)
+            db.update_lead_pitch(lead_id, pitch, user_id=g.user['id'])
             
         return jsonify({
             "success": True,
@@ -601,14 +802,14 @@ def generate_ai_pitch():
 @app.route("/api/stats", methods=["GET"])
 def get_stats():
     """Get dashboard statistics."""
-    stats = db.get_stats()
+    stats = db.get_stats(user_id=g.user['id'])
     return jsonify({"success": True, "stats": stats})
 
 
 @app.route("/api/history", methods=["GET"])
 def get_history():
     """Get search history."""
-    history = db.get_search_history()
+    history = db.get_search_history(user_id=g.user['id'])
     return jsonify({"success": True, "history": history})
 
 
@@ -617,7 +818,7 @@ def scan_lead_socials(lead_id):
     """
     Scan Google for Instagram and Facebook profiles of a lead on-demand.
     """
-    lead = db.get_lead_by_id(lead_id)
+    lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
     if not lead:
         return jsonify({"error": "Lead not found"}), 404
         
@@ -653,7 +854,7 @@ def scan_lead_socials(lead_id):
         print(f"Error scanning combined socials for lead {lead_id}: {e}")
         
     # Update lead in database
-    db.update_lead_socials(lead_id, instagram_link, facebook_link)
+    db.update_lead_socials(lead_id, instagram_link, facebook_link, user_id=g.user['id'])
     
     return jsonify({
         "success": True,
@@ -667,7 +868,7 @@ def clear_db():
     """
     Manually clear all uncontacted leads and search history.
     """
-    result = db.clear_uncontacted_data()
+    result = db.clear_uncontacted_data(user_id=g.user['id'])
     if result.get("success"):
         return jsonify(result)
     else:
@@ -677,7 +878,7 @@ def clear_db():
 @app.route("/preview/<int:lead_id>")
 def live_preview_mockup(lead_id):
     """Serve a stunning personalized website mockup for the business lead."""
-    lead = db.get_lead_by_id(lead_id)
+    lead = db.get_lead_by_id(lead_id, user_id=g.user['id'] if g.user else None)
     if not lead:
         return "Lead not found", 404
         
@@ -703,7 +904,7 @@ def live_preview_mockup(lead_id):
 @app.route("/api/leads/<int:lead_id>/scan-email", methods=["POST"])
 def scan_lead_email(lead_id):
     """Trigger email scraper with direct website scan and smart SerpApi Google search snippet fallback."""
-    lead = db.get_lead_by_id(lead_id)
+    lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
     if not lead:
         return jsonify({"error": "Lead not found"}), 404
         
@@ -733,7 +934,7 @@ def scan_lead_email(lead_id):
             else:
                 return jsonify({
                     "success": False,
-                    "message": "No email found via website scraper. Configure SerpApi Key in Settings to try Web-Search Fallback."
+                    "error": "No email found via website scraper. Configure SerpApi Key in Settings to try Web-Search Fallback."
                 })
                 
         try:
@@ -773,7 +974,7 @@ def scan_lead_email(lead_id):
             print(f"SerpApi Fallback Email search failed: {serp_err}")
             
     if email:
-        db.update_lead_email(lead_id, email)
+        db.update_lead_email(lead_id, email, user_id=g.user['id'])
         via_msg = "direct website crawling" if scraped_via == "direct_website" else "Google directory fallback search"
         return jsonify({
             "success": True,
@@ -786,7 +987,7 @@ def scan_lead_email(lead_id):
             msg = "No public email addresses listed on online directories for this business."
         return jsonify({
             "success": False,
-            "message": msg
+            "error": msg
         })
 
 
@@ -883,10 +1084,6 @@ def send_smtp_email():
     
     if not smtp_host or not smtp_port or not sender_email or not smtp_password:
         return jsonify({"error": "Complete SMTP credentials are required to send direct email."}), 400
-        
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
     
     try:
         msg = MIMEMultipart()
@@ -913,7 +1110,7 @@ def send_smtp_email():
         server.quit()
         
         if lead_id:
-            db.update_lead_pipeline_stage(lead_id, "PITCHED")
+            db.update_lead_pipeline_stage(lead_id, "PITCHED", user_id=g.user['id'])
             
         return jsonify({
             "success": True,

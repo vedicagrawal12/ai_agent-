@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Register an account for LeadHunter AI.">
+    <title>Signup — LeadHunter AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+    <style>
+        .auth-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: var(--space-xl) var(--space-lg);
+        }
+        .auth-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            gap: var(--space-xl);
+            align-items: center;
+        }
+        @media (min-width: 1024px) {
+            .auth-container {
+                grid-template-columns: 1.15fr 0.85fr;
+                gap: var(--space-3xl);
+            }
+        }
+        .brand-panel {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+            text-align: left;
+        }
+        @media (max-width: 1023px) {
+            .brand-panel {
+                display: none;
+            }
+        }
+        .brand-badge {
+            align-self: flex-start;
+            background: rgba(189, 0, 255, 0.08);
+            color: var(--accent-violet);
+            border: 1px solid rgba(189, 0, 255, 0.15);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .brand-hero-title {
+            font-family: var(--font-display);
+            font-size: 2.6rem;
+            font-weight: 800;
+            line-height: 1.2;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin-bottom: var(--space-xs);
+        }
+        .brand-hero-title span {
+            color: var(--accent-violet);
+            text-shadow: var(--shadow-glow-violet);
+        }
+        .brand-hero-subtitle {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: var(--space-md);
+        }
+        .features-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+        .feature-item {
+            display: flex;
+            gap: var(--space-md);
+            align-items: flex-start;
+        }
+        .feature-icon {
+            font-size: 1.2rem;
+            line-height: 1;
+            margin-top: 4px;
+            color: var(--accent-violet);
+            text-shadow: var(--shadow-glow-violet);
+        }
+        .feature-text-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+        .feature-text-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            padding: var(--space-xl) var(--space-lg);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+            transition: border-color var(--transition-base), box-shadow var(--transition-base);
+        }
+        .auth-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-glow-violet);
+        }
+        .auth-header {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+        .auth-logo {
+            font-size: 2.5rem;
+            margin-bottom: var(--space-sm);
+            display: inline-block;
+            animation: pulse-glow-violet 2s infinite ease-in-out;
+        }
+        .auth-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin-bottom: var(--space-xs);
+        }
+        .auth-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+        .form-input-glow:focus {
+            outline: none;
+            border-color: var(--accent-violet);
+            box-shadow: var(--shadow-glow-violet);
+            background: var(--bg-input-focus);
+        }
+        .auth-btn {
+            background: var(--accent-violet);
+            color: var(--text-primary);
+            font-weight: 700;
+            border: none;
+            padding: 14px;
+            font-size: 1rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .auth-btn:hover {
+            background: #ab00e6;
+            box-shadow: var(--shadow-glow-violet);
+            transform: translateY(-2px);
+        }
+        .auth-btn:active {
+            transform: translateY(0);
+        }
+        .auth-footer {
+            text-align: center;
+            margin-top: var(--space-lg);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .auth-link {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color var(--transition-fast);
+        }
+        .auth-link:hover {
+            color: var(--accent-violet);
+            text-decoration: underline;
+        }
+        /* Notification banners inside auth */
+        .auth-flash {
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .auth-flash.error {
+            background: rgba(255, 0, 85, 0.1);
+            border: 1px solid var(--accent-red);
+            color: #ff3b75;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.1);
+        }
+        .auth-flash.success {
+            background: rgba(57, 255, 20, 0.1);
+            border: 1px solid var(--accent-green);
+            color: #55ff3b;
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.1);
+        }
+        .password-wrapper {
+            position: relative;
+            display: block;
+            width: 100%;
+        }
+        .password-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.1rem;
+            line-height: 1;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color var(--transition-fast);
+        }
+        .password-toggle:hover {
+            color: var(--accent-violet);
+        }
+        @keyframes pulse-glow-violet {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(189, 0, 255, 0.2)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(189, 0, 255, 0.6)); }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-container">
+            <!-- Left Column: Brand Info Panel -->
+            <div class="brand-panel">
+                <div class="brand-badge">⚡ Agency Lead Generation Suite</div>
+                <h1 class="brand-hero-title">Automated AI<br><span>Client Scouting</span></h1>
+                <p class="brand-hero-subtitle">
+                    Apne city ke local businesses ko dhundhein, unki online presence (websites, ratings, maps listings) analyze karein, aur custom cold pitches (Websites, Local SEO, Marketing) dynamically generate karke client leads secure karein.
+                </p>
+                
+                <div class="features-list">
+                    <div class="feature-item">
+                        <div class="feature-icon">🔍</div>
+                        <div>
+                            <div class="feature-text-title">Maps Scraper Engine</div>
+                            <div class="feature-text-desc">Scouts listings across sub-localities, identifies rating gaps, flags missing websites, and targets high-priority agency clients.</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🧠</div>
+                        <div>
+                            <div class="feature-text-title">Gemini Copywriter Core</div>
+                            <div class="feature-text-desc">Reads portfolios and local listing data to draft conversion-friendly pitches tailored for any service (SEO, Ads, Web Design).</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">💬</div>
+                        <div>
+                            <div class="feature-text-title">WhatsApp & SMTP Dispatcher</div>
+                            <div class="feature-text-desc">Send pitches immediately with instant zero-cost WhatsApp Web integration or secure direct SMTP server connections.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Signup Card -->
+            <div class="auth-card">
+                <div class="auth-header">
+                    <div class="auth-logo">🎯</div>
+                    <h1 class="auth-title">LeadHunter AI</h1>
+                    <p class="auth-subtitle">Create an account to start scanning leads</p>
+                </div>
+
+                <!-- Flash messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="auth-flash {{ 'error' if category == 'error' else 'success' }}">
+                                <span>{% if category == 'error' %}⚠️{% else %}✓{% endif %}</span>
+                                <div>{{ message }}</div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form action="/signup" method="POST" class="auth-form">
+                    <div class="form-group">
+                        <label class="form-label" for="username">Username</label>
+                        <input type="text" id="username" name="username" class="form-input form-input-glow" placeholder="Choose a username" autocomplete="off" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email Address</label>
+                        <input type="email" id="email" name="email" class="form-input form-input-glow" placeholder="Enter your email address" autocomplete="off" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="password" name="password" class="form-input form-input-glow" placeholder="Choose a password" style="padding-right: 40px;" required>
+                            <button type="button" class="password-toggle" id="passwordToggle" aria-label="Toggle password visibility">👁️</button>
+                        </div>
+                        <!-- Dynamic strength meter bar -->
+                        <div style="margin-top: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 0.75rem; color: var(--text-secondary);">Strength:</span>
+                                <span id="strengthText" style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);">Too Short</span>
+                            </div>
+                            <div style="width: 100%; height: 4px; background: var(--bg-primary); border-radius: 2px; overflow: hidden; border: 1px solid var(--border-color);">
+                                <div id="strengthBar" style="width: 0%; height: 100%; background: var(--text-muted); transition: width 0.3s ease, background-color 0.3s ease;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="confirm_password">Confirm Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="confirm_password" name="confirm_password" class="form-input form-input-glow" placeholder="Confirm your password" style="padding-right: 40px;" required>
+                            <button type="button" class="password-toggle" id="confirmPasswordToggle" aria-label="Toggle password visibility">👁️</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="auth-btn">
+                        🚀 Create Free Account
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    Already have an account? <a href="/login" class="auth-link">Log in</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Password toggles
+        const passwordInput = document.getElementById('password');
+        const passwordToggle = document.getElementById('passwordToggle');
+        if (passwordInput && passwordToggle) {
+            passwordToggle.addEventListener('click', () => {
+                const isPassword = passwordInput.type === 'password';
+                passwordInput.type = isPassword ? 'text' : 'password';
+                passwordToggle.textContent = isPassword ? '🙈' : '👁️';
+                passwordToggle.style.color = isPassword ? 'var(--accent-violet)' : 'var(--text-secondary)';
+            });
+        }
+
+        const confirmPasswordInput = document.getElementById('confirm_password');
+        const confirmPasswordToggle = document.getElementById('confirmPasswordToggle');
+        if (confirmPasswordInput && confirmPasswordToggle) {
+            confirmPasswordToggle.addEventListener('click', () => {
+                const isPassword = confirmPasswordInput.type === 'password';
+                confirmPasswordInput.type = isPassword ? 'text' : 'password';
+                confirmPasswordToggle.textContent = isPassword ? '🙈' : '👁️';
+                confirmPasswordToggle.style.color = isPassword ? 'var(--accent-violet)' : 'var(--text-secondary)';
+            });
+        }
+
+        // Strength checker
+        const strengthBar = document.getElementById('strengthBar');
+        const strengthText = document.getElementById('strengthText');
+
+        if (passwordInput && strengthBar && strengthText) {
+            passwordInput.addEventListener('input', () => {
+                const val = passwordInput.value;
+                if (!val) {
+                    strengthBar.style.width = '0%';
+                    strengthBar.style.backgroundColor = 'var(--text-muted)';
+                    strengthText.textContent = 'Too Short';
+                    strengthText.style.color = 'var(--text-muted)';
+                    return;
+                }
+
+                if (val.length < 6) {
+                    strengthBar.style.width = '15%';
+                    strengthBar.style.backgroundColor = 'var(--accent-red)';
+                    strengthText.textContent = 'Too Short';
+                    strengthText.style.color = 'var(--accent-red)';
+                    return;
+                }
+
+                // Check complex patterns
+                let score = 0;
+                if (val.length >= 8) score++;
+                if (val.length >= 12) score++;
+                if (/[a-z]/.test(val) && /[A-Z]/.test(val)) score++;
+                if (/\d/.test(val)) score++;
+                if (/[^A-Za-z0-9]/.test(val)) score++;
+
+                if (score <= 1) {
+                    strengthBar.style.width = '35%';
+                    strengthBar.style.backgroundColor = 'var(--accent-orange)';
+                    strengthText.textContent = 'Weak';
+                    strengthText.style.color = 'var(--accent-orange)';
+                } else if (score <= 3) {
+                    strengthBar.style.width = '70%';
+                    strengthBar.style.backgroundColor = 'var(--accent-amber)';
+                    strengthText.textContent = 'Medium';
+                    strengthText.style.color = 'var(--accent-amber)';
+                } else {
+                    strengthBar.style.width = '100%';
+                    strengthBar.style.backgroundColor = 'var(--accent-green)';
+                    strengthText.textContent = 'Strong';
+                    strengthText.style.color = 'var(--accent-green)';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

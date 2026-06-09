@@ -1,5 +1,6 @@
 import requests
 import json
+import time
 
 class AIOutreachWriter:
     @staticmethod
@@ -28,46 +29,8 @@ class AIOutreachWriter:
         if custom_pitch_rules:
             custom_rules_directive = f"\n- CUSTOM USER PROFILE & OUTREACH RULES (CRITICAL: You must strictly incorporate these personalized preferences and details in your pitch writing):\n{custom_pitch_rules}\n"
 
-        # Resolve persona and service directives based on target service
-        persona_directive = ""
-        service_directives = ""
-        
-        if service == "seo":
-            persona_directive = "Search Engine Optimization (SEO) Specialist & Business Growth Consultant"
-            service_directives = """
-- SERVICE TO PITCH: Search Engine Optimization (SEO) & Local Google Ranking services.
-- VALUE PROPOSITION: Focus on ranking their Google Business Profile and local search visibility. Explain that ranking high on Google Search and Google Maps brings automated organic inquiries, calls, and foot traffic from clients in their area who are actively searching for their service. Highlight that high search ranking is a sustainable asset compared to constant paid ads.
-- KEY PHRASE HIGHLIGHTS: "Google ranking", "organic search traffic", "first page of Google", "local customer inquiries", "ranking high on Google Maps".
-"""
-        elif service == "social_media":
-            persona_directive = "Social Media Brand Architect, Content Strategist, and Visual Outreach Expert"
-            service_directives = """
-- SERVICE TO PITCH: Social Media Management (Instagram, Facebook) & Visual Branding.
-- VALUE PROPOSITION: Focus on building a highly active, visually stunning social media presence (posts, reels, stories). Explain that in their business category, modern premium clients check Instagram and Facebook profiles for the "vibe" and credibility before choosing. Consistent posts build trust, capture direct bookings/reservations, and expand local brand awareness.
-- KEY PHRASE HIGHLIGHTS: "Instagram presence", "active engagement", "social media vibe", "reels and posts", "DM bookings", "aesthetic local brand".
-"""
-        elif service == "gmb":
-            persona_directive = "Google Business Profile Specialist & Maps Visibility Consultant"
-            service_directives = """
-- SERVICE TO PITCH: Google Maps / Google Business Profile (GBP/GMB) Optimization.
-- VALUE PROPOSITION: Focus on optimizing their business profile listing on Google Maps. Highlight local SEO listing optimization, managing high-quality photos, attracting and responding to positive reviews, cleaning up business hours, and landing inside the coveted Google Maps "Local 3-Pack" section where 80% of local clicks happen.
-- KEY PHRASE HIGHLIGHTS: "Google Maps visibility", "local business profile listing", "GBP optimization", "Google 3-pack ranking", "responding to reviews".
-"""
-        elif service == "web_design":
-            persona_directive = "Freelance Web Developer, UI/UX Designer, and Digital Storefront Consultant"
-            service_directives = """
-- SERVICE TO PITCH: Custom Website Design & Development.
-- VALUE PROPOSITION: Focus on building a professional, high-performance, mobile-responsive website, or replacing/fixing their currently down/broken website. Explain that a premium digital storefront builds instant trust, serves as a 24/7 sales hub, automates customer bookings, and captures premium leads that would otherwise go to competitors.
-- KEY PHRASE HIGHLIGHTS: "premium digital storefront", "custom homepage design", "mobile responsive", "automated booking system", "conversion rates".
-"""
-        else: # custom niche service
-            persona_directive = f"Specialist, Local Consultant, and Solutions Expert in {service}"
-            service_directives = f"""
-- SERVICE TO PITCH: {service}.
-- VALUE PROPOSITION: Focus on delivering top-tier value and growth for their business using {service}. Highlight how optimizing and deploying {service} solves their business growth, visibility, or operational needs. Connect the value proposition of {service} to bringing them more local client inquiries, conversions, and revenue.
-- KEY PHRASE HIGHLIGHTS: "{service}", "growth consultant", "business optimization", "client conversion", "value proposition".
-- SPECIAL DIRECTIVE: You must strictly combine this custom service description with any rules and details from the CUSTOM USER PROFILE & OUTREACH RULES (if provided below) to refine the pitch details and tone.
-"""
+        # Resolve persona and service directives based on target service (BUG-L3)
+        persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)
 
         # Resolve tone directives
         tone_directives = ""
@@ -343,46 +306,8 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
         if custom_pitch_rules:
             custom_rules_directive = f"\n- CUSTOM USER PROFILE & OUTREACH RULES (CRITICAL: You must strictly incorporate these personalized preferences and details in your pitch writing):\n{custom_pitch_rules}\n"
 
-        # Resolve persona and service directives based on target service
-        persona_directive = ""
-        service_directives = ""
-        
-        if service == "seo":
-            persona_directive = "Search Engine Optimization (SEO) Specialist & Business Growth Consultant"
-            service_directives = """
-- SERVICE TO PITCH: Search Engine Optimization (SEO) & Local Google Ranking services.
-- VALUE PROPOSITION: Focus on ranking their Google Business Profile and local search visibility. Explain that ranking high on Google Search and Google Maps brings automated organic inquiries, calls, and foot traffic from clients in their area who are actively searching for their service. Highlight that high search ranking is a sustainable asset compared to constant paid ads.
-- KEY PHRASE HIGHLIGHTS: "Google ranking", "organic search traffic", "first page of Google", "local customer inquiries", "ranking high on Google Maps".
-"""
-        elif service == "social_media":
-            persona_directive = "Social Media Brand Architect, Content Strategist, and Visual Outreach Expert"
-            service_directives = """
-- SERVICE TO PITCH: Social Media Management (Instagram, Facebook) & Visual Branding.
-- VALUE PROPOSITION: Focus on building a highly active, visually stunning social media presence (posts, reels, stories). Explain that in their business category, modern premium clients check Instagram and Facebook profiles for the "vibe" and credibility before choosing. Consistent posts build trust, capture direct bookings/reservations, and expand local brand awareness.
-- KEY PHRASE HIGHLIGHTS: "Instagram presence", "active engagement", "social media vibe", "reels and posts", "DM bookings", "aesthetic local brand".
-"""
-        elif service == "gmb":
-            persona_directive = "Google Business Profile Specialist & Maps Visibility Consultant"
-            service_directives = """
-- SERVICE TO PITCH: Google Maps / Google Business Profile (GBP/GMB) Optimization.
-- VALUE PROPOSITION: Focus on optimizing their business profile listing on Google Maps. Highlight local SEO listing optimization, managing high-quality photos, attracting and responding to positive reviews, cleaning up business hours, and landing inside the coveted Google Maps "Local 3-Pack" section where 80% of local clicks happen.
-- KEY PHRASE HIGHLIGHTS: "Google Maps visibility", "local business profile listing", "GBP optimization", "Google 3-pack ranking", "responding to reviews".
-"""
-        elif service == "web_design":
-            persona_directive = "Freelance Web Developer, UI/UX Designer, and Digital Storefront Consultant"
-            service_directives = """
-- SERVICE TO PITCH: Custom Website Design & Development.
-- VALUE PROPOSITION: Focus on building a professional, high-performance, mobile-responsive website, or replacing/fixing their currently down/broken website. Explain that a premium digital storefront builds instant trust, serves as a 24/7 sales hub, automates customer bookings, and captures premium leads that would otherwise go to competitors.
-- KEY PHRASE HIGHLIGHTS: "premium digital storefront", "custom homepage design", "mobile responsive", "automated booking system", "conversion rates".
-"""
-        else: # custom niche service
-            persona_directive = f"Specialist, Local Consultant, and Solutions Expert in {service}"
-            service_directives = f"""
-- SERVICE TO PITCH: {service}.
-- VALUE PROPOSITION: Focus on delivering top-tier value and growth for their business using {service}. Highlight how optimizing and deploying {service} solves their business growth, visibility, or operational needs. Connect the value proposition of {service} to bringing them more local client inquiries, conversions, and revenue.
-- KEY PHRASE HIGHLIGHTS: "{service}", "growth consultant", "business optimization", "client conversion", "value proposition".
-- SPECIAL DIRECTIVE: You must strictly combine this custom service description with any rules and details from the CUSTOM USER PROFILE & OUTREACH RULES (if provided below) to refine the pitch details and tone.
-"""
+        # Resolve persona and service directives based on target service (BUG-L3)
+        persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)
 
         # Resolve tone directives
         tone_directives = ""
@@ -594,7 +519,6 @@ BODY:
 
         last_error = ""
         primary_error = ""
-        import time
         for version, model in final_models:
             url = f"https://generativelanguage.googleapis.com/{version}/models/{model}:generateContent?key={api_key}"
             headers = {
@@ -709,3 +633,46 @@ BODY:
             )
 
         raise Exception(f"All Gemini models failed. Last error: {error_to_check}")
+
+    @staticmethod
+    def _resolve_service_directives(service: str) -> tuple:
+        persona_directive = ""
+        service_directives = ""
+        
+        if service == "seo":
+            persona_directive = "Search Engine Optimization (SEO) Specialist & Business Growth Consultant"
+            service_directives = """
+- SERVICE TO PITCH: Search Engine Optimization (SEO) & Local Google Ranking services.
+- VALUE PROPOSITION: Focus on ranking their Google Business Profile and local search visibility. Explain that ranking high on Google Search and Google Maps brings automated organic inquiries, calls, and foot traffic from clients in their area who are actively searching for their service. Highlight that high search ranking is a sustainable asset compared to constant paid ads.
+- KEY PHRASE HIGHLIGHTS: "Google ranking", "organic search traffic", "first page of Google", "local customer inquiries", "ranking high on Google Maps".
+"""
+        elif service == "social_media":
+            persona_directive = "Social Media Brand Architect, Content Strategist, and Visual Outreach Expert"
+            service_directives = """
+- SERVICE TO PITCH: Social Media Management (Instagram, Facebook) & Visual Branding.
+- VALUE PROPOSITION: Focus on building a highly active, visually stunning social media presence (posts, reels, stories). Explain that in their business category, modern premium clients check Instagram and Facebook profiles for the "vibe" and credibility before choosing. Consistent posts build trust, capture direct bookings/reservations, and expand local brand awareness.
+- KEY PHRASE HIGHLIGHTS: "Instagram presence", "active engagement", "social media vibe", "reels and posts", "DM bookings", "aesthetic local brand".
+"""
+        elif service == "gmb":
+            persona_directive = "Google Business Profile Specialist & Maps Visibility Consultant"
+            service_directives = """
+- SERVICE TO PITCH: Google Maps / Google Business Profile (GBP/GMB) Optimization.
+- VALUE PROPOSITION: Focus on optimizing their business profile listing on Google Maps. Highlight local SEO listing optimization, managing high-quality photos, attracting and responding to positive reviews, cleaning up business hours, and landing inside the coveted Google Maps "Local 3-Pack" section where 80% of local clicks happen.
+- KEY PHRASE HIGHLIGHTS: "Google Maps visibility", "local business profile listing", "GBP optimization", "Google 3-pack ranking", "responding to reviews".
+"""
+        elif service == "web_design":
+            persona_directive = "Freelance Web Developer, UI/UX Designer, and Digital Storefront Consultant"
+            service_directives = """
+- SERVICE TO PITCH: Custom Website Design & Development.
+- VALUE PROPOSITION: Focus on building a professional, high-performance, mobile-responsive website, or replacing/fixing their currently down/broken website. Explain that a premium digital storefront builds instant trust, serves as a 24/7 sales hub, automates customer bookings, and captures premium leads that would otherwise go to competitors.
+- KEY PHRASE HIGHLIGHTS: "premium digital storefront", "custom homepage design", "mobile responsive", "automated booking system", "conversion rates".
+"""
+        else: # custom niche service
+            persona_directive = f"Specialist, Local Consultant, and Solutions Expert in {service}"
+            service_directives = f"""
+- SERVICE TO PITCH: {service}.
+- VALUE PROPOSITION: Focus on delivering top-tier value and growth for their business using {service}. Highlight how optimizing and deploying {service} solves their business growth, visibility, or operational needs. Connect the value proposition of {service} to bringing them more local client inquiries, conversions, and revenue.
+- KEY PHRASE HIGHLIGHTS: "{service}", "growth consultant", "business optimization", "client conversion", "value proposition".
+- SPECIAL DIRECTIVE: You must strictly combine this custom service description with any rules and details from the CUSTOM USER PROFILE & OUTREACH RULES (if provided below) to refine the pitch details and tone.
+"""
+        return persona_directive, service_directives

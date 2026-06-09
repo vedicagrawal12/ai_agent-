@@ -20,9 +20,18 @@
                 </div>
             </div>
             <div class="header-actions">
+                {% if session.get('username') %}
+                <span style="font-size: 0.85rem; color: var(--text-secondary); margin-right: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border-color); padding: 4px 10px; border-radius: var(--radius-sm); background: var(--bg-card);">👤 {{ session.get('username') }}</span>
+                {% endif %}
                 <span id="apiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
                 <button id="historyBtn" class="btn btn-ghost btn-icon" data-tooltip="Search History">📜</button>
                 <button id="settingsBtn" class="btn btn-secondary btn-icon" data-tooltip="Settings">⚙️</button>
+                {% if session.get('username') %}
+                <a href="/logout" class="btn btn-ghost btn-icon" data-tooltip="Logout" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; line-height: 1;">🚪</a>
+                {% else %}
+                <a href="/login" class="btn btn-ghost" style="text-decoration: none; font-size: 0.85rem; font-weight: 700; padding: 8px 16px; display: inline-flex; align-items: center;">Log In</a>
+                <a href="/signup" class="btn btn-primary" style="text-decoration: none; font-size: 0.85rem; font-weight: 800; padding: 8px 16px; box-shadow: var(--shadow-glow-cyan); display: inline-flex; align-items: center;">Sign Up</a>
+                {% endif %}
             </div>
         </header>
 
@@ -43,7 +52,7 @@
         <!-- ======== Search Section ======== -->
         <section class="search-section">
             <h2 class="search-title">🔍 Search Local Businesses</h2>
-            <p class="search-subtitle">Enter a business type and city to find businesses without websites — your next potential clients.</p>
+            <p class="search-subtitle">Enter a business type and city to analyze their online presence (websites, reviews, maps profiles) and scout your next agency clients.</p>
             
             <form id="searchForm" class="search-form">
                 <div class="form-group">
@@ -79,7 +88,7 @@
                         <input type="checkbox" id="includeWebsite">
                         <span class="toggle-slider"></span>
                     </div>
-                    <span class="toggle-label">Show businesses with websites (for comparison)</span>
+                    <span class="toggle-label">Show all businesses (websites, ratings, and social listings)</span>
                 </label>
 
                 <label class="toggle-container">
@@ -113,6 +122,87 @@
                 </div>
             </div>
         </section>
+
+        <!-- ======== Welcome Hero / Agent Core Dashboard ======== -->
+        <div id="welcomeHero" class="welcome-hero">
+            <div class="welcome-hero-header">
+                <div class="welcome-hero-badge">⚡ LeadHunter Agency Suite v2.2</div>
+                <h2 class="welcome-hero-title">Automated AI Client Scouting</h2>
+                <p class="welcome-hero-subtitle">
+                    Apne city ke local businesses ko dhundhein, unki online presence (websites, ratings, maps listings) analyze karein, aur custom cold pitches (Websites, Local SEO, Marketing) dynamically generate karke client leads secure karein.
+                </p>
+            </div>
+
+            <!-- Agent Systems Terminals / Modules Status -->
+            <div class="agent-systems-grid">
+                <div class="agent-system-card">
+                    <div class="agent-system-status">
+                        <span class="status-indicator active"></span>
+                        <span class="system-name">Maps Search Module</span>
+                    </div>
+                    <p class="system-desc">Scrapes live listings via SerpApi, filters results by rating, reviews count, website, and digital presence metrics.</p>
+                </div>
+                <div class="agent-system-card">
+                    <div class="agent-system-status">
+                        <span class="status-indicator active"></span>
+                        <span class="system-name">Gemini Copywriter Core</span>
+                    </div>
+                    <p class="system-desc">Reads your developer profile and scanned portfolio projects to write hyper-personalized conversion pitches.</p>
+                </div>
+                <div class="agent-system-card">
+                    <div class="agent-system-status">
+                        <span class="status-indicator active"></span>
+                        <span class="system-name">WhatsApp Outbox Adapter</span>
+                    </div>
+                    <p class="system-desc">Integrates directly with WhatsApp Web for instant, zero-cost outreach to qualified local clients.</p>
+                </div>
+                <div class="agent-system-card">
+                    <div class="agent-system-status">
+                        <span class="status-indicator active"></span>
+                        <span class="system-name">SMTP Email Dispatcher</span>
+                    </div>
+                    <p class="system-desc">Secures stateless SMTP mail server pipelines for dispatching bulk cold email campaign outreach.</p>
+                </div>
+            </div>
+
+            <!-- Visual Flowchart of Agent Action -->
+            <div class="agent-workflow-visual">
+                <div class="workflow-title">🔄 Agent Workflow Pipeline</div>
+                <div class="workflow-steps">
+                    <div class="workflow-step">
+                        <div class="step-num">1</div>
+                        <div class="step-title">Scout Zone</div>
+                        <div class="step-text">Maps search starts across sub-localities.</div>
+                    </div>
+                    <div class="arrow-right">➔</div>
+                    <div class="workflow-step">
+                        <div class="step-num">2</div>
+                        <div class="step-title">Analyze Listing</div>
+                        <div class="step-text">Analyzes online presence and website status.</div>
+                    </div>
+                    <div class="arrow-right">➔</div>
+                    <div class="workflow-step">
+                        <div class="step-num">3</div>
+                        <div class="step-title">Generate Pitch</div>
+                        <div class="step-text">Gemini AI builds bespoke custom offers.</div>
+                    </div>
+                    <div class="arrow-right">➔</div>
+                    <div class="workflow-step">
+                        <div class="step-num">4</div>
+                        <div class="step-title">Send Outreach</div>
+                        <div class="step-text">Dispatches pitches via SMTP/WhatsApp.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips Banner -->
+            <div class="quick-tips-banner">
+                <span style="font-size: 1.4rem;">💡</span>
+                <div>
+                    <strong>Pro Hinglish Tip:</strong> Pehle maps par <code>gym</code>, <code>cafe</code>, ya <code>salon</code> aur apni city ka naam likhkar search karein. SerpApi key save karna mat bhulein settings mein search start karne se pehle!
+                </div>
+            </div>
+        </div>
 
         <!-- ======== Stats Bar ======== -->
         <div id="statsBar" class="stats-bar" style="display: none;">
@@ -172,7 +262,7 @@
                         <button id="bulkScanSocialsBtn" class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; font-size: 0.85rem; padding: 8px 16px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
                             🔍 Auto-Scan All Socials (50% Credits Saved)
                         </button>
-                        <button id="bulkEmailCampaignBtn" class="btn btn-primary" style="background: var(--gradient-primary); border: none; font-size: 0.85rem; padding: 8px 16px; display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: var(--shadow-glow-cyan); font-weight: 600;">
+                        <button id="bulkEmailCampaignBtn" class="btn btn-primary" style="background: var(--accent-blue); border: none; font-size: 0.85rem; padding: 8px 16px; display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: var(--shadow-glow-blue); font-weight: 600;">
                             🚀 Launch Email Campaign
                         </button>
                     </div>
@@ -185,7 +275,7 @@
                         <span id="bulkProgressPercentage" style="font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan);">0%</span>
                     </div>
                     <div style="width: 100%; height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; position: relative;">
-                        <div id="bulkProgressBar" style="width: 0%; height: 100%; background: var(--gradient-primary); transition: width 0.3s ease;"></div>
+                        <div id="bulkProgressBar" style="width: 0%; height: 100%; background: var(--accent-cyan); transition: width 0.3s ease;"></div>
                     </div>
                 </div>
             </div>
@@ -196,103 +286,313 @@
                 <button id="kanbanViewBtn" class="view-btn">📋 Kanban CRM</button>
             </div>
 
-            <!-- Empty State -->
-            <div id="emptyState" class="empty-state" style="display: none;">
-                <div class="empty-state-icon">🔍</div>
-                <div class="empty-state-title">No leads found</div>
-                <div class="empty-state-text">All businesses in this search have websites. Try a different keyword or city.</div>
-            </div>
+            <div class="workspace-body">
+                <div class="workspace-main">
+                    <!-- Empty State -->
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <div class="empty-state-icon">🔍</div>
+                        <div class="empty-state-title">No leads found</div>
+                        <div class="empty-state-text">All businesses in this search have websites. Try a different keyword or city.</div>
+                    </div>
 
-            <!-- Table -->
-            <div id="tableContainer" class="table-container" style="display: none;">
-                <div class="table-scroll">
-                    <table class="leads-table">
-                        <thead>
-                            <tr>
-                                <th data-sort="name">Business Name</th>
-                                <th data-sort="phone">Phone</th>
-                                <th data-sort="address">Address</th>
-                                <th data-sort="city">City</th>
-                                <th data-sort="website">Website</th>
-                                <th data-sort="rating">Rating</th>
-                                <th data-sort="reviews">Reviews</th>
-                                <th data-sort="priority">Priority</th>
-                                <th>Socials</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leadsTableBody">
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Load More Button -->
-                <div id="loadMoreContainer" style="display: none; text-align: center; margin-top: 24px; margin-bottom: 8px;">
-                    <button id="loadMoreBtn" class="btn btn-secondary btn-lg" style="background: var(--gradient-primary); border: none; color: white; box-shadow: var(--shadow-glow-cyan); transition: var(--transition-base); min-width: 250px;">
-                        ⏭️ Load Next Page (Get More Leads)
-                    </button>
-                </div>
-            </div>
+                    <!-- Table -->
+                    <div id="tableContainer" class="table-container" style="display: none;">
+                        <div class="table-scroll">
+                            <table class="leads-table">
+                                <thead>
+                                    <tr>
+                                        <th data-sort="name">Business Name</th>
+                                        <th data-sort="phone">Phone</th>
+                                        <th data-sort="address">Address</th>
+                                        <th data-sort="city">City</th>
+                                        <th data-sort="website">Website</th>
+                                        <th data-sort="rating">Rating</th>
+                                        <th data-sort="reviews">Reviews</th>
+                                        <th data-sort="priority">Priority</th>
+                                        <th>Socials</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leadsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Load More Button -->
+                        <div id="loadMoreContainer" style="display: none; text-align: center; margin-top: 24px; margin-bottom: 8px;">
+                            <button id="loadMoreBtn" class="btn btn-secondary btn-lg" style="background: var(--accent-blue); border: none; color: white; transition: var(--transition-base); min-width: 250px;">
+                                ⏭️ Load Next Page (Get More Leads)
+                            </button>
+                        </div>
+                    </div>
 
-            <!-- Kanban CRM Board -->
-            <div id="kanbanContainer" class="kanban-container" style="display: none; width: 100%; overflow-x: auto; padding-bottom: 12px; margin-top: 16px;">
-                <div class="kanban-board" style="display: flex; gap: 16px; min-width: 1000px; align-items: flex-start;">
-                    
-                    <!-- New Column -->
-                    <div class="kanban-column" data-stage="NEW">
-                        <div class="kanban-column-header">
-                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🆕 New Leads</span>
-                            <span class="column-count badge-cyan" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); font-weight: bold;">0</span>
-                        </div>
-                        <div class="kanban-cards" data-stage="NEW" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
-                            <!-- Cards rendered dynamically -->
+                    <!-- Kanban CRM Board -->
+                    <div id="kanbanContainer" class="kanban-container" style="display: none; width: 100%; overflow-x: auto; padding-bottom: 12px; margin-top: 16px;">
+                        <div class="kanban-board" style="display: flex; gap: 16px; min-width: 1000px; align-items: flex-start;">
+                            
+                            <!-- New Column -->
+                            <div class="kanban-column" data-stage="NEW">
+                                <div class="kanban-column-header">
+                                    <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🆕 New Leads</span>
+                                    <span class="column-count badge-cyan" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); font-weight: bold;">0</span>
+                                </div>
+                                <div class="kanban-cards" data-stage="NEW" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                                    <!-- Cards rendered dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Pitched Column -->
+                            <div class="kanban-column" data-stage="PITCHED">
+                                <div class="kanban-column-header">
+                                    <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">💬 Pitched</span>
+                                    <span class="column-count badge-violet" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(124, 58, 237, 0.1); color: var(--accent-violet); font-weight: bold;">0</span>
+                                </div>
+                                <div class="kanban-cards" data-stage="PITCHED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                                    <!-- Cards rendered dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Interested Column -->
+                            <div class="kanban-column" data-stage="INTERESTED">
+                                <div class="kanban-column-header">
+                                    <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🤝 Interested</span>
+                                    <span class="column-count badge-amber" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(245, 158, 11, 0.1); color: var(--accent-amber); font-weight: bold;">0</span>
+                                </div>
+                                <div class="kanban-cards" data-stage="INTERESTED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                                    <!-- Cards rendered dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Converted Column -->
+                            <div class="kanban-column" data-stage="CONVERTED">
+                                <div class="kanban-column-header">
+                                    <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🎉 Converted</span>
+                                    <span class="column-count badge-green" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(16, 185, 129, 0.1); color: var(--accent-green); font-weight: bold;">0</span>
+                                </div>
+                                <div class="kanban-cards" data-stage="CONVERTED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                                    <!-- Cards rendered dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Ignored Column -->
+                            <div class="kanban-column" data-stage="IGNORED">
+                                <div class="kanban-column-header">
+                                    <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">❌ Ignored</span>
+                                    <span class="column-count badge-red" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(239, 68, 68, 0.1); color: var(--accent-red); font-weight: bold;">0</span>
+                                </div>
+                                <div class="kanban-cards" data-stage="IGNORED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
+                                    <!-- Cards rendered dynamically -->
+                                </div>
+                            </div>
+                            
                         </div>
                     </div>
-                    
-                    <!-- Pitched Column -->
-                    <div class="kanban-column" data-stage="PITCHED">
-                        <div class="kanban-column-header">
-                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">💬 Pitched</span>
-                            <span class="column-count badge-violet" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(124, 58, 237, 0.1); color: var(--accent-violet); font-weight: bold;">0</span>
+                </div>
+
+                <!-- ======== Collapsible Right Detail Pane ======== -->
+                <div id="detailPane" class="detail-pane">
+                    <div class="detail-pane-header">
+                        <div class="detail-pane-title-wrap">
+                            <h3 id="detailBusinessName" class="detail-pane-title">Business Name</h3>
+                            <span id="detailBusinessCategory" class="category-pill" style="align-self: flex-start; margin-top: 2px;">Category</span>
                         </div>
-                        <div class="kanban-cards" data-stage="PITCHED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
-                            <!-- Cards rendered dynamically -->
-                        </div>
+                        <button id="closeDetailPaneBtn" class="detail-pane-close">✕</button>
                     </div>
                     
-                    <!-- Interested Column -->
-                    <div class="kanban-column" data-stage="INTERESTED">
-                        <div class="kanban-column-header">
-                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🤝 Interested</span>
-                            <span class="column-count badge-amber" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(245, 158, 11, 0.1); color: var(--accent-amber); font-weight: bold;">0</span>
-                        </div>
-                        <div class="kanban-cards" data-stage="INTERESTED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
-                            <!-- Cards rendered dynamically -->
-                        </div>
+                    <!-- Tab Switcher -->
+                    <div class="detail-tabs">
+                        <button class="detail-tab-btn active" data-tab="whatsapp">📱 WhatsApp Pitch</button>
+                        <button class="detail-tab-btn" data-tab="email">📧 Email Outreach</button>
+                        <button class="detail-tab-btn" data-tab="mockup">🖥️ Live Mockup</button>
                     </div>
                     
-                    <!-- Converted Column -->
-                    <div class="kanban-column" data-stage="CONVERTED">
-                        <div class="kanban-column-header">
-                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">🎉 Converted</span>
-                            <span class="column-count badge-green" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(16, 185, 129, 0.1); color: var(--accent-green); font-weight: bold;">0</span>
+                    <div class="detail-pane-body">
+                        <!-- Tab Content: WhatsApp -->
+                        <div class="detail-tab-content active" id="detailTab-whatsapp">
+                            <div class="detail-section-card" style="margin-bottom: 0;">
+                                <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-input); border-radius: var(--radius-md);">
+                                    <div style="font-weight: 700; font-size: 1rem;" id="whatsappBusinessName">Business Name</div>
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">📱 <span id="whatsappPhoneNumber">Phone</span></div>
+                                </div>
+
+                                <div style="margin-bottom: 12px;">
+                                    <label class="form-label">Choose a Template</label>
+                                </div>
+                                
+                                <div id="templateOptions" class="template-selector">
+                                    <!-- Templates loaded dynamically -->
+                                </div>
+
+                                <div style="margin-top: 16px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                                    <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">⚙️ Pitch Personalization Options</div>
+                                    <!-- Service Select Row -->
+                                    <div style="margin-bottom: 12px; width: 100%;">
+                                        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchServiceSelect">Service to Pitch</label>
+                                        <select id="pitchServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                            <option value="web_design" selected>Website Design & Development</option>
+                                            <option value="seo">Search Engine Optimization (SEO)</option>
+                                            <option value="social_media">Social Media Management (SMM)</option>
+                                            <option value="gmb">Google Business Profile (GMB) Optimization</option>
+                                            <option value="custom">Custom Niche Service</option>
+                                        </select>
+                                    </div>
+                                    <!-- Custom Service Input (Hidden by default) -->
+                                    <div id="pitchCustomServiceContainer" style="display: none; margin-bottom: 12px; width: 100%;">
+                                        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchCustomServiceInput">Specify Niche Service</label>
+                                        <input type="text" id="pitchCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                    </div>
+                                    <div class="detail-flex-row" style="margin-bottom: 8px;">
+                                        <div style="flex: 1;">
+                                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchToneSelect">Tone</label>
+                                            <select id="pitchToneSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                                <option value="elite" selected>Elite Growth Consultant</option>
+                                                <option value="friendly">Friendly Local Freelancer</option>
+                                                <option value="direct">Direct Growth Partner</option>
+                                            </select>
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchLengthSelect">Length</label>
+                                            <select id="pitchLengthSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                                <option value="detailed" selected>Detailed Value Pitch</option>
+                                                <option value="short">Short & Punchy (DM-friendly)</option>
+                                            </select>
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchMinWordsSelect">Min Words</label>
+                                            <select id="pitchMinWordsSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                                <option value="150" selected>150 words</option>
+                                                <option value="250">250 words</option>
+                                                <option value="350">350 words</option>
+                                                <option value="450">450 words</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 16px; margin-bottom: 16px; text-align: center;">
+                                    <button id="aiGenerateBtn" class="btn btn-primary" style="background: var(--accent-blue); border: none; font-size: 0.95rem; padding: 10px 20px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; cursor: pointer; color: white;">
+                                        ✨ AI Generate Custom Pitch (Gemini)
+                                    </button>
+                                </div>
+
+                                <div id="customMessageArea" style="display: none; margin-top: 16px;">
+                                    <label class="form-label">Your Custom Message</label>
+                                    <textarea id="customMessageInput" class="form-textarea" 
+                                        placeholder="Type your message here... Use {business_name}, {city}, {category}, {rating}, {reviews} for personalization."></textarea>
+                                    
+                                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                        <input type="text" id="pitchRefineInput" class="form-input" placeholder="e.g., make it a bit shorter..." style="font-size: 0.85rem; flex: 1;">
+                                        <button id="refinePitchBtn" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; cursor: pointer;">🔄 Refine</button>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 16px;">
+                                    <label class="form-label">Message Preview</label>
+                                    <div id="messagePreview" class="message-preview">
+                                        Select a template to preview the message...
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="detail-pane-footer" style="padding: 16px 0 0 0; background: transparent; border-top: none;">
+                                <button id="sendWhatsAppBtn" class="btn btn-whatsapp btn-full">
+                                    💬 Open WhatsApp
+                                </button>
+                            </div>
                         </div>
-                        <div class="kanban-cards" data-stage="CONVERTED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
-                            <!-- Cards rendered dynamically -->
+                        
+                        <!-- Tab Content: Email -->
+                        <div class="detail-tab-content" id="detailTab-email">
+                            <div class="detail-section-card" style="margin-bottom: 0;">
+                                <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-input); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 1rem;" id="emailBusinessName">Business Name</div>
+                                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;" id="emailCoordinates">
+                                            📧 <span id="emailAddressText" style="font-weight: bold; color: var(--accent-cyan);">Scanning website...</span>
+                                        </div>
+                                    </div>
+                                    <button id="scanEmailOnDemandBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; padding: 6px 12px; font-size: 0.8rem; display: none;">
+                                        🔍 Scan Website
+                                    </button>
+                                </div>
+
+                                <div style="margin-top: 16px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                                    <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">⚙️ Pitch Personalization Options</div>
+                                    <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px;">
+                                        <div style="width: 100%;">
+                                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailServiceSelect">Service to Pitch</label>
+                                            <select id="emailServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                                <option value="web_design" selected>Website Design & Development</option>
+                                                <option value="seo">Search Engine Optimization (SEO)</option>
+                                                <option value="social_media">Social Media Management (SMM)</option>
+                                                <option value="gmb">Google Business Profile (GMB) Optimization</option>
+                                                <option value="custom">Custom Niche Service</option>
+                                            </select>
+                                        </div>
+                                        <!-- Custom Service Input (Hidden by default) -->
+                                        <div id="emailCustomServiceContainer" style="display: none; width: 100%; margin-bottom: 4px;">
+                                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailCustomServiceInput">Specify Niche Service</label>
+                                            <input type="text" id="emailCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                        </div>
+                                        <div class="detail-flex-row">
+                                            <div style="flex: 1;">
+                                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailToneSelect">Outreach Tone</label>
+                                                <select id="emailToneSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                                    <option value="elite" selected>Elite Growth Consultant</option>
+                                                    <option value="friendly">Friendly Local Freelancer</option>
+                                                    <option value="direct">Direct Growth Partner</option>
+                                                </select>
+                                            </div>
+                                            <div style="flex: 1;">
+                                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailMinWordsSelect">Min Words</label>
+                                                <select id="emailMinWordsSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                                    <option value="150" selected>150 words</option>
+                                                    <option value="250">250 words</option>
+                                                    <option value="350">350 words</option>
+                                                    <option value="450">450 words</option>
+                                                </select>
+                                            </div>
+                                            <button id="aiGenerateEmailBtn" class="btn btn-primary" style="background: var(--accent-blue); border: none; font-size: 0.85rem; padding: 8px 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; height: 32px; color: white;">
+                                                ✨ AI Generate Pitch
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 16px;">
+                                    <div class="form-group">
+                                        <label class="form-label" for="emailSubjectInput">Subject Line</label>
+                                        <input type="text" id="emailSubjectInput" class="form-input" placeholder="Subject line will be generated or typed...">
+                                    </div>
+                                    <div class="form-group" style="margin-top: 12px;">
+                                        <label class="form-label" for="emailBodyInput">Email Message Body</label>
+                                        <textarea id="emailBodyInput" class="form-textarea" style="height: 180px;" placeholder="Email body will be generated or typed..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-pane-footer email-footer detail-footer-buttons" style="padding: 16px 0 0 0; background: transparent; border-top: none; width: 100%;">
+                                <button id="openMailClientBtn" class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; flex: 1; margin-right: 8px;">
+                                    ✉️ Native Draft (mailto:)
+                                </button>
+                                <button id="sendSmtpEmailBtn" class="btn btn-whatsapp" style="background: var(--accent-blue); font-weight: 600; flex: 1; color: white; border: none;">
+                                    🚀 Send Direct (SMTP)
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab Content: Live Mockup -->
+                        <div class="detail-tab-content" id="detailTab-mockup">
+                            <div class="detail-section-card mockup-tab-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; height: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: rgba(0, 0, 0, 0.2);">
+                                <div class="mockup-info-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px var(--space-md); background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+                                    <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">🖥️ Client Mockup Preview</span>
+                                    <button id="detailCopyMockupLinkBtn" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.75rem; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent;">📋 Copy Link</button>
+                                </div>
+                                <div class="mockup-iframe-wrapper" style="position: relative; background: #fff; height: 500px;">
+                                    <iframe id="mockupIframe" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- Ignored Column -->
-                    <div class="kanban-column" data-stage="IGNORED">
-                        <div class="kanban-column-header">
-                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">❌ Ignored</span>
-                            <span class="column-count badge-red" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; background: rgba(239, 68, 68, 0.1); color: var(--accent-red); font-weight: bold;">0</span>
-                        </div>
-                        <div class="kanban-cards" data-stage="IGNORED" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 400px;">
-                            <!-- Cards rendered dynamically -->
-                        </div>
-                    </div>
-                    
                 </div>
             </div>
         </section>
@@ -323,7 +623,7 @@
                             <a href="https://serpapi.com" target="_blank" style="color: var(--accent-cyan);">serpapi.com</a>.
                             You get 100 free searches per month!
                         </p>
-                        <div style="display: flex; gap: 8px;">
+                        <div class="settings-input-group">
                             <input type="password" id="apiKeyInput" class="form-input" placeholder="Paste your SerpApi key here..." style="flex: 1;">
                             <button id="saveApiKeyBtn" class="btn btn-primary">Save</button>
                         </div>
@@ -351,7 +651,7 @@
                             Enter your portfolio URL (e.g. <code>https://raunaksharmaq64.github.io/portfolio/</code>).
                             The agent will dynamically extract your project samples and match them to the client's industry in the WhatsApp message!
                         </p>
-                        <div style="display: flex; gap: 8px;">
+                        <div class="settings-input-group">
                             <input type="text" id="portfolioUrlInput" class="form-input" placeholder="Enter portfolio URL here..." style="flex: 1;">
                             <button id="savePortfolioUrlBtn" class="btn btn-primary">Save & Scan</button>
                         </div>
@@ -379,7 +679,7 @@
                             Allows generating 100% unique, human-like sales pitches for each client. Get a free key from 
                             <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-cyan);">Google AI Studio</a> (No credit card needed).
                         </p>
-                        <div style="display: flex; gap: 8px;">
+                        <div class="settings-input-group">
                             <input type="password" id="geminiApiKeyInput" class="form-input" placeholder="Paste your Gemini API key here..." style="flex: 1;">
                             <button id="saveGeminiApiKeyBtn" class="btn btn-primary">Save Key</button>
                         </div>
@@ -406,17 +706,17 @@
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
                             Enter your details so Gemini can dynamically sign off and tailor the sales pitches to your name/brand!
                         </p>
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <span style="font-size: 0.85rem; width: 120px; color: var(--text-secondary);">Your Name:</span>
+                        <div class="settings-flex-col">
+                            <div class="settings-flex-row">
+                                <span style="font-size: 0.85rem; width: 120px; color: var(--text-secondary); flex-shrink: 0;">Your Name:</span>
                                 <input type="text" id="senderNameInput" class="form-input" placeholder="e.g. Raunak Sharma" style="flex: 1;">
                             </div>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <span style="font-size: 0.85rem; width: 120px; color: var(--text-secondary);">Agency/Brand:</span>
+                            <div class="settings-flex-row">
+                                <span style="font-size: 0.85rem; width: 120px; color: var(--text-secondary); flex-shrink: 0;">Agency/Brand:</span>
                                 <input type="text" id="senderBrandInput" class="form-input" placeholder="e.g. WebScale Studio" style="flex: 1;">
                             </div>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <span style="font-size: 0.85rem; width: 120px; color: var(--text-secondary);">Your Role:</span>
+                            <div class="settings-flex-row">
+                                <span style="font-size: 0.85rem; width: 120px; color: var(--text-secondary); flex-shrink: 0;">Your Role:</span>
                                 <input type="text" id="senderRoleInput" class="form-input" placeholder="e.g. UI/UX Designer & Developer" style="flex: 1;">
                             </div>
                             <button id="saveSenderProfileBtn" class="btn btn-primary" style="margin-top: 4px; align-self: flex-end;">Save Profile</button>
@@ -428,7 +728,7 @@
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
                             Define your unique value proposition, background, experience, or custom instructions. Gemini AI will dynamically weave these into every high-converting pitch generated for WhatsApp & Email!
                         </p>
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div class="settings-flex-col">
                             <textarea id="customPitchRulesInput" class="form-input" rows="4" placeholder="e.g. I am a Python/NextJS developer with 3 years of experience. Highlight premium UI/UX designs, extremely fast performance, and direct call-to-actions that convert readers instantly." style="flex: 1; resize: vertical; min-height: 100px; font-family: inherit; font-size: 0.85rem; line-height: 1.4; padding: 10px;"></textarea>
                             <button id="saveCustomPitchRulesBtn" class="btn btn-primary" style="margin-top: 4px; align-self: flex-end;">Save Pitch Rules</button>
                         </div>
@@ -442,25 +742,25 @@
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
                             Configure SMTP to dispatch high-converting cold emails directly from this dashboard. Stored securely on your browser only.
                         </p>
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <div style="display: flex; gap: 8px;">
+                        <div class="settings-flex-col">
+                            <div class="settings-input-group">
                                 <div style="flex: 2;">
                                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="smtpHostInput">SMTP Host</label>
-                                    <input type="text" id="smtpHostInput" class="form-input" placeholder="e.g. smtp.gmail.com">
+                                    <input type="text" id="smtpHostInput" class="form-input" placeholder="e.g. smtp.gmail.com" style="width: 100%;">
                                 </div>
                                 <div style="flex: 1;">
                                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="smtpPortInput">Port</label>
-                                    <input type="number" id="smtpPortInput" class="form-input" placeholder="e.g. 465">
+                                    <input type="number" id="smtpPortInput" class="form-input" placeholder="e.g. 465" style="width: 100%;">
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 8px; align-items: center;">
+                            <div class="settings-input-group">
                                 <div style="flex: 1;">
                                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="smtpEmailInput">Sender Email</label>
-                                    <input type="email" id="smtpEmailInput" class="form-input" placeholder="e.g. name@domain.com">
+                                    <input type="email" id="smtpEmailInput" class="form-input" placeholder="e.g. name@domain.com" style="width: 100%;">
                                 </div>
                                 <div style="flex: 1;">
                                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="smtpPasswordInput">App Password</label>
-                                    <input type="password" id="smtpPasswordInput" class="form-input" placeholder="SMTP Password/Token">
+                                    <input type="password" id="smtpPasswordInput" class="form-input" placeholder="SMTP Password/Token" style="width: 100%;">
                                 </div>
                             </div>
                             <label class="toggle-container" style="margin-top: 4px;">
@@ -505,201 +805,13 @@
         </div>
     </div>
 
-    <!-- ======== WhatsApp Modal ======== -->
-    <div id="whatsappModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">💬 Send WhatsApp Message</h3>
-                <button class="modal-close">✕</button>
-            </div>
-            <div class="modal-body">
-                <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-input); border-radius: var(--radius-md);">
-                    <div style="font-weight: 700; font-size: 1rem;" id="whatsappBusinessName">Business Name</div>
-                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">📱 <span id="whatsappPhoneNumber">Phone</span></div>
-                </div>
-
-                <div style="margin-bottom: 12px;">
-                    <label class="form-label">Choose a Template</label>
-                </div>
-                
-                <div id="templateOptions" class="template-selector">
-                    <!-- Templates loaded dynamically -->
-                </div>
-
-                <div style="margin-top: 16px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-                    <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">⚙️ Pitch Personalization Options</div>
-                    <!-- Service Select Row -->
-                    <div style="margin-bottom: 12px; width: 100%;">
-                        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchServiceSelect">Service to Pitch</label>
-                        <select id="pitchServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                            <option value="web_design" selected>Website Design & Development</option>
-                            <option value="seo">Search Engine Optimization (SEO)</option>
-                            <option value="social_media">Social Media Management (SMM)</option>
-                            <option value="gmb">Google Business Profile (GMB) Optimization</option>
-                            <option value="custom">Custom Niche Service</option>
-                        </select>
-                    </div>
-                    <!-- Custom Service Input (Hidden by default) -->
-                    <div id="pitchCustomServiceContainer" style="display: none; margin-bottom: 12px; width: 100%;">
-                        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchCustomServiceInput">Specify Niche Service</label>
-                        <input type="text" id="pitchCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                    </div>
-                    <div style="display: flex; gap: 12px; margin-bottom: 8px;">
-                        <div style="flex: 1;">
-                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchToneSelect">Tone</label>
-                            <select id="pitchToneSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                                <option value="elite" selected>Elite Growth Consultant</option>
-                                <option value="friendly">Friendly Local Freelancer</option>
-                                <option value="direct">Direct Growth Partner</option>
-                            </select>
-                        </div>
-                        <div style="flex: 1;">
-                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchLengthSelect">Length</label>
-                            <select id="pitchLengthSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                                <option value="detailed" selected>Detailed Value Pitch</option>
-                                <option value="short">Short & Punchy (DM-friendly)</option>
-                            </select>
-                        </div>
-                        <div style="flex: 1;">
-                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchMinWordsSelect">Min Words</label>
-                            <select id="pitchMinWordsSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                                <option value="150" selected>150 words</option>
-                                <option value="250">250 words</option>
-                                <option value="350">350 words</option>
-                                <option value="450">450 words</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 16px; margin-bottom: 16px; text-align: center;">
-                    <button id="aiGenerateBtn" class="btn btn-primary" style="background: var(--gradient-primary); border: none; font-size: 0.95rem; padding: 10px 20px; box-shadow: var(--shadow-glow-cyan); width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; cursor: pointer;">
-                        ✨ AI Generate Custom Pitch (Gemini)
-                    </button>
-                </div>
-
-                <div id="customMessageArea" style="display: none; margin-top: 16px;">
-                    <label class="form-label">Your Custom Message</label>
-                    <textarea id="customMessageInput" class="form-textarea" 
-                        placeholder="Type your message here... Use {business_name}, {city}, {category}, {rating}, {reviews} for personalization."></textarea>
-                    
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <input type="text" id="pitchRefineInput" class="form-input" placeholder="e.g., make it a bit shorter / write in pure English..." style="font-size: 0.85rem; flex: 1;">
-                        <button id="refinePitchBtn" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 12px; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; cursor: pointer;">🔄 Refine</button>
-                    </div>
-                </div>
-
-                <div style="margin-top: 16px;">
-                    <label class="form-label">Message Preview</label>
-                    <div id="messagePreview" class="message-preview">
-                        Select a template to preview the message...
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary modal-close">Cancel</button>
-                <button id="sendWhatsAppBtn" class="btn btn-whatsapp">
-                    💬 Open WhatsApp
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ======== Email Modal ======== -->
-    <div id="emailModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">📧 Send Cold Email Pitch</h3>
-                <button class="modal-close">✕</button>
-            </div>
-            <div class="modal-body">
-                <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-input); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                    <div>
-                        <div style="font-weight: 700; font-size: 1rem;" id="emailBusinessName">Business Name</div>
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;" id="emailCoordinates">
-                            📧 <span id="emailAddressText" style="font-weight: bold; color: var(--accent-cyan);">Scanning website...</span>
-                        </div>
-                    </div>
-                    <button id="scanEmailOnDemandBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; padding: 6px 12px; font-size: 0.8rem; display: none;">
-                        🔍 Scan Website
-                    </button>
-                </div>
-
-                <div style="margin-top: 16px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
-                    <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">⚙️ Pitch Personalization Options</div>
-                    <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px;">
-                        <div style="width: 100%;">
-                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailServiceSelect">Service to Pitch</label>
-                            <select id="emailServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                                <option value="web_design" selected>Website Design & Development</option>
-                                <option value="seo">Search Engine Optimization (SEO)</option>
-                                <option value="social_media">Social Media Management (SMM)</option>
-                                <option value="gmb">Google Business Profile (GMB) Optimization</option>
-                                <option value="custom">Custom Niche Service</option>
-                            </select>
-                        </div>
-                        <!-- Custom Service Input (Hidden by default) -->
-                        <div id="emailCustomServiceContainer" style="display: none; width: 100%; margin-bottom: 4px;">
-                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailCustomServiceInput">Specify Niche Service</label>
-                            <input type="text" id="emailCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                        </div>
-                        <div style="display: flex; gap: 12px; align-items: flex-end; width: 100%;">
-                            <div style="flex: 1;">
-                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailToneSelect">Outreach Tone</label>
-                                <select id="emailToneSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                                    <option value="elite" selected>Elite Growth Consultant</option>
-                                    <option value="friendly">Friendly Local Freelancer</option>
-                                    <option value="direct">Direct Growth Partner</option>
-                                </select>
-                            </div>
-                            <div style="flex: 1;">
-                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailMinWordsSelect">Min Words</label>
-                                <select id="emailMinWordsSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                                    <option value="150" selected>150 words</option>
-                                    <option value="250">250 words</option>
-                                    <option value="350">350 words</option>
-                                    <option value="450">450 words</option>
-                                </select>
-                            </div>
-                            <button id="aiGenerateEmailBtn" class="btn btn-primary" style="background: var(--gradient-primary); border: none; font-size: 0.85rem; padding: 8px 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; height: 32px;">
-                                ✨ AI Generate Pitch
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 16px;">
-                    <div class="form-group">
-                        <label class="form-label" for="emailSubjectInput">Subject Line</label>
-                        <input type="text" id="emailSubjectInput" class="form-input" placeholder="Subject line will be generated or typed...">
-                    </div>
-                    <div class="form-group" style="margin-top: 12px;">
-                        <label class="form-label" for="emailBodyInput">Email Message Body</label>
-                        <textarea id="emailBodyInput" class="form-textarea" style="height: 200px;" placeholder="Email body will be generated or typed..."></textarea>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div>
-                    <button id="openMailClientBtn" class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent;">
-                        ✉️ Native Draft (mailto:)
-                    </button>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-secondary modal-close">Cancel</button>
-                    <button id="sendSmtpEmailBtn" class="btn btn-whatsapp" style="background: var(--gradient-primary); box-shadow: var(--shadow-glow-cyan); font-weight: 600;">
-                        🚀 Send Direct (SMTP)
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Deprecated Modals: WhatsApp and Email outreach moved to persistent Detail Drawer -->
 
     </div>
 
     <!-- ======== Email Campaign Modal ======== -->
     <div id="emailCampaignModal" class="modal-overlay">
-        <div class="modal campaign-modal" style="max-width: 95vw; width: 1200px; height: 85vh; display: flex; flex-direction: column;">
+        <div class="modal campaign-modal">
             <div class="modal-header" style="flex-shrink: 0;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 1.5rem;">🚀</span>
@@ -725,26 +837,26 @@
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button id="campaignBulkScanBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; cursor: pointer;">🔍 Scan All Emails</button>
                         <button id="campaignBulkDraftBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-violet); color: var(--accent-violet); background: transparent; cursor: pointer;">✨ Auto-Draft All (Gemini)</button>
-                        <button id="campaignBulkSendBtn" class="btn btn-primary btn-sm" style="background: var(--gradient-primary); border: none; box-shadow: var(--shadow-glow-cyan); cursor: pointer; font-weight: 600;">🚀 Send All Drafts (SMTP)</button>
+                        <button id="campaignBulkSendBtn" class="btn btn-primary btn-sm" style="background: var(--accent-blue); border: none; box-shadow: var(--shadow-glow-blue); cursor: pointer; font-weight: 600;">🚀 Send All Drafts (SMTP)</button>
                     </div>
                 </div>
 
                 <!-- Live Progress Bar -->
                 <div id="campaignProgressContainer" style="display: none; padding: 12px; background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: var(--radius-md); flex-shrink: 0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span id="campaignProgressLabel" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-cyan);">Bulk Scan Progress...</span>
+                        <span id="campaignProgressLabel" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-cyan);">Browse Scan Progress...</span>
                         <span id="campaignProgressPercentage" style="font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan);">0%</span>
                     </div>
                     <div style="width: 100%; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden;">
-                        <div id="campaignProgressBar" style="width: 0%; height: 100%; background: var(--gradient-primary); transition: width 0.2s ease;"></div>
+                        <div id="campaignProgressBar" style="width: 0%; height: 100%; background: var(--accent-cyan); transition: width 0.2s ease;"></div>
                     </div>
                 </div>
 
                 <!-- Main Split-Pane Workspace -->
-                <div class="campaign-split-pane" style="flex: 1; display: flex; gap: 16px; overflow: hidden; height: 100%;">
+                <div class="campaign-split-pane">
                     
                     <!-- Left Pane: Eligible Leads Table Directory -->
-                    <div class="campaign-left-pane" style="flex: 1.2; display: flex; flex-direction: column; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: rgba(0, 0, 0, 0.1); overflow: hidden; height: 100%;">
+                    <div class="campaign-left-pane">
                         <div class="campaign-pane-header" style="padding: 10px 12px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 0.85rem; color: var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;">
                             <span>📇 Campaign Directory</span>
                             <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-secondary);">Leads with Websites</span>
@@ -767,16 +879,16 @@
                     </div>
 
                     <!-- Right Pane: Active Email Outbox Editor & Live HTML Preview -->
-                    <div class="campaign-right-pane" id="campaignOutboxReviewPanel" style="flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: rgba(0, 0, 0, 0.15); overflow: hidden; height: 100%;">
+                    <div class="campaign-right-pane" id="campaignOutboxReviewPanel">
                         <!-- Empty state when no lead selected -->
-                        <div id="campaignOutboxEmptyState" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-secondary); padding: 32px; text-align: center;">
+                        <div id="campaignOutboxEmptyState" class="campaign-outbox-empty-state" style="display: flex;">
                             <span style="font-size: 2.5rem;">📬</span>
                             <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Select a lead to review</div>
                             <p style="font-size: 0.8rem; line-height: 1.4; margin: 0; max-width: 250px;">Click on any row in the directory list to load details, edit subject/body, and check the live preview card.</p>
                         </div>
 
                         <!-- Active Review Editor Workspace -->
-                        <div id="campaignOutboxWorkspace" style="display: none; flex: 1; flex-direction: column; overflow: hidden; height: 100%;">
+                        <div id="campaignOutboxWorkspace" class="campaign-outbox-workspace" style="display: none;">
                             <!-- Selected Lead Header -->
                             <div style="padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
                                 <div>
@@ -823,7 +935,7 @@
                             <!-- Selected Lead Workspace Footer Actions -->
                             <div style="padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-top: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: flex-end; gap: 8px;">
                                 <button id="campaignSelectedSkipBtn" class="btn btn-ghost btn-sm">Skip</button>
-                                <button id="campaignSelectedSendBtn" class="btn btn-whatsapp btn-sm" style="background: var(--gradient-primary); box-shadow: var(--shadow-glow-cyan); font-weight: 600; cursor: pointer;">🚀 Send SMTP</button>
+                                <button id="campaignSelectedSendBtn" class="btn btn-primary btn-sm" style="background: var(--accent-blue); border: none; box-shadow: var(--shadow-glow-blue); font-weight: 600; cursor: pointer;">🚀 Send SMTP</button>
                             </div>
                         </div>
                     </div>
@@ -907,6 +1019,142 @@
         </div>
     </div>
 
+    <!-- ======== Auth Required Modal ======== -->
+    <div id="authRequiredModalOverlay" class="modal-overlay-custom">
+        <div class="modal-box-custom">
+            <div style="font-size: 3rem; margin-bottom: var(--space-md); animation: pulse-glow-cyan 2s infinite ease-in-out;">🔒</div>
+            <h3 style="font-size: 1.5rem; font-weight: 850; color: var(--text-primary); margin-bottom: var(--space-sm); font-family: var(--font-display);">Authentication Required</h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: var(--space-lg);">
+                Apne search filters configure karne, cold outreach ready karne, aur client details access karne ke liye login ya signup karein!
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center; width: 100%; margin-bottom: var(--space-md);">
+                <a href="/login" class="btn btn-secondary" style="flex: 1; text-decoration: none; text-align: center; padding: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">🔑 Log In</a>
+                <a href="/signup" class="btn btn-primary" style="flex: 1; text-decoration: none; text-align: center; padding: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: var(--shadow-glow-cyan);">🚀 Sign Up</a>
+            </div>
+            <button id="closeAuthRequiredModalBtn" class="btn btn-ghost" style="font-size: 0.8rem; color: var(--text-muted); cursor: pointer; text-decoration: underline;">Close & Explore Layout</button>
+        </div>
+    </div>
+
+    <style>
+        .modal-overlay-custom {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 6, 12, 0.9);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 15000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay-custom.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-box-custom {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 440px;
+            padding: var(--space-xl) var(--space-lg);
+            box-shadow: var(--shadow-lg);
+            transform: translateY(20px);
+            transition: transform 0.3s ease, border-color var(--transition-base), box-shadow var(--transition-base);
+            text-align: center;
+        }
+        .modal-overlay-custom.active .modal-box-custom {
+            transform: translateY(0);
+        }
+        .modal-box-custom:hover {
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-glow-cyan);
+        }
+        @keyframes pulse-glow-cyan {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(0, 240, 255, 0.2)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.6)); }
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="/static/js/app.js"></script>
+    
+    <script>
+        const IS_AUTHENTICATED = {% if session.get('user_id') %}true{% else %}false{% endif %};
+        
+        function showAuthRequiredModal() {
+            const modal = document.getElementById('authRequiredModalOverlay');
+            if (modal) {
+                modal.classList.add('active');
+            }
+        }
+
+        function hideAuthRequiredModal() {
+            const modal = document.getElementById('authRequiredModalOverlay');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        document.getElementById('closeAuthRequiredModalBtn')?.addEventListener('click', hideAuthRequiredModal);
+
+        // Global Event Interceptor (Capturing phase - blocks triggers before other handlers run)
+        document.addEventListener('click', (e) => {
+            if (IS_AUTHENTICATED) return;
+            
+            // List of selectors requiring authentication
+            const protectedSelectors = [
+                '#historyBtn',
+                '#settingsBtn',
+                '#exportExcelBtn',
+                '#viewFollowupsBtn',
+                '#searchBtn',
+                '.stat-card',
+                '.campaign-card',
+                '.pipeline-col',
+                '#bulkActionsPanel',
+                '#leadListTable',
+                '.lead-row',
+                '.btn-action',
+                '.tab-btn',
+                '.reminder-preset-btn',
+                '#saveReminderBtn',
+                '#viewFollowupsBtn'
+            ];
+            
+            // Allow closing modals
+            if (e.target.closest('.modal-close') || e.target.closest('#closeAuthRequiredModalBtn')) {
+                return;
+            }
+
+            const isProtected = protectedSelectors.some(selector => {
+                try {
+                    return e.target.closest(selector) !== null;
+                } catch(err) {
+                    return false;
+                }
+            });
+            
+            if (isProtected) {
+                e.preventDefault();
+                e.stopPropagation();
+                showAuthRequiredModal();
+            }
+        }, true);
+
+        // Prevent search form submissions
+        document.getElementById('searchForm')?.addEventListener('submit', (e) => {
+            if (!IS_AUTHENTICATED) {
+                e.preventDefault();
+                e.stopPropagation();
+                showAuthRequiredModal();
+            }
+        }, true);
+    </script>
 </body>
 </html>

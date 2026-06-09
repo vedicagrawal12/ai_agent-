@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 import os
+import time
 import hashlib
 from serpapi import GoogleSearch
 from .base_collector import BaseCollector, Lead
@@ -93,10 +94,20 @@ class SerpApiCollector(BaseCollector):
                 
                 # SerpApi usually returns 20 results per page
                 start += 20
+                
+                # BUG-M4 fix: Rate limit between pages to prevent rapid credit burn
+                if len(leads) < max_results and start <= 100:
+                    time.sleep(1)
                         
             except Exception as e:
                 print(f"Error fetching from SerpApi at start {start}: {e}")
-                raise e
+                # BUG-H5 fix: Don't crash entire search if one page fails.
+                # Return whatever results were collected so far.
+                # Only re-raise for auth errors so user knows to fix their key.
+                error_msg = str(e).lower()
+                if '401' in error_msg or 'invalid api' in error_msg or 'unauthorized' in error_msg:
+                    raise e
+                break  # Network/quota errors: return partial results
                 
         return leads[:max_results]
 

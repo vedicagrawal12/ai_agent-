@@ -6,6 +6,7 @@ Supports message templates with variable substitution for personalization.
 """
 
 import urllib.parse
+import re
 from typing import Dict, List
 from collectors.base_collector import Lead
 
@@ -121,7 +122,6 @@ class WhatsAppMessenger:
         # Remove project_sample placeholder — only used in AI-generated pitches
         message = message.replace(" {project_sample}", "").replace("{project_sample}", "")
         # Clean any double whitespace/spaces left from removed placeholders
-        import re
         message = re.sub(r'[ \t]+', ' ', message)  # Remove multiple spaces
         message = re.sub(r' \n', '\n', message)  # Remove space before newline
         message = re.sub(r'\n\s*\n\s*\n', '\n\n', message)
