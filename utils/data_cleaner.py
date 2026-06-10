@@ -289,15 +289,15 @@ class DataCleaner:
                         try:
                             is_online = future.result()
                             # If NOT online, mark as broken website!
-                            lead.is_broken_website = 0 if is_online else 1
+                            lead.is_broken_website = False if is_online else True
                         except Exception as e:
                             print(f"Error checking website for {lead.name}: {e}")
-                            lead.is_broken_website = 1 # Treat failures as broken
+                            lead.is_broken_website = True # Treat failures as broken
                 except concurrent.futures.TimeoutError:
                     print("Warning: Website health check timed out after 30s. Marking remaining as broken.")
                     for future, lead in future_to_lead.items():
                         if not future.done():
-                            lead.is_broken_website = 1
+                            lead.is_broken_website = True
                             future.cancel()
                 except Exception as loop_err:
                     print(f"Error during parallel website checks: {loop_err}")

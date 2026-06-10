@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Privacy Policy for LeadHunter AI.">
+    <title>Privacy Policy — LeadHunter AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
+    <style>
+        .page-wrapper {
+            max-width: 800px;
+            margin: 60px auto;
+            padding: var(--space-xl) var(--space-lg);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+        }
+        .page-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 2.2rem;
+            color: var(--text-primary);
+            margin-bottom: var(--space-xs);
+        }
+        .page-title span {
+            color: var(--accent-cyan);
+            text-shadow: var(--shadow-glow-cyan);
+        }
+        .page-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .content-section {
+            margin-bottom: var(--space-lg);
+        }
+        .content-section h2 {
+            font-size: 1.35rem;
+            color: var(--text-primary);
+            border-left: 3px solid var(--accent-cyan);
+            padding-left: var(--space-sm);
+            margin-bottom: var(--space-sm);
+            margin-top: var(--space-lg);
+        }
+        .content-section p, .content-section ul {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: var(--space-sm);
+        }
+        .content-section ul {
+            padding-left: 20px;
+            list-style-type: square;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: var(--space-xl);
+            transition: color var(--transition-fast);
+        }
+        .back-link:hover {
+            color: var(--accent-violet);
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="page-header">
+            <h1 class="page-title">Privacy <span>Policy</span></h1>
+            <div class="page-meta">Last updated: June 10, 2026</div>
+        </div>
+        
+        <div class="content-section">
+            <p>LeadHunter AI respects your privacy and is committed to protecting your personal data. This Privacy Policy details how we handle your login profile, search logs, and saved business leads.</p>
+        </div>
+
+        <div class="content-section">
+            <h2>1. Information We Collect</h2>
+            <p>We collect and store only the minimal necessary information to execute local lead generation tasks:</p>
+            <ul>
+                <li><strong>Account Registration Details:</strong> Username, email, and hashed password.</li>
+                <li><strong>Business Leads and Search History:</strong> Saved listings fetched via SerpApi mapping.</li>
+                <li><strong>Outreach Logs:</strong> A record of custom messages generated and emails dispatched.</li>
+            </ul>
+        </div>
+
+        <div class="content-section">
+            <h2>2. Credential Security & Local Storage</h2>
+            <p>To maximize security, third-party credentials (such as your private SerpApi key, Gemini API key, and SMTP login details) are processed in-memory and can be stored in your browser's local storage rather than on our backend database, ensuring complete client-side control.</p>
+        </div>
+
+        <div class="content-section">
+            <h2>3. Data Deletion & Portability</h2>
+            <p>In accordance with GDPR compliance standards, you possess the right to portability and the right to be forgotten:</p>
+            <ul>
+                <li><strong>Export Data:</strong> You can download all your stored records (user profile, saved leads, history) at any time from your settings console.</li>
+                <li><strong>Delete Account:</strong> Triggering the account deletion will instantly and permanently delete all your information from our database server.</li>
+            </ul>
+        </div>
+
+        <div class="content-section">
+            <h2>4. Third-Party Services</h2>
+            <p>Our service communicates with SerpApi and Google Gemini platforms to execute searches and draft content. Please review their respective privacy agreements regarding external query analytics.</p>
+        </div>
+
+        <a href="/" class="back-link">← Return to Dashboard</a>
+    </div>
+</body>
+</html>

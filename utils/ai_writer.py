@@ -1,8 +1,26 @@
+import os
 import requests
 import json
 import time
+import yaml
 
 class AIOutreachWriter:
+    _prompts = None
+
+    @staticmethod
+    def _load_prompts():
+        """Load and cache prompt templates from outreach_pitches.yaml."""
+        if AIOutreachWriter._prompts is None:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            prompts_path = os.path.join(base_dir, "prompts", "outreach_pitches.yaml")
+            try:
+                with open(prompts_path, "r", encoding="utf-8") as f:
+                    AIOutreachWriter._prompts = yaml.safe_load(f)
+            except Exception as e:
+                print(f"Error loading prompts YAML from {prompts_path}: {e}")
+                AIOutreachWriter._prompts = {}
+        return AIOutreachWriter._prompts
+
     @staticmethod
     def generate_pitch(
         lead_data: dict, 
@@ -16,11 +34,12 @@ class AIOutreachWriter:
         previous_pitch: str = None,
         mockup_link: str = "",
         custom_pitch_rules: str = "",
-        min_words: int = 150
+        min_words: int = 150,
+        language: str = "hinglish"
     ) -> str:
         """
         Generates a highly personalized, human-like sales pitch using the Gemini API.
-        Uses raw requests to avoid installing extra dependencies.
+        Templates are loaded dynamically from yaml.
         """
         if not api_key:
             raise Exception("Gemini API key is required for AI generation.")
@@ -29,7 +48,7 @@ class AIOutreachWriter:
         if custom_pitch_rules:
             custom_rules_directive = f"\n- CUSTOM USER PROFILE & OUTREACH RULES (CRITICAL: You must strictly incorporate these personalized preferences and details in your pitch writing):\n{custom_pitch_rules}\n"
 
-        # Resolve persona and service directives based on target service (BUG-L3)
+        # Resolve persona and service directives based on target service
         persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)
 
         # Resolve tone directives
@@ -125,7 +144,7 @@ class AIOutreachWriter:
         
         if reviews_count >= 100:
             hook_type_directive = f"""
-- SMART HOOK (ESTABLISHED AUTHORITY): This local business has a massive review count ({reviews_count} reviews) and is clearly an established local favorite. Frame the pitch around scaling, keeping up with demand, and retaining premium customers who prefer quick booking interfaces. (e.g. 'Aap Bhopal ke elite brands mein aate hain...' or 'Google par aapka setup dekh kar maza aa gaya!').
+- SMART HOOK (ESTABLISHED AUTHORITY): This local business has a massive review count ({reviews_count} reviews) and is clearly an established local favorite. Frame the pitch around scaling, keeping up with demand, and retaining premium customers who prefer quick booking interfaces.
 """
         else:
             hook_type_directive = f"""
@@ -152,135 +171,75 @@ class AIOutreachWriter:
         else:
             signoff_directive = f"\n7. NO SIGN OFF: Do NOT sign off the message with any name or brand placeholder. Leave it open or end on a friendly CTA."
 
+        # Resolve language directives for WhatsApp
+        lang_lower = (language or "hinglish").lower().strip()
+        if lang_lower == "english":
+            whatsapp_lang_dir = "- LANGUAGE: Must be written in pure, grammatically correct, professional and natural English. Do NOT use Hinglish or Hindi words."
+            refine_lang_dir = "Keep the natural, conversational, polite English tone. Do NOT use Hinglish or Hindi words."
+        elif lang_lower == "hindi":
+            whatsapp_lang_dir = "- LANGUAGE: Must be written in pure, grammatically correct and natural Hindi written in Devanagari script. Do NOT use English script, but you may use technical terms transliterated or written in Devanagari (e.g. सेटअप, वेबसाइट, Leads, etc.)."
+            refine_lang_dir = "Keep the natural, conversational, polite Hindi tone written in Devanagari script. Do NOT use English script."
+        else: # hinglish
+            whatsapp_lang_dir = "- LANGUAGE: Must be highly natural, conversational Hinglish (using Latin/English script) as spoken in India. Mix Hindi and English words naturally. Use words like: *setup*, *vibe*, *fuss*, *traffic*, *leads*, *look*, *draft*, *leakage*, *switch*."
+            refine_lang_dir = "Keep the natural, conversational, polite Hinglish tone, mixing Hindi and English words naturally."
+
+        prompts = AIOutreachWriter._load_prompts()
+
         # Build the prompt with dynamic context
         if refine_feedback and previous_pitch:
-            prompt = f"""
-You are an Elite B2B Pitch Copywriter. Your task is to REFINE and REWRITE an existing cold outreach sales pitch based on direct feedback from the user.
-{custom_rules_directive}
-Here are the details of the local business we are pitching:
-- Business Name: {lead_data.get('name', 'Business')}
-- City: {lead_data.get('city', 'your city')}
-- Category: {lead_data.get('category', 'Business')}
-
-Here is the PREVIOUS generated sales pitch:
----------------------------------
-{previous_pitch}
----------------------------------
-
-Here is the USER'S FEEDBACK/REWRITE REQUEST:
----------------------------------
-"{refine_feedback}"
----------------------------------
-
-Strict Copywriting Guidelines for Refinement:
-1. Apply the user's feedback precisely (e.g. making it shorter, translating to a specific language, adding more emojis, changing the focus, etc.).
-2. Keep the natural, conversational, polite Hinglish/English tone.
-3. Preserve the core business personalization details (Reviews/Rating/Name/City) and ensure the dynamic project sample is still naturally included.
-4. Keep the output beautifully formatted with short paragraphs, bold text highlights (using single * asterisks), and a few high-quality emojis.
-5. NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc. Output must be 100% ready to copy-paste.
-"""
+            template = prompts.get("whatsapp_pitch_refine", "")
+            prompt = template.format(
+                custom_rules_directive=custom_rules_directive,
+                business_name=lead_data.get('name', 'Business'),
+                city=lead_data.get('city', 'your city'),
+                category=lead_data.get('category', 'Business'),
+                previous_pitch=previous_pitch,
+                refine_feedback=refine_feedback,
+                language_directives=refine_lang_dir
+            )
         else:
-            is_broken = int(lead_data.get('is_broken_website', 0)) == 1
+            is_broken = bool(lead_data.get('is_broken_website'))
             website_url = lead_data.get('website', '')
 
             if is_broken:
-                prompt = f"""
-You are an Elite B2B Growth Strategist, {persona_directive} in India. You write highly personalized, warm, and 100% human-sounding WhatsApp pitches for local business owners.
-Write an outreach pitch for a local business whose website is BROKEN/DOWN (it returns errors/fails to load, causing them to lose premium clients):
-
-- Business Name: {lead_data.get('name', 'Business')}
-- Category: {lead_data.get('category', 'Business')}
-- Location: {lead_data.get('city', 'your city')}
-- Google Maps Rating: {lead_data.get('rating', '0')}
-- Google Maps Reviews: {lead_data.get('reviews', '0')}
-- Listed Broken Website: {website_url}
-{custom_rules_directive}
-Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
-{mockup_link}
-
-Best matching project proof to naturally mention:
-{project_sample}
-
-SERVICE CONFIGURATION:
-{service_directives}
-
-TONE DIRECTIVES:
-{tone_directives}
-
-LENGTH & STRUCTURE DIRECTIVES:
-{length_directives}
-
-SMART HOOK DIRECTIVES:
-{hook_type_directive}
-
-CRITICAL COPYWRITING DIRECTIVES FOR BROKEN WEBSITES (FOLLOW THOROUGHLY):
-1. CASUAL GREETING: NEVER start with formal, robotic things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly, human greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
-2. IMPRESSION OVER FLATTERY & BROKEN WEBSITE HOOK: Speak like a real human who just noticed a bug. Start with a direct, casual statement about their amazing local reputation, then bring up the broken website naturally. Do NOT repeat a single static script. Vary your style.
-   For example:
-   "Hey there! Bhopal me aapka setup sach me bahut popular hai—Google par aapke *{lead_data.get('rating')} rating* aur *{lead_data.get('reviews')} reviews* dekh kar maza aa gaya! 🔥 Par maine ek critical issue notice kiya... Google Maps par aapki listed website open nahi ho rahi hai (error page/down dikha rahi hai). ⚠️"
-   (Note: Do NOT write or print the actual raw broken website URL '{website_url}' in the output text itself to avoid triggering safety/phishing link filters).
-3. THE CONVERSATIONAL PAIN POINT (THE GAP): Explain in casual Hinglish how this website breakdown is a massive trust leak. Connect it directly to the service you are pitching:
-   - If Web Design: Losing customers to competitors due to a broken site.
-   - If SEO/GMB: Broken site harms search ranking and authority, causing them to slip from search results.
-   - If Social Media: Traffic from pages is wasted because the landing link is broken.
-4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally.
-5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible. Offer a custom mockup layout or draft structure. If mockup link is provided ({mockup_link}), you MUST naturally weave this link into your CTA.
-6. FORMATTING & LANGUAGE STYLE (CRITICAL FOR HUMAN FEEL):
-   - LANGUAGE: Must be highly natural, conversational Hinglish. Use words like: *setup*, *vibe*, *fuss*, *traffic*, *leads*, *look*, *draft*, *leakage*, *switch*.
-   - Keep paragraphs short (maximum 2-3 sentences per paragraph) with clean spacing.
-   - Use bold text for key numbers and phrases using asterisks.
-   - EMOJIS: Keep emojis limited to 3 or 4 maximum.
-   - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc.
-7. PITCH OBJECTIVE: You must strictly align your pitch with the provided SERVICE TO PITCH and VALUE PROPOSITION guidelines under SERVICE CONFIGURATION. Pitch the selected service (SEO, SMM, GMB, or Web Design) instead of defaulting only to web design.
-{signoff_directive}
-"""
+                template = prompts.get("whatsapp_pitch_broken", "")
+                prompt = template.format(
+                    persona_directive=persona_directive,
+                    business_name=lead_data.get('name', 'Business'),
+                    category=lead_data.get('category', 'Business'),
+                    city=lead_data.get('city', 'your city'),
+                    rating=lead_data.get('rating', '0'),
+                    reviews=lead_data.get('reviews', '0'),
+                    website_url=website_url,
+                    custom_rules_directive=custom_rules_directive,
+                    mockup_link=mockup_link,
+                    project_sample=project_sample,
+                    service_directives=service_directives,
+                    tone_directives=tone_directives,
+                    length_directives=length_directives,
+                    hook_type_directive=hook_type_directive,
+                    signoff_directive=signoff_directive,
+                    language_directives=whatsapp_lang_dir
+                )
             else:
-                prompt = f"""
-You are an Elite B2B Growth Strategist, {persona_directive} in India. You write highly personalized, warm, and 100% human-sounding WhatsApp pitches for local business owners.
-Write an outreach pitch for a local business who DOES NOT HAVE A WEBSITE YET:
-
-- Business Name: {lead_data.get('name', 'Business')}
-- Category: {lead_data.get('category', 'Business')}
-- Location: {lead_data.get('city', 'your city')}
-- Google Maps Rating: {lead_data.get('rating', '0')}
-- Google Maps Reviews: {lead_data.get('reviews', '0')}
-{custom_rules_directive}
-Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
-{mockup_link}
-
-Best matching project proof to naturally mention:
-{project_sample}
-
-SERVICE CONFIGURATION:
-{service_directives}
-
-TONE DIRECTIVES:
-{tone_directives}
-
-LENGTH & STRUCTURE DIRECTIVES:
-{length_directives}
-
-SMART HOOK DIRECTIVES:
-{hook_type_directive}
-
-CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
-1. CASUAL GREETING: NEVER start with formal, robotic things like "नमस्ते {lead_data.get('name')} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly, human greetings like "Hey {lead_data.get('name')} team! 👋" or "Hey there! Quick question for the team at {lead_data.get('name')}."
-2. IMPRESSION OVER FLATTERY: Speak like a real human salesperson who is genuinely impressed. Do NOT repeat a single static script. Vary your style.
-3. THE GAP (CONVERSATIONAL PAIN POINT): Pivot smoothly. Explain in conversational Hinglish that today, local customers check online to discover their services. Connect the gap to the service you are pitching:
-   - If Web Design: Not having a website is a huge missed opportunity to capture and automate high-paying memberships/bookings.
-   - If SEO/GMB: Missing out on massive organic search queries and calls from customers in their city.
-   - If Social Media: Lacking a visually stunning active visual brand feed on Instagram where new clients search.
-4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally.
-5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible and low-friction. Offer a custom mockup layout or draft strategy. If mockup link is provided ({mockup_link}), you MUST naturally weave this link into your CTA.
-6. FORMATTING & LANGUAGE STYLE (CRITICAL FOR HUMAN FEEL):
-   - LANGUAGE: Must be highly natural, conversational Hinglish.
-   - Keep paragraphs short (maximum 2-3 sentences per paragraph).
-   - Use bold text for key numbers and phrases using asterisks.
-   - EMOJIS: Keep emojis limited to 3 or 4 maximum.
-   - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc.
-7. PITCH OBJECTIVE: You must strictly align your pitch with the provided SERVICE TO PITCH and VALUE PROPOSITION guidelines under SERVICE CONFIGURATION. Pitch the selected service (SEO, SMM, GMB, or Web Design) instead of defaulting only to web design.
-{signoff_directive}
-"""
+                template = prompts.get("whatsapp_pitch_no_website", "")
+                prompt = template.format(
+                    persona_directive=persona_directive,
+                    business_name=lead_data.get('name', 'Business'),
+                    category=lead_data.get('category', 'Business'),
+                    city=lead_data.get('city', 'your city'),
+                    rating=lead_data.get('rating', '0'),
+                    reviews=lead_data.get('reviews', '0'),
+                    custom_rules_directive=custom_rules_directive,
+                    mockup_link=mockup_link,
+                    project_sample=project_sample,
+                    service_directives=service_directives,
+                    tone_directives=tone_directives,
+                    length_directives=length_directives,
+                    hook_type_directive=hook_type_directive,
+                    signoff_directive=signoff_directive,
+                    language_directives=whatsapp_lang_dir
+                )
 
         return AIOutreachWriter._call_gemini_api(prompt, api_key)
 
@@ -294,7 +253,8 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
         sender_info: dict = None,
         mockup_link: str = "",
         custom_pitch_rules: str = "",
-        min_words: int = 150
+        min_words: int = 150,
+        language: str = "hinglish"
     ) -> str:
         """
         Generates a highly personalized, human-like sales cold email with a Subject Line and Body.
@@ -306,7 +266,7 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
         if custom_pitch_rules:
             custom_rules_directive = f"\n- CUSTOM USER PROFILE & OUTREACH RULES (CRITICAL: You must strictly incorporate these personalized preferences and details in your pitch writing):\n{custom_pitch_rules}\n"
 
-        # Resolve persona and service directives based on target service (BUG-L3)
+        # Resolve persona and service directives based on target service
         persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)
 
         # Resolve tone directives
@@ -336,7 +296,7 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
         except (ValueError, TypeError):
             reviews_count = 0
             
-        is_broken = int(lead_data.get('is_broken_website', 0)) == 1
+        is_broken = bool(lead_data.get('is_broken_website'))
         website_url = lead_data.get('website', '')
 
         # Resolve sender profile sign-off
@@ -407,85 +367,61 @@ CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
 - WORD COUNT REQUIREMENT (CRITICAL): The generated email body must strictly be at least {min_words} words.
 """
 
-        # Build prompt
-        prompt = f"""
-You are an Elite B2B Growth Strategy Copywriter in India. Your task is to write a highly personalized, warm, and 100% human-sounding B2B Cold Email for a local business to pitch them your custom services.
+        # Resolve language directives for Email
+        lang_lower = (language or "hinglish").lower().strip()
+        if lang_lower == "english":
+            email_lang_dir = "LANGUAGE: Pure, grammatically correct, professional and natural English. Do NOT use Hinglish or Hindi words. Follow English syntax and grammar strictly."
+        elif lang_lower == "hindi":
+            email_lang_dir = "LANGUAGE: Pure, grammatically correct and natural Hindi written in Devanagari script. Do NOT use English script, but you may use technical terms transliterated or written in Devanagari (e.g. सेटअप, वेबसाइट, Leads, etc.)."
+        else: # hinglish
+            email_lang_dir = "LANGUAGE: Natural conversational Hinglish (using Latin/English script) as spoken in casual business conversations in India. Mix Hindi and English words naturally. Use words like: *setup*, *vibe*, *fuss*, *traffic*, *leads*, *look*, *draft*, *leakage*, *switch*."
 
-Here are the details of the business:
-- Business Name: {lead_data.get('name', 'Business')}
-- Category: {lead_data.get('category', 'Business')}
-- Location: {lead_data.get('city', 'your city')}
-- Google Maps Rating: {lead_data.get('rating', '0')}
-- Google Maps Reviews: {lead_data.get('reviews', '0')}
-- Website State: {"Broken/Down listed URL: " + website_url if is_broken else "DOES NOT HAVE A WEBSITE YET"}
-{custom_rules_directive}
-Best matching project proof to mention in the email body:
-{project_sample}
+        prompts = AIOutreachWriter._load_prompts()
+        template = prompts.get("email_pitch", "")
+        
+        prompt = template.format(
+            business_name=lead_data.get('name', 'Business'),
+            category=lead_data.get('category', 'Business'),
+            city=lead_data.get('city', 'your city'),
+            rating=lead_data.get('rating', '0'),
+            reviews=lead_data.get('reviews', '0'),
+            website_state="Broken/Down listed URL: " + website_url if is_broken else "DOES NOT HAVE A WEBSITE YET",
+            custom_rules_directive=custom_rules_directive,
+            project_sample=project_sample,
+            mockup_link=mockup_link,
+            service_directives=service_directives,
+            tone_directives=tone_directives,
+            email_length_directives=email_length_directives,
+            signoff_str=signoff_str,
+            language_directives=email_lang_dir
+        )
 
-Dynamic live draft mockup link designed specifically for them (if provided, weave it naturally as a key highlight, otherwise offer to make one):
-{mockup_link}
-
-SERVICE CONFIGURATION:
-{service_directives}
-
-TONE DIRECTIVES:
-{tone_directives}
-
-LENGTH & STRUCTURE DIRECTIVES:
-{email_length_directives}
-
-Strict Copywriting Guidelines for Cold Email:
-1. SUBJECT LINE: Write a short, highly curiosity-driven, and personalized subject line under 7 words. Never use spammy clickbait or all caps. It should feel like a genuine observation and align with the service (e.g. for SEO: "Question about {lead_data.get('name')}'s search visibility" or for GMB: "Google Maps optimization for {lead_data.get('name')}" or for Web Design: "Quick design layout for {lead_data.get('name')} setup").
-2. STRUCTURE: 
-   - Follow the structure described in LENGTH & STRUCTURE DIRECTIVES strictly. Ensure every section outlined is fully expanded into its own paragraph.
-3. LANGUAGE: Natural conversational Hinglish/English. Speak like a real human partner.
-4. SIGN OFF: Use "Best," or "Warm regards," followed by "{signoff_str}".
-5. FORMATTING: You MUST separate the Subject Line and the Body cleanly using the exact identifiers "SUBJECT:" and "BODY:". Do not put any formatting tags like markdown in the SUBJECT line. Keep the body in short, clean paragraphs. No placeholders or brackets anywhere!
-6. PITCH OBJECTIVE: You must strictly align your pitch with the provided SERVICE TO PITCH and VALUE PROPOSITION guidelines under SERVICE CONFIGURATION. Pitch the selected service (SEO, SMM, GMB, or Web Design) instead of defaulting only to web design.
-7. WORD COUNT & DETAIL REQUIREMENT (CRITICAL): The generated email body (the content after 'BODY:') must strictly be at least {min_words} words long. To meet this length naturally, you must go into detail about their industry position, how specifically they are missing out on bookings or conversions, the detailed benefits of the pitch, and describe the matching portfolio sample in detail as specified in LENGTH & STRUCTURE DIRECTIVES. Do not write a short/abbreviated email.
-
-OUTPUT FORMAT (YOU MUST FOLLOW THIS EXACTLY):
-SUBJECT: [Curiosity-driven Subject Line]
-BODY:
-[Email Body Paragraphs here]
-"""
         return AIOutreachWriter._call_gemini_api(prompt, api_key)
 
     @staticmethod
     def _call_gemini_api(prompt: str, api_key: str) -> str:
         """Helper method to handle the stateless requests to the Google Gemini API."""
-        # 1. Quick validation: Google API Keys start with "AIza" or "AQ."
         if not api_key.startswith("AIza") and not api_key.startswith("AQ."):
             print("WARNING: Gemini API Key does not start with standard 'AIza' or 'AQ.' prefix. Proceeding anyway.")
 
-        # 2. Dynamically tune generation parameters based on prompt complexity
-        #    Longer prompts = user wants detailed output = needs more tokens, time, and creativity
         prompt_len = len(prompt)
         if prompt_len > 4000:
-            # Large detailed prompt (350-450 word limit requests)
             max_output_tokens = 2048
             temperature = 0.85
             request_timeout = 45
         elif prompt_len > 2500:
-            # Medium prompt (250 word limit requests)
             max_output_tokens = 1500
             temperature = 0.8
             request_timeout = 35
         else:
-            # Short/standard prompt (150 word limit requests)
             max_output_tokens = 1024
             temperature = 0.75
             request_timeout = 25
 
-        print(f"[AI Writer Config] prompt_len={prompt_len}, maxTokens={max_output_tokens}, temp={temperature}, timeout={request_timeout}s")
-
-        # 3. Dynamic Model Discovery: Ask Google what models this key supports!
         discovered_models = []
         try:
-            print("Querying Google for available models...")
             list_url = f"https://generativelanguage.googleapis.com/v1/models?key={api_key}"
             res = requests.get(list_url, timeout=10)
-            
             if res.status_code == 200:
                 models_data = res.json().get("models", [])
                 for m in models_data:
@@ -494,11 +430,9 @@ BODY:
                     if "generateContent" in methods:
                         model_id = name.split("/")[-1] if "/" in name else name
                         discovered_models.append(("v1", model_id))
-                print(f"Dynamically discovered models: {discovered_models}")
-        except Exception as list_err:
-            print(f"Model discovery query failed: {list_err}. Falling back to default list.")
+        except Exception:
+            pass
 
-        # 4. Compile final models list to try (capped to prevent long timeout chains)
         discovered_capped = discovered_models[:3]
         models_to_try = discovered_capped + [
             ("v1", "gemini-1.5-flash"),
@@ -541,28 +475,19 @@ BODY:
             max_retries = 2
             for attempt in range(max_retries + 1):
                 try:
-                    if attempt > 0:
-                        print(f"Retrying Gemini model: {model} on {version} (attempt {attempt}/{max_retries})...")
-                    else:
-                        print(f"Trying Gemini model: {model} on {version}...")
-                    
                     response = requests.post(url, headers=headers, json=payload, timeout=request_timeout)
                     
                     if response.status_code == 200:
                         data = response.json()
                         candidates = data.get("candidates", [])
                         if candidates:
-                            # Check if the response was truncated by the model
                             finish_reason = candidates[0].get("finishReason", "")
                             text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
                             if text:
                                 word_count = len(text.split())
-                                print(f"Success with Gemini model: {model}! Words generated: {word_count}, finishReason: {finish_reason}")
                                 if finish_reason == "MAX_TOKENS" and word_count < 100:
-                                    # Output was severely truncated, try next model
-                                    print(f"Output truncated at MAX_TOKENS with only {word_count} words, trying next model...")
                                     last_error = "Output truncated (MAX_TOKENS)"
-                                    break # Break retry loop to try next model
+                                    break
                                 return text.strip()
                     
                     try:
@@ -571,15 +496,12 @@ BODY:
                     except Exception:
                         last_error = f"Status {response.status_code}"
                     
-                    # Check for invalid API key immediately to avoid misleading fallbacks
                     if "key not valid" in last_error.lower() or "api key not valid" in last_error.lower() or "invalid api key" in last_error.lower():
                         raise Exception("Invalid Gemini API Key. Google API keys must start with 'AIza' or 'AQ.'. Please check your key in Settings.")
                     
                     if not primary_error:
                         primary_error = last_error
-                    print(f"Model {model} on {version} failed (status {response.status_code}): {last_error}")
                     
-                    # Check if error is retryable (429, 503, 500, or related keywords)
                     is_retryable = (
                         response.status_code in [429, 500, 503] or
                         any(keyword in last_error.lower() for keyword in ["demand", "rate limit", "quota", "overloaded", "resource exhausted", "limit exceeded", "temp", "busy"])
@@ -587,37 +509,27 @@ BODY:
                     
                     if is_retryable and attempt < max_retries:
                         sleep_time = 2.0 * (attempt + 1)
-                        print(f"Retryable error detected. Sleeping for {sleep_time}s before retrying...")
                         time.sleep(sleep_time)
                         continue
-                    
-                    # If not retryable or max retries reached, try the next model in the fallback queue
                     break
                     
                 except requests.exceptions.Timeout:
                     last_error = "Request timed out."
                     if not primary_error:
                         primary_error = last_error
-                    print(f"Model {model} timed out after {request_timeout}s.")
                     if attempt < max_retries:
                         sleep_time = 2.0 * (attempt + 1)
-                        print(f"Timeout occurred. Sleeping for {sleep_time}s before retrying...")
                         time.sleep(sleep_time)
                         continue
                     break
                 except Exception as e:
-                    # Re-raise explicit validation/authentication errors immediately
                     if "Invalid Gemini API Key" in str(e):
                         raise e
                     last_error = str(e)
                     if not primary_error:
                         primary_error = last_error
-                    print(f"Network error with model {model}: {last_error}")
-                    
-                    # Network connection failures are also retryable
                     if attempt < max_retries:
                         sleep_time = 2.0 * (attempt + 1)
-                        print(f"Connection issue. Sleeping for {sleep_time}s before retrying...")
                         time.sleep(sleep_time)
                         continue
                     break

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Centralized admin user management console.">
+    <title>Admin Dashboard — LeadHunter AI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
+    <style>
+        .admin-wrapper {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: var(--space-xl) var(--space-lg);
+        }
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-xl);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: var(--space-md);
+            flex-wrap: wrap;
+            gap: var(--space-md);
+        }
+        .admin-title {
+            font-family: var(--font-display);
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        .admin-title span {
+            color: var(--accent-cyan);
+            text-shadow: var(--shadow-glow-cyan);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-md);
+            margin-bottom: var(--space-xl);
+        }
+        @media (min-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--space-md) var(--space-lg);
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            transition: all var(--transition-base);
+        }
+        .stat-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-glow-cyan);
+            transform: translateY(-2px);
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            text-shadow: var(--shadow-glow-cyan);
+        }
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl) var(--space-lg);
+            box-shadow: var(--shadow-lg);
+        }
+        .panel-title {
+            font-size: 1.35rem;
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .user-table-container {
+            overflow-x: auto;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            margin-bottom: var(--space-md);
+        }
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+        .user-table th {
+            padding: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .user-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+        .user-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: var(--radius-sm);
+            text-transform: uppercase;
+        }
+        .user-badge.admin {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--accent-violet);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+        .user-badge.active {
+            background: rgba(57, 255, 20, 0.08);
+            color: var(--accent-green);
+            border: 1px solid rgba(57, 255, 20, 0.15);
+        }
+        .user-badge.inactive {
+            background: rgba(255, 0, 85, 0.08);
+            color: var(--accent-red);
+            border: 1px solid rgba(255, 0, 85, 0.15);
+        }
+        .action-btn {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .action-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            background: rgba(0, 240, 255, 0.03);
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .footer-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: var(--space-xl);
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-wrapper">
+        <div class="admin-header">
+            <h1 class="admin-title">👑 Admin Control <span>Console</span></h1>
+            <a href="/" class="btn btn-secondary btn-sm" style="text-decoration: none;">➔ Operator Dashboard</a>
+        </div>
+        
+        <!-- Summary Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total users</div>
+                <div class="stat-value">{{ status.stats.total_users }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Users</div>
+                <div class="stat-value" style="color: var(--accent-green);">{{ status.stats.active_users }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Scouted Leads</div>
+                <div class="stat-value" style="color: var(--accent-violet);">{{ status.stats.total_leads }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Searches Executed</div>
+                <div class="stat-value" style="color: var(--accent-orange);">{{ status.stats.total_searches }}</div>
+            </div>
+        </div>
+
+        <!-- User Accounts Table Card -->
+        <div class="panel-card">
+            <h2 class="panel-title">👥 Registered Operator Accounts</h2>
+            
+            {% if status.users %}
+            <div class="user-table-container">
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Registered At</th>
+                            <th>Administrative Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in status.users %}
+                        <tr id="userRow-{{ u.id }}">
+                            <td style="font-family: var(--font-mono); color: var(--text-secondary);">#{{ u.id }}</td>
+                            <td style="font-weight: 700; color: var(--accent-cyan);">{{ u.username }}</td>
+                            <td style="word-break: break-all;">{{ u.email }}</td>
+                            <td>
+                                {% if u.is_admin %}
+                                <span class="user-badge admin" id="badge-admin-{{ u.id }}">Admin</span>
+                                {% else %}
+                                <span class="user-badge" id="badge-admin-{{ u.id }}" style="color: var(--text-secondary); border: 1px solid var(--border-color);">User</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.is_active %}
+                                <span class="user-badge active" id="badge-active-{{ u.id }}">Active</span>
+                                {% else %}
+                                <span class="user-badge inactive" id="badge-active-{{ u.id }}">Deactivated</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">{{ u.created_at_str }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    {% set is_self = (u.id == g.user.id) %}
+                                    <button 
+                                        class="action-btn" 
+                                        onclick="toggleUserActive({{ u.id }}, {{ 'false' if u.is_active else 'true' }})"
+                                        id="btn-active-{{ u.id }}"
+                                        {{ 'disabled' if is_self }}>
+                                        {% if u.is_active %}❌ Deactivate{% else %}✓ Activate{% endif %}
+                                    </button>
+                                    <button 
+                                        class="action-btn" 
+                                        onclick="toggleUserAdmin({{ u.id }}, {{ 'false' if u.is_admin else 'true' }})"
+                                        id="btn-admin-{{ u.id }}"
+                                        {{ 'disabled' if is_self }}>
+                                        💼 Toggle Role
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 40px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: var(--radius-md);">
+                No user accounts registered.
+            </div>
+            {% endif %}
+            
+            <div class="footer-actions">
+                <button onclick="window.location.reload();" class="action-btn" style="padding: 10px 16px;">🔄 Reload User Listings</button>
+                <a href="/verify-db" class="action-btn" style="padding: 10px 16px; border-color: var(--accent-cyan); color: var(--accent-cyan);">⚙️ View Database Diagnostic Panel</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toasts Container -->
+    <div id="toastContainer" style="position: fixed; bottom: 24px; right: 24px; z-index: 1000; display: flex; flex-direction: column; gap: 8px;"></div>
+
+    <script>
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.style.background = 'var(--bg-card)';
+            toast.style.border = `1px solid ${type === 'success' ? 'var(--accent-green)' : 'var(--accent-red)'}`;
+            toast.style.color = type === 'success' ? '#55ff3b' : '#ff3b75';
+            toast.style.padding = '12px 20px';
+            toast.style.borderRadius = 'var(--radius-md)';
+            toast.style.fontSize = '0.9rem';
+            toast.style.fontWeight = '600';
+            toast.style.boxShadow = 'var(--shadow-lg)';
+            toast.style.display = 'flex';
+            toast.style.alignItems = 'center';
+            toast.style.gap = '8px';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(20px)';
+            toast.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠️'}</span> <div>${message}</div>`;
+            container.appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            }, 50);
+            
+            // Remove after 3.5 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        async function toggleUserActive(userId, newStatus) {
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/toggle-active`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: newStatus })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showToast(`User status updated successfully!`, 'success');
+                    
+                    // Update UI elements dynamically
+                    const badge = document.getElementById(`badge-active-${userId}`);
+                    const btn = document.getElementById(`btn-active-${userId}`);
+                    
+                    if (newStatus) {
+                        badge.className = 'user-badge active';
+                        badge.textContent = 'Active';
+                        btn.innerHTML = '❌ Deactivate';
+                        btn.setAttribute('onclick', `toggleUserActive(${userId}, false)`);
+                    } else {
+                        badge.className = 'user-badge inactive';
+                        badge.textContent = 'Deactivated';
+                        btn.innerHTML = '✓ Activate';
+                        btn.setAttribute('onclick', `toggleUserActive(${userId}, true)`);
+                    }
+                } else {
+                    showToast(data.error || 'Failed to update user status.', 'error');
+                }
+            } catch (err) {
+                showToast('Network error updating user status.', 'error');
+            }
+        }
+
+        async function toggleUserAdmin(userId, newStatus) {
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/toggle-admin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admin: newStatus })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showToast(`User privileges updated successfully!`, 'success');
+                    
+                    // Update UI elements dynamically
+                    const badge = document.getElementById(`badge-admin-${userId}`);
+                    const btn = document.getElementById(`btn-admin-${userId}`);
+                    
+                    if (newStatus) {
+                        badge.className = 'user-badge admin';
+                        badge.textContent = 'Admin';
+                        badge.style.border = '';
+                        btn.setAttribute('onclick', `toggleUserAdmin(${userId}, false)`);
+                    } else {
+                        badge.className = 'user-badge';
+                        badge.textContent = 'User';
+                        badge.style.border = '1px solid var(--border-color)';
+                        btn.setAttribute('onclick', `toggleUserAdmin(${userId}, true)`);
+                    }
+                } else {
+                    showToast(data.error || 'Failed to update user privileges.', 'error');
+                }
+            } catch (err) {
+                showToast('Network error updating user privileges.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

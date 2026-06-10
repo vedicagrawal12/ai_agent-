@@ -26,6 +26,9 @@
                 <span id="apiKeyStatus" class="api-key-status inactive">✗ Not Set</span>
                 <button id="historyBtn" class="btn btn-ghost btn-icon" data-tooltip="Search History">📜</button>
                 <button id="settingsBtn" class="btn btn-secondary btn-icon" data-tooltip="Settings">⚙️</button>
+                {% if g.user and g.user.is_admin %}
+                <a href="/admin" class="btn btn-ghost btn-icon" data-tooltip="Admin Control Console" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; line-height: 1;">👑</a>
+                {% endif %}
                 {% if session.get('username') %}
                 <a href="/logout" class="btn btn-ghost btn-icon" data-tooltip="Logout" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; line-height: 1;">🚪</a>
                 {% else %}
@@ -1082,10 +1085,10 @@
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script type="module" src="/static/js/app.js"></script>
     
     <script>
-        const IS_AUTHENTICATED = {% if session.get('user_id') %}true{% else %}false{% endif %};
+        const IS_AUTHENTICATED = "{{ 'true' if session.get('user_id') else 'false' }}" === "true";
         
         function showAuthRequiredModal() {
             const modal = document.getElementById('authRequiredModalOverlay');

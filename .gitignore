@@ -8,6 +8,9 @@ bin/
 lib/
 include/
 
+# Log files
+logs/
+
 # Python Compilation & Caches
 __pycache__/
 *.py[cod]

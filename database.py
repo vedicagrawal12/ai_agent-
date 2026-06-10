@@ -1,7 +1,9 @@
 import psycopg2
 import psycopg2.extras
+from psycopg2 import pool
 import json
 import os
+import logging
 import threading
 from datetime import datetime
 from typing import List, Optional, Dict
@@ -10,6 +12,10 @@ from collectors.base_collector import Lead
 
 class Database:
     """PostgreSQL database manager for lead storage."""
+
+    # Class-level connection pool
+    _pool = None
+    _pool_lock = threading.Lock()
 
     # Class-level flag to prevent double cleanup in Flask debug mode (reloader runs __init__ twice)
     _cleanup_done = False
@@ -24,6 +30,18 @@ class Database:
             print("[Database] WARNING: DATABASE_URL contains placeholder password. Falling back to default 'postgres' password.")
             db_url = db_url.replace("YOUR_POSTGRES_PASSWORD", "postgres")
         self.db_url = db_url
+
+        # Initialize thread-safe connection pool once
+        with Database._pool_lock:
+            if Database._pool is None:
+                logging.info("[Database] Initializing connection pool...")
+                Database._pool = pool.ThreadedConnectionPool(
+                    minconn=2,
+                    maxconn=20,
+                    dsn=self.db_url,
+                    cursor_factory=psycopg2.extras.DictCursor
+                )
+
         self._init_db()
         # Run startup cleanup once, outside of _init_db
         # BUG-M8 fix: Use lock to prevent race condition in multi-worker environments
@@ -33,17 +51,29 @@ class Database:
                 self.cleanup_old_data()
 
     def _get_connection(self):
-        """Get a database connection with dictionary cursor factory."""
-        # By default, pass cursor_factory=psycopg2.extras.DictCursor so all cursors behave like dictionaries
-        return psycopg2.connect(self.db_url, cursor_factory=psycopg2.extras.DictCursor)
+        """Get a database connection from the connection pool."""
+        return Database._pool.getconn()
+
+    def _release_connection(self, conn):
+        """Release a database connection back to the pool."""
+        if conn:
+            Database._pool.putconn(conn)
 
     def _init_db(self):
         """Create database tables if they don't exist."""
         conn = self._get_connection()
-        cursor = conn.cursor()
+
+        def run_query(query, params=None):
+            cursor = conn.cursor()
+            try:
+                cursor.execute(query, params)
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logging.debug(f"[Database Init] Query skipped/failed: {query}. Error: {e}")
 
         # Users table (created if not exists, with password_hash as TEXT and email column)
-        cursor.execute("""
+        run_query("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(100) UNIQUE NOT NULL,
@@ -52,16 +82,15 @@ class Database:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        # Safe migration: ensure existing password_hash column is TYPE TEXT and email column exists
-        try:
-            cursor.execute("ALTER TABLE users ALTER COLUMN password_hash TYPE TEXT;")
-            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) DEFAULT '';")
-        except Exception as migration_err:
-            conn.rollback()
-            print(f"[Database Migration] Warning altering column or adding email: {migration_err}")
+        # Safe migration: ensure existing password_hash column is TYPE TEXT, email, is_admin, and is_active columns exist
+        run_query("ALTER TABLE users ALTER COLUMN password_hash TYPE TEXT;")
+        run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) DEFAULT '';")
+        run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
+        run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;")
+        run_query("UPDATE users SET is_admin = TRUE WHERE id = (SELECT MIN(id) FROM users) AND is_admin = FALSE;")
 
         # Leads table
-        cursor.execute("""
+        run_query("""
             CREATE TABLE IF NOT EXISTS leads (
                 id SERIAL PRIMARY KEY,
                 place_id VARCHAR(255),
@@ -77,17 +106,17 @@ class Database:
                 priority VARCHAR(50) DEFAULT 'LOW',
                 whatsapp_number VARCHAR(50) DEFAULT '',
                 source VARCHAR(100) DEFAULT 'google_maps',
-                contacted INTEGER DEFAULT 0,
-                contact_date VARCHAR(100) DEFAULT '',
+                contacted BOOLEAN DEFAULT FALSE,
+                contact_date TIMESTAMP DEFAULT NULL,
                 notes TEXT DEFAULT '',
                 instagram VARCHAR(255) DEFAULT '',
                 facebook VARCHAR(255) DEFAULT '',
                 custom_pitch TEXT DEFAULT '',
-                is_broken_website INTEGER DEFAULT 0,
+                is_broken_website BOOLEAN DEFAULT FALSE,
                 line_type VARCHAR(100) DEFAULT '',
                 pipeline_stage VARCHAR(100) DEFAULT 'NEW',
                 email VARCHAR(255) DEFAULT '',
-                remind_date VARCHAR(100) DEFAULT '',
+                remind_date DATE DEFAULT NULL,
                 remind_status VARCHAR(100) DEFAULT '',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -96,7 +125,7 @@ class Database:
         """)
 
         # Search history table
-        cursor.execute("""
+        run_query("""
             CREATE TABLE IF NOT EXISTS search_history (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -109,7 +138,7 @@ class Database:
         """)
 
         # WhatsApp message log
-        cursor.execute("""
+        run_query("""
             CREATE TABLE IF NOT EXISTS message_log (
                 id SERIAL PRIMARY KEY,
                 lead_id INTEGER,
@@ -122,12 +151,13 @@ class Database:
         """)
 
         # Safe migration: add columns and update constraints for existing tables
+        run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;")
+        run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;")
+        run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;")
+        
+        # Map existing orphan records to the first user
+        cursor = conn.cursor()
         try:
-            cursor.execute("ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;")
-            cursor.execute("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;")
-            cursor.execute("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;")
-            
-            # Map existing orphan records to the first user
             cursor.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1;")
             first_user = cursor.fetchone()
             if first_user:
@@ -135,24 +165,75 @@ class Database:
                 cursor.execute("UPDATE leads SET user_id = %s WHERE user_id IS NULL;", (first_user_id,))
                 cursor.execute("UPDATE search_history SET user_id = %s WHERE user_id IS NULL;", (first_user_id,))
                 cursor.execute("UPDATE message_log SET user_id = %s WHERE user_id IS NULL;", (first_user_id,))
-                
-            # Drop old single place_id constraint and add composite unique constraint
-            cursor.execute("ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_place_id_key;")
-            cursor.execute("""
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'leads_place_id_user_id_key') THEN
-                        ALTER TABLE leads ADD CONSTRAINT leads_place_id_user_id_key UNIQUE (place_id, user_id);
-                    END IF;
-                END
-                $$;
-            """)
-        except Exception as migration_err:
+            conn.commit()
+        except Exception as e:
             conn.rollback()
-            print(f"[Database Migration] Warning adding user_id columns or constraints: {migration_err}")
 
-        conn.commit()
-        conn.close()
+        # Drop old single place_id constraint and add composite unique constraint
+        run_query("ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_place_id_key;")
+        run_query("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'leads_place_id_user_id_key') THEN
+                    ALTER TABLE leads ADD CONSTRAINT leads_place_id_user_id_key UNIQUE (place_id, user_id);
+                END IF;
+            END
+            $$;
+        """)
+
+        # ---- PHASE 3: Database Type Migrations ----
+        type_migrations = [
+            # contacted: INTEGER → BOOLEAN
+            "ALTER TABLE leads ALTER COLUMN contacted DROP DEFAULT;",
+            "ALTER TABLE leads ALTER COLUMN contacted TYPE BOOLEAN USING contacted::boolean;",
+            "ALTER TABLE leads ALTER COLUMN contacted SET DEFAULT FALSE;",
+            # is_broken_website: INTEGER → BOOLEAN
+            "ALTER TABLE leads ALTER COLUMN is_broken_website DROP DEFAULT;",
+            "ALTER TABLE leads ALTER COLUMN is_broken_website TYPE BOOLEAN USING is_broken_website::boolean;",
+            "ALTER TABLE leads ALTER COLUMN is_broken_website SET DEFAULT FALSE;",
+            # remind_date: VARCHAR → DATE (nullable)
+            "ALTER TABLE leads ALTER COLUMN remind_date DROP DEFAULT;",
+            "ALTER TABLE leads ALTER COLUMN remind_date TYPE DATE USING NULLIF(remind_date, '')::date;",
+            "ALTER TABLE leads ALTER COLUMN remind_date SET DEFAULT NULL;",
+            # contact_date: VARCHAR → TIMESTAMP (nullable)
+            "ALTER TABLE leads ALTER COLUMN contact_date DROP DEFAULT;",
+            "ALTER TABLE leads ALTER COLUMN contact_date TYPE TIMESTAMP USING NULLIF(contact_date, '')::timestamp;",
+            "ALTER TABLE leads ALTER COLUMN contact_date SET DEFAULT NULL;",
+        ]
+        for query in type_migrations:
+            run_query(query)
+
+        # ---- PHASE 3: Database Indexes ----
+        index_queries = [
+            "CREATE INDEX IF NOT EXISTS idx_leads_user_id ON leads(user_id);",
+            "CREATE INDEX IF NOT EXISTS idx_leads_city ON leads(city);",
+            "CREATE INDEX IF NOT EXISTS idx_leads_priority ON leads(priority);",
+            "CREATE INDEX IF NOT EXISTS idx_leads_pipeline ON leads(pipeline_stage);",
+            "CREATE INDEX IF NOT EXISTS idx_leads_contacted ON leads(contacted);",
+            "CREATE INDEX IF NOT EXISTS idx_leads_remind ON leads(remind_status, remind_date);",
+            "CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at);",
+            "CREATE INDEX IF NOT EXISTS idx_search_user_id ON search_history(user_id);",
+            "CREATE INDEX IF NOT EXISTS idx_search_date ON search_history(searched_at);",
+            "CREATE INDEX IF NOT EXISTS idx_msglog_lead ON message_log(lead_id);",
+            "CREATE INDEX IF NOT EXISTS idx_msglog_user ON message_log(user_id);",
+        ]
+        for query in index_queries:
+            run_query(query)
+
+        self._release_connection(conn)
+
+    def is_user_admin(self, user_id: int) -> bool:
+        """Check if a user has admin privileges."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT is_admin FROM users WHERE id = %s", (user_id,))
+            row = cursor.fetchone()
+            return bool(row and row.get('is_admin'))
+        except Exception:
+            return False
+        finally:
+            self._release_connection(conn)
 
     def save_leads(self, leads: List[Lead], user_id: int) -> int:
         """
@@ -181,8 +262,8 @@ class Database:
                     cursor.execute("""
                         INSERT INTO leads (place_id, user_id, name, phone, address, website, rating, 
                                           reviews, category, city, priority, whatsapp_number, source,
-                                          is_broken_website, line_type)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                          is_broken_website, line_type, email)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT(place_id, user_id) DO UPDATE SET
                             name = EXCLUDED.name,
                             phone = EXCLUDED.phone,
@@ -196,12 +277,13 @@ class Database:
                             whatsapp_number = EXCLUDED.whatsapp_number,
                             is_broken_website = EXCLUDED.is_broken_website,
                             line_type = EXCLUDED.line_type,
+                            email = EXCLUDED.email,
                             updated_at = CURRENT_TIMESTAMP
                     """, (
                         lead.place_id, user_id, lead.name, lead.phone, lead.address,
                         lead.website, lead.rating, lead.reviews, lead.category,
                         lead.city, lead.priority, lead.whatsapp_number, lead.source,
-                        lead.is_broken_website, lead.line_type
+                        lead.is_broken_website, lead.line_type, lead.email
                     ))
                     
                     if is_new:
@@ -216,7 +298,7 @@ class Database:
             print(f"Error in save_leads batch: {e}")
             conn.rollback()
         finally:
-            conn.close()
+            self._release_connection(conn)
         return new_count
 
     def save_search(self, query: str, city: str, results_count: int, leads_count: int, user_id: int):
@@ -233,7 +315,7 @@ class Database:
             print(f"Error saving search history: {e}")
             conn.rollback()
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def get_all_leads(self, priority_filter: str = None, city_filter: str = None, user_id: int = None) -> List[Dict]:
         """
@@ -261,131 +343,189 @@ class Database:
 
         query += " ORDER BY CASE priority WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END"
 
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        conn.close()
+        try:
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            self._release_connection(conn)
 
-        # DictRow needs to be cast to normal dict objects
-        return [dict(row) for row in rows]
+    def get_all_leads_paginated(self, priority_filter: str = None, city_filter: str = None, user_id: int = None, page: int = 1, per_page: int = 50) -> Dict:
+        """
+        Get paginated leads from the database with optional filters for a specific user.
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        where_clauses = ["priority != 'IGNORE'"]
+        params = []
+        
+        if user_id is not None:
+            where_clauses.append("user_id = %s")
+            params.append(user_id)
+
+        if priority_filter:
+            where_clauses.append("priority = %s")
+            params.append(priority_filter)
+        
+        if city_filter:
+            where_clauses.append("LOWER(city) LIKE %s")
+            params.append(f"%{city_filter.lower()}%")
+
+        where_str = " AND ".join(where_clauses)
+        
+        # Get total count first
+        count_query = f"SELECT COUNT(*) FROM leads WHERE {where_str}"
+        
+        # Paginated query
+        offset = (page - 1) * per_page
+        query = f"SELECT * FROM leads WHERE {where_str} ORDER BY CASE priority WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END LIMIT %s OFFSET %s"
+        
+        try:
+            cursor.execute(count_query, params)
+            total_count = cursor.fetchone()[0]
+            
+            # Execute with limit/offset params
+            query_params = params + [per_page, offset]
+            cursor.execute(query, query_params)
+            rows = cursor.fetchall()
+            leads = [dict(row) for row in rows]
+            
+            return {
+                "leads": leads,
+                "total": total_count,
+                "page": page,
+                "per_page": per_page,
+                "pages": (total_count + per_page - 1) // per_page if total_count > 0 else 1
+            }
+        finally:
+            self._release_connection(conn)
 
     def get_search_history(self, limit: int = 20, user_id: int = None) -> List[Dict]:
         """Get recent search history for a specific user."""
         conn = self._get_connection()
         cursor = conn.cursor()
-        
-        query = "SELECT * FROM search_history"
-        params = []
-        
-        if user_id:
-            query += " WHERE user_id = %s"
-            params.append(user_id)
+        try:
+            query = "SELECT * FROM search_history"
+            params = []
             
-        query += " ORDER BY searched_at DESC LIMIT %s"
-        params.append(limit)
-        
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        conn.close()
-        return [dict(row) for row in rows]
+            if user_id:
+                query += " WHERE user_id = %s"
+                params.append(user_id)
+                
+            query += " ORDER BY searched_at DESC LIMIT %s"
+            params.append(limit)
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            self._release_connection(conn)
 
     def mark_contacted(self, lead_id: int, notes: str = "", user_id: int = None):
         """Mark a lead as contacted for a specific user."""
         conn = self._get_connection()
         cursor = conn.cursor()
-        
-        query = """
-            UPDATE leads 
-            SET contacted = 1, 
-                contact_date = %s, 
-                notes = %s,
-                pipeline_stage = CASE WHEN pipeline_stage = 'NEW' THEN 'PITCHED' ELSE pipeline_stage END,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s
-        """
-        params = [datetime.now().isoformat(), notes, lead_id]
-        
-        # BUG-L4 fix: Always enforce user_id filter when provided
-        if user_id is not None:
-            query += " AND user_id = %s"
-            params.append(user_id)
+        try:
+            query = """
+                UPDATE leads 
+                SET contacted = TRUE, 
+                    contact_date = %s, 
+                    notes = %s,
+                    pipeline_stage = CASE WHEN pipeline_stage = 'NEW' THEN 'PITCHED' ELSE pipeline_stage END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """
+            params = [datetime.now().isoformat(), notes, lead_id]
             
-        cursor.execute(query, params)
-        conn.commit()
-        conn.close()
+            # BUG-L4 fix: Always enforce user_id filter when provided
+            if user_id is not None:
+                query += " AND user_id = %s"
+                params.append(user_id)
+                
+            cursor.execute(query, params)
+            conn.commit()
+        finally:
+            self._release_connection(conn)
 
     def log_message(self, lead_id: int, template: str, message: str, user_id: int):
         """Log a WhatsApp message sent to a lead for a specific user."""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO message_log (lead_id, user_id, template_used, message_sent)
-            VALUES (%s, %s, %s, %s)
-        """, (lead_id, user_id, template, message))
-        conn.commit()
-        conn.close()
+        try:
+            cursor.execute("""
+                INSERT INTO message_log (lead_id, user_id, template_used, message_sent)
+                VALUES (%s, %s, %s, %s)
+            """, (lead_id, user_id, template, message))
+            conn.commit()
+        finally:
+            self._release_connection(conn)
 
     def get_stats(self, user_id: int = None) -> Dict:
         """Get dashboard statistics for a specific user."""
         conn = self._get_connection()
         cursor = conn.cursor()
-
-        stats = {}
-        
-        # Build query filtering helpers
-        where_clause = " WHERE priority != 'IGNORE'"
-        params = []
-        if user_id:
-            where_clause += " AND user_id = %s"
-            params.append(user_id)
+        try:
+            stats = {}
             
-        # Total leads
-        cursor.execute("SELECT COUNT(*) FROM leads" + where_clause, params)
-        stats["total_leads"] = cursor.fetchone()[0]
+            # Build query filtering helpers
+            where_clause = " WHERE priority != 'IGNORE'"
+            params = []
+            if user_id:
+                where_clause += " AND user_id = %s"
+                params.append(user_id)
+                
+            # Total leads
+            cursor.execute("SELECT COUNT(*) FROM leads" + where_clause, params)
+            stats["total_leads"] = cursor.fetchone()[0]
 
-        # By priority
-        cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND priority = 'HIGH'", params)
-        stats["high_priority"] = cursor.fetchone()[0]
+            # By priority
+            cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND priority = 'HIGH'", params)
+            stats["high_priority"] = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND priority = 'MEDIUM'", params)
-        stats["medium_priority"] = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND priority = 'MEDIUM'", params)
+            stats["medium_priority"] = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND priority = 'LOW'", params)
-        stats["low_priority"] = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND priority = 'LOW'", params)
+            stats["low_priority"] = cursor.fetchone()[0]
 
-        # Contacted
-        cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND contacted = 1", params)
-        stats["contacted"] = cursor.fetchone()[0]
+            # Contacted
+            cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND contacted = TRUE", params)
+            stats["contacted"] = cursor.fetchone()[0]
 
-        # Total searches
-        search_where = ""
-        search_params = []
-        if user_id:
-            search_where = " WHERE user_id = %s"
-            search_params.append(user_id)
-        cursor.execute("SELECT COUNT(*) FROM search_history" + search_where, search_params)
-        stats["total_searches"] = cursor.fetchone()[0]
+            # Total searches
+            search_where = ""
+            search_params = []
+            if user_id:
+                search_where = " WHERE user_id = %s"
+                search_params.append(user_id)
+            cursor.execute("SELECT COUNT(*) FROM search_history" + search_where, search_params)
+            stats["total_searches"] = cursor.fetchone()[0]
 
-        # Cities covered
-        cursor.execute("SELECT COUNT(DISTINCT city) FROM leads" + where_clause, params)
-        stats["cities_covered"] = cursor.fetchone()[0]
+            # Cities covered
+            cursor.execute("SELECT COUNT(DISTINCT city) FROM leads" + where_clause, params)
+            stats["cities_covered"] = cursor.fetchone()[0]
 
-        # Broken websites
-        cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND is_broken_website = 1", params)
-        stats["broken_websites"] = cursor.fetchone()[0]
+            # Broken websites
+            cursor.execute("SELECT COUNT(*) FROM leads" + where_clause + " AND is_broken_website = TRUE", params)
+            stats["broken_websites"] = cursor.fetchone()[0]
 
-        conn.close()
-        return stats
+            return stats
+        finally:
+            self._release_connection(conn)
 
     def delete_lead(self, lead_id: int, user_id: int = None):
         """Delete a lead by ID for a specific user."""
         conn = self._get_connection()
         cursor = conn.cursor()
-        if user_id is not None:
-            cursor.execute("DELETE FROM leads WHERE id = %s AND user_id = %s", (lead_id, user_id))
-        else:
-            cursor.execute("DELETE FROM leads WHERE id = %s", (lead_id,))
-        conn.commit()
-        conn.close()
+        try:
+            if user_id is not None:
+                cursor.execute("DELETE FROM leads WHERE id = %s AND user_id = %s", (lead_id, user_id))
+            else:
+                cursor.execute("DELETE FROM leads WHERE id = %s", (lead_id,))
+            conn.commit()
+        finally:
+            self._release_connection(conn)
 
     def cleanup_old_data(self):
         """
@@ -401,7 +541,7 @@ class Database:
             # PostgreSQL date calculations: CURRENT_TIMESTAMP - INTERVAL 'X days'
             cursor.execute("""
                 DELETE FROM leads 
-                WHERE contacted = 0 
+                WHERE contacted = FALSE 
                 AND pipeline_stage = 'NEW'
                 AND (remind_status IS NULL OR remind_status = '' OR remind_status = 'DISMISSED')
                 AND created_at < CURRENT_TIMESTAMP - INTERVAL '14 days'
@@ -431,7 +571,7 @@ class Database:
         except Exception as e:
             print(f"[Smart Cleanup] Error cleaning up old data: {e}")
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def clear_uncontacted_data(self, user_id: int = None) -> dict:
         """
@@ -441,7 +581,7 @@ class Database:
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
-            leads_clause = " WHERE contacted = 0"
+            leads_clause = " WHERE contacted = FALSE"
             history_clause = ""
             params = []
             
@@ -471,7 +611,7 @@ class Database:
                 "error": str(e)
             }
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def update_lead_socials(self, lead_id: int, instagram: str, facebook: str, user_id: int = None) -> bool:
         """Update Instagram and Facebook links for a lead."""
@@ -497,7 +637,7 @@ class Database:
             print(f"Error updating socials for lead {lead_id}: {e}")
             return False
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def get_lead_by_id(self, lead_id: int, user_id: int = None) -> Optional[Dict]:
         """Fetch a single lead by its database ID."""
@@ -514,7 +654,7 @@ class Database:
             print(f"Error fetching lead by ID {lead_id}: {e}")
             return None
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def update_lead_pitch(self, lead_id: int, custom_pitch: str, user_id: int = None) -> bool:
         """Update the custom AI generated pitch for a lead."""
@@ -539,7 +679,7 @@ class Database:
             print(f"Error updating custom pitch for lead {lead_id}: {e}")
             return False
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def update_lead_pipeline_stage(self, lead_id: int, stage: str, user_id: int = None) -> bool:
         """Update the pipeline stage of a lead."""
@@ -550,8 +690,8 @@ class Database:
                 query = """
                     UPDATE leads
                     SET pipeline_stage = %s,
-                        contacted = 1,
-                        contact_date = CASE WHEN contact_date IS NULL OR contact_date = '' THEN %s ELSE contact_date END,
+                        contacted = TRUE,
+                        contact_date = CASE WHEN contact_date IS NULL THEN %s ELSE contact_date END,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """
@@ -576,7 +716,7 @@ class Database:
             print(f"Error updating pipeline stage for lead {lead_id}: {e}")
             return False
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def update_lead_email(self, lead_id: int, email: str, user_id: int = None) -> bool:
         """Update the scraped email address for a lead."""
@@ -601,7 +741,7 @@ class Database:
             print(f"Error updating email for lead {lead_id}: {e}")
             return False
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def schedule_reminder(self, lead_id: int, remind_date: str, user_id: int = None) -> bool:
         """Schedule a follow-up reminder date for a lead."""
@@ -627,7 +767,7 @@ class Database:
             print(f"Error scheduling reminder for lead {lead_id}: {e}")
             return False
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def get_pending_reminders(self, user_id: int = None) -> List[Dict]:
         """Fetch all leads that have a pending follow-up reminder."""
@@ -636,7 +776,7 @@ class Database:
         try:
             query = """
                 SELECT * FROM leads 
-                WHERE remind_date IS NOT NULL AND remind_date != '' 
+                WHERE remind_date IS NOT NULL 
                 AND remind_status = 'PENDING'
             """
             params = []
@@ -652,7 +792,7 @@ class Database:
             print(f"Error fetching pending reminders: {e}")
             return []
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def dismiss_reminder(self, lead_id: int, user_id: int = None) -> bool:
         """Dismiss/complete a follow-up reminder for a lead."""
@@ -677,7 +817,7 @@ class Database:
             print(f"Error dismissing reminder for lead {lead_id}: {e}")
             return False
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def create_user(self, username, email, password_hash) -> bool:
         """Create a new user with hashed password and email."""
@@ -696,7 +836,7 @@ class Database:
             print(f"Error creating user {normalized_username}: {e}")
             return False
         finally:
-            conn.close()
+            self._release_connection(conn)
 
     def get_user_by_username(self, username) -> Optional[Dict]:
         """Fetch a user by username (case-insensitive)."""
@@ -711,5 +851,47 @@ class Database:
             print(f"Error fetching user by username {normalized_username}: {e}")
             return None
         finally:
-            conn.close()
+            self._release_connection(conn)
+
+    def toggle_user_active(self, user_id: int, status: bool) -> bool:
+        """Toggle a user's is_active status."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("UPDATE users SET is_active = %s WHERE id = %s", (status, user_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error toggling active status for user {user_id}: {e}")
+            return False
+        finally:
+            self._release_connection(conn)
+
+    def toggle_user_admin(self, user_id: int, status: bool) -> bool:
+        """Toggle a user's is_admin status."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("UPDATE users SET is_admin = %s WHERE id = %s", (status, user_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error toggling admin status for user {user_id}: {e}")
+            return False
+        finally:
+            self._release_connection(conn)
+
+    def delete_user_account(self, user_id: int) -> bool:
+        """Delete a user account. Deletes all associated records via cascade."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error deleting user {user_id}: {e}")
+            return False
+        finally:
+            self._release_connection(conn)
 
