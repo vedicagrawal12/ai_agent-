@@ -392,9 +392,11 @@ class AIOutreachWriter:
             service_directives=service_directives,
             tone_directives=tone_directives,
             email_length_directives=email_length_directives,
+            min_words=min_words,
             signoff_str=signoff_str,
             language_directives=email_lang_dir
         )
+
 
         return AIOutreachWriter._call_gemini_api(prompt, api_key)
 

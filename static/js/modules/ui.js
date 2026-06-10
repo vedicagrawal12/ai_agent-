@@ -292,27 +292,27 @@ export const UI = {
             if (lead.is_broken_website) {
                 websiteDisplay = `<a href="${sanitizedWebsite}" target="_blank" class="broken-website-badge" data-tooltip="BROKEN SITE: ${safeWebsite}">⚠️ Broken Site</a>`;
             } else {
-                websiteDisplay = `<a href="${sanitizedWebsite}" target="_blank" class="website-link" data-tooltip="${safeWebsite}">🌐 Visit Site</a>`;
+                websiteDisplay = `<a href="${sanitizedWebsite}" target="_blank" class="website-link" data-tooltip="${safeWebsite}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; display: inline-block; vertical-align: middle; margin-right: 4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0V3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 18c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3M3.75 6h16.5M3.75 12h16.5m-16.5 6h16.5" /></svg>Visit Site</a>`;
             }
         } else {
-            websiteDisplay = `<span class="no-website">❌ No Website</span>`;
+            websiteDisplay = `<span class="no-website"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke: var(--text-muted); fill: none; stroke-width: 2; display: inline-block; vertical-align: middle; margin-right: 4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>No Website</span>`;
         }
             
         let whatsappBtn = '';
         if (lead.whatsapp_number) {
             if (lead.line_type === 'LANDLINE') {
-                whatsappBtn = `<button class="row-btn whatsapp disabled-landline" data-tooltip="Landline Number (No WhatsApp)" disabled>💬</button>`;
+                whatsappBtn = `<button class="row-btn whatsapp disabled-landline" data-tooltip="Landline Number (No WhatsApp)" disabled><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48L4.25 21l3.59-.87A8.966 8.966 0 0 0 12 20.25Z" /></svg></button>`;
             } else {
-                whatsappBtn = `<button class="row-btn whatsapp" data-tooltip="Send WhatsApp Message" onclick="App.openWhatsApp(${index})">💬</button>`;
+                whatsappBtn = `<button class="row-btn whatsapp" data-tooltip="Send WhatsApp Message" onclick="App.openWhatsApp(${index})"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48L4.25 21l3.59-.87A8.966 8.966 0 0 0 12 20.25Z" /></svg></button>`;
             }
         }
 
         let emailBtn = '';
         if (lead.email) {
-            emailBtn = `<button class="row-btn email" data-tooltip="Send Email Outreach" onclick="App.openEmail(${index})">📧</button>`;
+            emailBtn = `<button class="row-btn email" data-tooltip="Send Email Outreach" onclick="App.openEmail(${index})"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg></button>`;
         } else {
             const tooltip = lead.website ? "Scan Website/Web for Email" : "Search Web for Email (SerpApi)";
-            emailBtn = `<button class="row-btn scan-email-btn" id="scanEmailBtn-${index}" data-tooltip="${tooltip}" onclick="App.scanEmail(${lead.id}, ${index})">🔍📧</button>`;
+            emailBtn = `<button class="row-btn scan-email-btn" id="scanEmailBtn-${index}" data-tooltip="${tooltip}" onclick="App.scanEmail(${lead.id}, ${index})"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774ZM21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25" /></svg></button>`;
         }
         
         const mapsQuery = encodeURIComponent(`${lead.name} ${lead.address || lead.city}`);
@@ -323,16 +323,16 @@ export const UI = {
         let socialsDisplay = '';
         if (lead.instagram || lead.facebook) {
             if (lead.instagram) {
-                socialsDisplay += `<button class="row-btn instagram" data-tooltip="Instagram DM & Auto-Copy" onclick="App.openInstagram(${index})" style="background: var(--accent-blue); color: white; border: none; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; margin-right: 4px; cursor: pointer;">📸 DM</button>`;
+                socialsDisplay += `<button class="row-btn instagram" data-tooltip="Instagram DM & Auto-Copy" onclick="App.openInstagram(${index})" style="background: var(--accent-blue); color: white; border: none; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; margin-right: 4px; cursor: pointer;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; display: inline-block; vertical-align: middle; margin-right: 4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316A2.192 2.192 0 0 0 14.54 3.75h-5.08c-.73 0-1.402.36-1.8 1.003l-.833 1.334ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>DM</button>`;
             }
             if (lead.facebook) {
                 const sanitizedFacebook = this.sanitizeUrl(lead.facebook);
-                socialsDisplay += `<a href="${sanitizedFacebook}" target="_blank" class="row-btn facebook" data-tooltip="Facebook Profile" style="background: var(--accent-blue); color: white; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 23px;">📘 Page</a>`;
+                socialsDisplay += `<a href="${sanitizedFacebook}" target="_blank" class="row-btn facebook" data-tooltip="Facebook Profile" style="background: var(--accent-blue); color: white; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 23px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; display: inline-block; vertical-align: middle; margin-right: 4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>Page</a>`;
             }
         } else {
             const scanId = lead.id || '';
             if (scanId) {
-                socialsDisplay = `<button class="row-btn" id="scanSocialBtn-${index}" onclick="App.scanSocials(${scanId}, ${index})" style="font-size: 0.75rem; padding: 3px 6px; background: rgba(0,212,255,0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 4px; cursor: pointer;">🔍 Scan Socials</button>`;
+                socialsDisplay = `<button class="row-btn" id="scanSocialBtn-${index}" onclick="App.scanSocials(${scanId}, ${index})" style="font-size: 0.75rem; padding: 3px 6px; background: rgba(0,212,255,0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); border-radius: 4px; cursor: pointer;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; display: inline-block; vertical-align: middle; margin-right: 4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196a7.5 7.5 0 0010.607 10.607z" /></svg>Scan Socials</button>`;
             } else {
                 socialsDisplay = `<span style="color: var(--text-muted); font-size: 0.8rem;">Save first to Scan</span>`;
             }
@@ -361,11 +361,11 @@ export const UI = {
                 <td>${socialsDisplay}</td>
                 <td>
                     <div class="row-actions">
-                        <a href="${mapsLink}" target="_blank" class="row-btn" data-tooltip="View on Google Maps">📍</a>
+                        <a href="${mapsLink}" target="_blank" class="row-btn" data-tooltip="View on Google Maps"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg></a>
                         ${whatsappBtn}
                         ${emailBtn}
-                        <button class="row-btn mockup" data-tooltip="Copy Mockup Link" onclick="App.copyMockupLink(${lead.id})">📱</button>
-                        <button class="row-btn" data-tooltip="Copy Phone" onclick="App.copyPhone(${index})">📋</button>
+                        <button class="row-btn mockup" data-tooltip="Copy Mockup Link" onclick="App.copyMockupLink(${lead.id})"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H13.5A2.25 2.25 0 0 1 15.75 3.75V20.25A2.25 2.25 0 0 1 13.5 22.5H10.5A2.25 2.25 0 0 1 8.25 20.25V3.75a2.25 2.25 0 0 1 2.25-2.25z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75h.008v.008H12V18.75z" /></svg></button>
+                        <button class="row-btn" data-tooltip="Copy Phone" onclick="App.copyPhone(${index})"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6A2.25 2.25 0 0 0 8.25 12V18" /></svg></button>
                     </div>
                 </td>
             </tr>

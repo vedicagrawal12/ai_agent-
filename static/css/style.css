@@ -294,6 +294,24 @@ body::before {
     padding: 0;
     border-radius: var(--radius-md);
     font-size: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    display: inline-block;
+    vertical-align: middle;
+    transition: transform var(--transition-fast);
+}
+
+.btn-icon:hover svg {
+    transform: scale(1.08);
 }
 
 .btn-sm {
@@ -656,6 +674,21 @@ body::before {
     cursor: pointer;
     transition: all var(--transition-fast);
     font-size: 0.85rem;
+}
+
+.row-btn svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    display: inline-block;
+    vertical-align: middle;
+    transition: transform var(--transition-fast);
+}
+
+.row-btn:hover svg {
+    transform: scale(1.08);
 }
 
 .row-btn:hover {

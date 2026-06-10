@@ -816,12 +816,12 @@ export const outreachModule = {
             
             let whatsappBtn = '';
             if (lead.whatsapp_number) {
-                whatsappBtn = `<button class="row-btn whatsapp" data-tooltip="WhatsApp Pitch" onclick="App.triggerWhatsAppReminder(${lead.id})" style="padding: 6px; border-radius: 4px;">💬</button>`;
+                whatsappBtn = `<button class="row-btn whatsapp" data-tooltip="WhatsApp Pitch" onclick="App.triggerWhatsAppReminder(${lead.id})" style="padding: 6px; border-radius: 4px;"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48L4.25 21l3.59-.87A8.966 8.966 0 0 0 12 20.25Z" /></svg></button>`;
             }
             
             let emailBtn = '';
             if (lead.email) {
-                emailBtn = `<button class="row-btn email" data-tooltip="Email Pitch" onclick="App.triggerEmailReminder(${lead.id})" style="padding: 6px; border-radius: 4px;">📧</button>`;
+                emailBtn = `<button class="row-btn email" data-tooltip="Email Pitch" onclick="App.triggerEmailReminder(${lead.id})" style="padding: 6px; border-radius: 4px;"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg></button>`;
             }
             
             html += `
@@ -839,7 +839,7 @@ export const outreachModule = {
                     <div style="display: flex; gap: 6px;">
                         ${whatsappBtn}
                         ${emailBtn}
-                        <button class="row-btn delete" data-tooltip="Dismiss Reminder" onclick="App.dismissLeadReminder(${lead.id})" style="border-color: var(--accent-green); color: var(--accent-green); background: rgba(16, 185, 129, 0.05); padding: 6px; border-radius: 4px;">✓</button>
+                        <button class="row-btn delete" data-tooltip="Dismiss Reminder" onclick="App.dismissLeadReminder(${lead.id})" style="border-color: var(--accent-green); color: var(--accent-green); background: rgba(16, 185, 129, 0.05); padding: 6px; border-radius: 4px;"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></button>
                     </div>
                 </div>
             `;

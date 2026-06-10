@@ -151,9 +151,49 @@ class Database:
         """)
 
         # Safe migration: add columns and update constraints for existing tables
-        run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;")
-        run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;")
-        run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;")
+        run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id INTEGER;")
+        run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS user_id INTEGER;")
+        run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS user_id INTEGER;")
+        
+        # Clean up orphan records before adding constraint to prevent ForeignKeyViolation
+        run_query("DELETE FROM leads WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);")
+        run_query("DELETE FROM search_history WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);")
+        run_query("DELETE FROM message_log WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);")
+
+        
+        run_query("""
+            DO $$
+            BEGIN
+                -- For leads
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint 
+                    WHERE conrelid = 'leads'::regclass AND contype = 'f' 
+                    AND (conname = 'fk_leads_users' OR pg_get_constraintdef(oid) ILIKE '%references users(id)%')
+                ) THEN
+                    ALTER TABLE leads ADD CONSTRAINT fk_leads_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+                
+                -- For search_history
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint 
+                    WHERE conrelid = 'search_history'::regclass AND contype = 'f' 
+                    AND (conname = 'fk_search_history_users' OR pg_get_constraintdef(oid) ILIKE '%references users(id)%')
+                ) THEN
+                    ALTER TABLE search_history ADD CONSTRAINT fk_search_history_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+
+                -- For message_log
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint 
+                    WHERE conrelid = 'message_log'::regclass AND contype = 'f' 
+                    AND (conname = 'fk_message_log_users' OR pg_get_constraintdef(oid) ILIKE '%references users(id)%')
+                ) THEN
+                    ALTER TABLE message_log ADD CONSTRAINT fk_message_log_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+            END
+            $$;
+        """)
+
         
         # Map existing orphan records to the first user
         cursor = conn.cursor()
@@ -224,13 +264,22 @@ class Database:
 
     def is_user_admin(self, user_id: int) -> bool:
         """Check if a user has admin privileges."""
+        if not user_id:
+            return False
+        try:
+            user_id = int(user_id)
+        except (ValueError, TypeError) as type_err:
+            logging.error(f"[Database] Invalid user_id format passed to is_user_admin: {user_id}. Error: {type_err}")
+            return False
+
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
             cursor.execute("SELECT is_admin FROM users WHERE id = %s", (user_id,))
             row = cursor.fetchone()
             return bool(row and row.get('is_admin'))
-        except Exception:
+        except Exception as e:
+            logging.error(f"[Database] Error checking admin privileges for user_id {user_id}: {e}", exc_info=True)
             return False
         finally:
             self._release_connection(conn)

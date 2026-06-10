@@ -30,6 +30,8 @@ class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
     SESSION_COOKIE_SECURE = False
+    RATELIMIT_ENABLED = False
+
 
 class ProductionConfig(Config):
     """Production configuration."""

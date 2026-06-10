@@ -50,7 +50,7 @@ def login():
     return render_template("login.html")
 
 @auth_bp.route("/signup", methods=["GET", "POST"])
-@limiter.limit("3 per hour", methods=["POST"])
+@limiter.limit("60 per hour", methods=["POST"])
 def signup():
     if g.user:
         return redirect(url_for('dashboard.index'))

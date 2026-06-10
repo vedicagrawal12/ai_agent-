@@ -80,6 +80,7 @@ def test_delete_user_account(client, db):
     finally:
         db._release_connection(conn)
 
+
 def test_export_user_data(client, db):
     """Verify data portability export endpoint yields correct user history structure."""
     # Sign up and login

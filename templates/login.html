@@ -88,6 +88,16 @@
             margin-top: 4px;
             color: var(--accent-cyan);
             text-shadow: var(--shadow-glow-cyan);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .feature-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
         }
         .feature-text-title {
             font-weight: 700;
@@ -122,8 +132,18 @@
         .auth-logo {
             font-size: 2.5rem;
             margin-bottom: var(--space-sm);
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             animation: pulse-glow 2s infinite ease-in-out;
+            color: var(--accent-cyan);
+        }
+        .auth-logo svg {
+            width: 38px;
+            height: 38px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
         }
         .auth-title {
             font-size: 1.8rem;
@@ -245,7 +265,7 @@
         <div class="auth-container">
             <!-- Left Column: Brand Info Panel -->
             <div class="brand-panel">
-                <div class="brand-badge">⚡ Agency Lead Generation Suite</div>
+                <div class="brand-badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke: currentColor; fill: currentColor; display: inline-block; vertical-align: middle; margin-right: 4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>Agency Lead Generation Suite</div>
                 <h1 class="brand-hero-title">Automated AI<br><span>Client Scouting</span></h1>
                 <p class="brand-hero-subtitle">
                     Apne city ke local businesses ko dhundhein, unki online presence (websites, ratings, maps listings) analyze karein, aur custom cold pitches (Websites, Local SEO, Marketing) dynamically generate karke client leads secure karein.
@@ -253,21 +273,21 @@
                 
                 <div class="features-list">
                     <div class="feature-item">
-                        <div class="feature-icon">🔍</div>
+                        <div class="feature-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg></div>
                         <div>
                             <div class="feature-text-title">Maps Scraper Engine</div>
                             <div class="feature-text-desc">Scouts listings across sub-localities, identifies rating gaps, flags missing websites, and targets high-priority agency clients.</div>
                         </div>
                     </div>
                     <div class="feature-item">
-                        <div class="feature-icon">🧠</div>
+                        <div class="feature-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21l-.813-5.096L3 15l5.096-.813L9 9l.813 5.096L15 15l-5.187.904zm7.078-7.078L16 12l-.892-3.178L12 8l3.108-.892L16 4l.892 3.108L20 8l-3.109.826z" /></svg></div>
                         <div>
                             <div class="feature-text-title">Gemini Copywriter Core</div>
                             <div class="feature-text-desc">Reads portfolios and local listing data to draft conversion-friendly pitches tailored for any service (SEO, Ads, Web Design).</div>
                         </div>
                     </div>
                     <div class="feature-item">
-                        <div class="feature-icon">💬</div>
+                        <div class="feature-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg></div>
                         <div>
                             <div class="feature-text-title">WhatsApp & SMTP Dispatcher</div>
                             <div class="feature-text-desc">Send pitches immediately with instant zero-cost WhatsApp Web integration or secure direct SMTP server connections.</div>
@@ -279,7 +299,7 @@
             <!-- Right Column: Login Card -->
             <div class="auth-card">
                 <div class="auth-header">
-                    <div class="auth-logo">🎯</div>
+                    <div class="auth-logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg></div>
                     <h1 class="auth-title">LeadHunter AI</h1>
                     <p class="auth-subtitle">Log in to manage campaigns and scan leads</p>
                 </div>

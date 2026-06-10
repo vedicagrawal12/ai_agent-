@@ -2,13 +2,24 @@
 import pytest
 import os
 import sys
+from dotenv import load_dotenv
 
 # Ensure project root is in python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Load env variables and override DATABASE_URL for testing BEFORE importing database/extensions
+load_dotenv()
+db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/leadhunter_db")
+if "leadhunter_db" in db_url:
+    test_db_url = db_url.replace("leadhunter_db", "leadhunter_test")
+else:
+    test_db_url = "postgresql://postgres:postgres@localhost:5432/leadhunter_test"
+os.environ["DATABASE_URL"] = test_db_url
+
 from app import create_app
 from config import Config
 from extensions import db as db_instance
+
 
 class TestConfig(Config):
     TESTING = True
@@ -16,8 +27,9 @@ class TestConfig(Config):
     SECRET_KEY = "test-secret-key-123"
     WTF_CSRF_ENABLED = False
     # Use dedicated testing database
-    DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/leadhunter_test"
+    DATABASE_URL = os.environ.get("DATABASE_URL")
     RATELIMIT_ENABLED = False  # Disable rate limiter for testing to avoid 429 errors
+
 
 @pytest.fixture(scope="session")
 def app():

@@ -84,6 +84,16 @@ def create_app(config_class=None):
                 return jsonify({"error": "Unauthorized. Please login."}), 401
             return redirect(url_for('auth.login'))
 
+    # 5.5 Register Context Processor for Template variables
+    @app.context_processor
+    def inject_user_status():
+        is_admin = False
+        is_logged_in = False
+        if g.get('user'):
+            is_admin = g.user.get('is_admin', False)
+            is_logged_in = True
+        return dict(is_admin=is_admin, is_logged_in=is_logged_in)
+
     # 6. Register Blueprints
     from routes.auth import auth_bp
     from routes.dashboard import dashboard_bp
