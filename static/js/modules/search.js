@@ -210,12 +210,20 @@ export const searchModule = {
     switchView(view) {
         AppState.currentView = view;
         
+        const listBtn = document.getElementById('listViewBtn');
+        const kanbanBtn = document.getElementById('kanbanViewBtn');
+        const analyticsBtn = document.getElementById('analyticsViewBtn');
+        
+        if (listBtn) listBtn.classList.remove('active');
+        if (kanbanBtn) kanbanBtn.classList.remove('active');
+        if (analyticsBtn) analyticsBtn.classList.remove('active');
+        
         if (view === 'kanban') {
-            UI.el.listViewBtn?.classList.remove('active');
-            UI.el.kanbanViewBtn?.classList.add('active');
+            if (kanbanBtn) kanbanBtn.classList.add('active');
+        } else if (view === 'analytics') {
+            if (analyticsBtn) analyticsBtn.classList.add('active');
         } else {
-            UI.el.listViewBtn?.classList.add('active');
-            UI.el.kanbanViewBtn?.classList.remove('active');
+            if (listBtn) listBtn.classList.add('active');
         }
         
         UI.renderLeads(AppState.leads);

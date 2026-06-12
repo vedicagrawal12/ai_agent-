@@ -106,6 +106,27 @@ Iska dynamic web dashboard premium modern aesthetics (glassmorphism), high-perfo
 
 ---
 
+## 📬 Advanced Outreach Intelligence Features (New!)
+
+1. **Inbound Reply Tracking (IMAP Reader):**
+   - Stored IMAP settings monitor incoming replies. Settings host, port (993 standard), email address, aur app password configuration options support save options inside the main dashboard.
+   - **Background Scanner:** Startup sequence initializes background threads polling mailboxes periodically. Jab client reply trigger execute karta hai, text records save ho jaate hain aur lead pipeline stage karke **📬 REPLIED** status push ho jati hai.
+   - **Manual Synchronization:** Dynamic user settings command button `Sync Replies Now` allows operators to sync replies instantly.
+
+2. **Automated Follow-up Drip Campaigns (Smart Sequences):**
+   - Background Sequence Checker thread runs periodically.
+   - If a lead sits in the pitched (`CONTACTED`) stage for a user-specified delay duration (e.g. 3 days) without links open, clicks, or replies, the agent compiles and dispatches follow-up drip templates utilizing the user's SMTP credentials.
+   - Auto-halts campaign sequence when maximum followup counts are reached.
+   - Templates support variable replacement macros: `{business_name}`, `{city}`, `{category}`, `{rating}`.
+
+3. **Interactive Telemetry & Analytics Dashboard (Chart.js):**
+   - Premium dark neon HSL-themed graphs populate the new "Outreach Analytics" dashboard tab view:
+     - **Outreach Funnel (Horizontal Bar Chart):** Tracks conversions progression from Scouted -> Pitched -> Opened -> Clicked -> Replied -> Converted.
+     - **Engagement Ratios (Doughnut Chart):** Displays precise CTR, open-rate, and response percentage telemetry values.
+     - **Dispatch Timeline (Line Chart):** Compiles daily email vs WhatsApp messaging volume counts over the last 14 days.
+
+---
+
 ## 🔌 Tech Stack & Integrations
 
 - **Backend:** Python 3.11+ + Flask (Thread-safe connection pooling, modular routing design)
@@ -236,6 +257,8 @@ Sare unit aur integration tests run karne ke liye pytest trigger karein:
 ```bash
 .venv\Scripts\pytest tests/ -v
 ```
+
+9e72bc92af8e3931f7ff3c62388bd3f18edae9b63d9ed47ecb9c2e1f56673a28
 
 to start server :  .venv\Scripts\python app.py
 

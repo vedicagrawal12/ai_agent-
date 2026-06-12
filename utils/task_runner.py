@@ -59,6 +59,15 @@ class TaskRunner:
         thread = threading.Thread(target=wrapper, daemon=True)
         thread.start()
         
+        # Automatic self-cleanup after 1 hour to prevent memory leaks if never polled
+        def self_cleanup():
+            with cls._lock:
+                cls._tasks.pop(task_id, None)
+        
+        cleanup_timer = threading.Timer(3600.0, self_cleanup)
+        cleanup_timer.daemon = True
+        cleanup_timer.start()
+        
         return task_id
         
     @classmethod

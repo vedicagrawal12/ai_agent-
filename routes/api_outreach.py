@@ -347,6 +347,7 @@ def send_smtp_email():
         return jsonify({"error": f"SMTP Delivery failed: {str(e)}"}), 500
 
 @outreach_bp.route("/track/open/<int:log_id>", methods=["GET"])
+@limiter.limit("30 per minute")
 def track_open(log_id):
     """Track email open event and return a 1x1 transparent pixel."""
     try:
@@ -359,6 +360,7 @@ def track_open(log_id):
     return send_file(BytesIO(pixel_data), mimetype='image/gif')
 
 @outreach_bp.route("/track/click/<int:log_id>", methods=["GET"])
+@limiter.limit("20 per minute")
 def track_click(log_id):
     """Track link click and redirect to the destination URL."""
     dest = request.args.get('dest', '').strip()
@@ -376,3 +378,97 @@ def track_click(log_id):
         dest = "/"
         
     return redirect(dest)
+
+@outreach_bp.route("/config/imap", methods=["GET", "POST"])
+def manage_imap_config():
+    """Save or retrieve IMAP configuration settings for the user."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    if request.method == "POST":
+        data = request.get_json() or {}
+        host = data.get("host", "").strip()
+        port = data.get("port")
+        email_addr = data.get("email", "").strip()
+        password = data.get("password", "").strip()
+        use_ssl = data.get("use_ssl", True)
+        
+        if not host or not port or not email_addr or not password:
+            return jsonify({"error": "Missing required IMAP settings"}), 400
+            
+        try:
+            port = int(port)
+        except ValueError:
+            return jsonify({"error": "Invalid port number"}), 400
+            
+        success = db.save_imap_settings(user_id, host, port, email_addr, password, use_ssl)
+        if success:
+            return jsonify({"success": True, "message": "IMAP credentials saved successfully."})
+        return jsonify({"error": "Failed to save IMAP credentials."}), 500
+        
+    else:
+        # GET request
+        settings = db.get_imap_settings(user_id)
+        if not settings:
+            return jsonify({"configured": False})
+        
+        # Mask the decrypted password
+        password = settings.get("password", "")
+        masked_password = password[:2] + "*" * (len(password) - 2) if len(password) > 2 else "****"
+        settings["password"] = masked_password
+        settings["configured"] = True
+        return jsonify(settings)
+
+@outreach_bp.route("/config/smtp", methods=["GET", "POST"])
+def manage_smtp_config():
+    """Save or retrieve SMTP configuration settings for the user."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    if request.method == "POST":
+        data = request.get_json() or {}
+        host = data.get("host", "").strip()
+        port = data.get("port")
+        email_addr = data.get("email", "").strip()
+        password = data.get("password", "").strip()
+        use_ssl = data.get("use_ssl", True)
+        
+        if not host or not port or not email_addr or not password:
+            return jsonify({"error": "Missing required SMTP settings"}), 400
+            
+        try:
+            port = int(port)
+        except ValueError:
+            return jsonify({"error": "Invalid port number"}), 400
+            
+        success = db.save_smtp_settings(user_id, host, port, email_addr, password, use_ssl)
+        if success:
+            return jsonify({"success": True, "message": "SMTP credentials saved successfully."})
+        return jsonify({"error": "Failed to save SMTP credentials."}), 500
+        
+    else:
+        # GET request
+        settings = db.get_smtp_settings(user_id)
+        if not settings:
+            return jsonify({"configured": False})
+        
+        password = settings.get("password", "")
+        masked_password = password[:2] + "*" * (len(password) - 2) if len(password) > 2 else "****"
+        settings["password"] = masked_password
+        settings["configured"] = True
+        return jsonify(settings)
+
+@outreach_bp.route("/outreach/sync-replies", methods=["POST"])
+def sync_replies():
+    """Manually trigger IMAP synchronization for incoming email replies."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    from utils.imap_reader import sync_user_replies
+    res = sync_user_replies(user_id)
+    if res.get("success"):
+        return jsonify(res)
+    return jsonify({"error": res.get("error", "Unknown sync error")}), 500

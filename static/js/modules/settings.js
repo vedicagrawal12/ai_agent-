@@ -251,12 +251,26 @@ export const settingsModule = {
     },
 
     async checkSmtpConfig() {
-        const host = localStorage.getItem('smtp_host') || '';
-        const port = localStorage.getItem('smtp_port') || '';
-        const email = localStorage.getItem('smtp_email') || '';
-        const password = localStorage.getItem('smtp_password') || '';
-        const decryptedPassword = password ? await CryptoHelper.decrypt(password, AppState.encryptionKey) : '';
-        const useSSL = localStorage.getItem('smtp_use_ssl') !== 'false';
+        let host = localStorage.getItem('smtp_host') || '';
+        let port = localStorage.getItem('smtp_port') || '';
+        let email = localStorage.getItem('smtp_email') || '';
+        let password = localStorage.getItem('smtp_password') || '';
+        let decryptedPassword = password ? await CryptoHelper.decrypt(password, AppState.encryptionKey) : '';
+        let useSSL = localStorage.getItem('smtp_use_ssl') !== 'false';
+
+        // Check backend server config fallback
+        try {
+            const data = await API.request('/api/config/smtp', { method: 'GET' });
+            if (data && data.configured && (!host || !email)) {
+                host = data.host || '';
+                port = data.port || '';
+                email = data.email || '';
+                decryptedPassword = data.password || ''; // Masked password
+                useSSL = data.use_ssl !== false;
+            }
+        } catch (error) {
+            console.error('SMTP server check failed:', error);
+        }
 
         if (UI.el.smtpHostInput) UI.el.smtpHostInput.value = host;
         if (UI.el.smtpPortInput) UI.el.smtpPortInput.value = port;
@@ -266,7 +280,7 @@ export const settingsModule = {
 
         const statusEl = UI.el.smtpStatus;
         if (statusEl) {
-            if (host && port && email && password) {
+            if (host && port && email && (password || decryptedPassword)) {
                 statusEl.className = 'api-key-status active';
                 statusEl.textContent = '✓ Configured';
             } else {
@@ -288,14 +302,200 @@ export const settingsModule = {
             return;
         }
 
-        const encryptedPassword = await CryptoHelper.encrypt(password, AppState.encryptionKey);
-        localStorage.setItem('smtp_host', host);
-        localStorage.setItem('smtp_port', port);
-        localStorage.setItem('smtp_email', email);
-        localStorage.setItem('smtp_password', encryptedPassword);
-        localStorage.setItem('smtp_use_ssl', useSSL ? 'true' : 'false');
+        try {
+            UI.showLoading('Saving SMTP configuration...');
+            const encryptedPassword = await CryptoHelper.encrypt(password, AppState.encryptionKey);
+            localStorage.setItem('smtp_host', host);
+            localStorage.setItem('smtp_port', port);
+            localStorage.setItem('smtp_email', email);
+            localStorage.setItem('smtp_password', encryptedPassword);
+            localStorage.setItem('smtp_use_ssl', useSSL ? 'true' : 'false');
 
-        await this.checkSmtpConfig();
-        UI.showToast('SMTP credentials saved securely to your browser!', 'success');
+            // Save SMTP to backend database for background drip campaign sequence checker
+            const res = await API.request('/api/config/smtp', {
+                method: 'POST',
+                body: JSON.stringify({
+                    host,
+                    port: parseInt(port),
+                    email,
+                    password,
+                    use_ssl: useSSL
+                })
+            });
+
+            if (res.success) {
+                await this.checkSmtpConfig();
+                UI.showToast('SMTP credentials saved securely to your browser and database!', 'success');
+            } else {
+                UI.showToast(res.error || 'Failed to save SMTP settings to database.', 'error');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    async checkImapConfig() {
+        const hostInput = document.getElementById('imapHostInput');
+        const portInput = document.getElementById('imapPortInput');
+        const emailInput = document.getElementById('imapEmailInput');
+        const passwordInput = document.getElementById('imapPasswordInput');
+        const useSSLInput = document.getElementById('imapUseSSL');
+        const statusEl = document.getElementById('imapStatus');
+
+        try {
+            const data = await API.request('/api/config/imap', { method: 'GET' });
+            if (data && data.configured) {
+                if (hostInput) hostInput.value = data.host || '';
+                if (portInput) portInput.value = data.port || '';
+                if (emailInput) emailInput.value = data.email || '';
+                if (passwordInput) passwordInput.value = data.password || ''; // Masked password from server
+                if (useSSLInput) useSSLInput.checked = data.use_ssl !== false;
+                
+                if (statusEl) {
+                    statusEl.className = 'api-key-status active';
+                    statusEl.textContent = '✓ Configured';
+                }
+            } else {
+                if (statusEl) {
+                    statusEl.className = 'api-key-status inactive';
+                    statusEl.textContent = '✗ Not Set';
+                }
+            }
+        } catch (error) {
+            console.error('IMAP check failed:', error);
+        }
+    },
+
+    async saveImapSettings() {
+        const host = document.getElementById('imapHostInput')?.value.trim() || '';
+        const port = document.getElementById('imapPortInput')?.value.trim() || '';
+        const email = document.getElementById('imapEmailInput')?.value.trim() || '';
+        const password = document.getElementById('imapPasswordInput')?.value.trim() || '';
+        const useSSL = document.getElementById('imapUseSSL') ? document.getElementById('imapUseSSL').checked : true;
+
+        if (!host || !port || !email || !password) {
+            UI.showToast('Please fill in all IMAP fields before saving.', 'warning');
+            return;
+        }
+
+        try {
+            UI.showLoading('Saving IMAP settings...');
+            const res = await API.request('/api/config/imap', {
+                method: 'POST',
+                body: JSON.stringify({
+                    host,
+                    port: parseInt(port),
+                    email,
+                    password,
+                    use_ssl: useSSL
+                })
+            });
+
+            if (res.success) {
+                UI.showToast('IMAP credentials saved successfully!', 'success');
+                await this.checkImapConfig();
+            } else {
+                UI.showToast(res.error || 'Failed to save IMAP configurations.', 'error');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    async syncReplies() {
+        try {
+            UI.showLoading('Syncing incoming email replies via IMAP...');
+            const res = await API.request('/api/outreach/sync-replies', { method: 'POST' });
+            if (res.success) {
+                const count = res.replies_synced || 0;
+                UI.showToast(`IMAP sync complete! Synchronized ${count} new email replies.`, 'success');
+                // Refresh active search view to update pipeline cards
+                if (window.App && typeof window.App.handleSearch === 'function' && AppState.activeSearchParams) {
+                    await window.App.handleSearch();
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                UI.showToast(res.error || 'IMAP reply sync failed.', 'error');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    async checkDripsConfig() {
+        const enabledInput = document.getElementById('dripsEnabled');
+        const delayInput = document.getElementById('dripsDelayInput');
+        const maxInput = document.getElementById('dripsMaxInput');
+        const subjectInput = document.getElementById('dripsSubjectInput');
+        const templateInput = document.getElementById('dripsTemplateInput');
+        const statusEl = document.getElementById('dripsStatus');
+
+        try {
+            const data = await API.request('/api/config/drips', { method: 'GET' });
+            if (data && data.configured) {
+                if (enabledInput) enabledInput.checked = !!data.is_enabled;
+                if (delayInput) delayInput.value = data.delay_days || 3;
+                if (maxInput) maxInput.value = data.max_followups || 2;
+                if (subjectInput) subjectInput.value = data.followup_subject || '';
+                if (templateInput) templateInput.value = data.followup_template || '';
+
+                if (statusEl) {
+                    statusEl.className = 'api-key-status active';
+                    statusEl.textContent = data.is_enabled ? '✓ Enabled & Active' : '✓ Saved (Disabled)';
+                }
+            } else {
+                if (statusEl) {
+                    statusEl.className = 'api-key-status inactive';
+                    statusEl.textContent = '✗ Not Set';
+                }
+            }
+        } catch (error) {
+            console.error('Drip campaign check failed:', error);
+        }
+    },
+
+    async saveDripsSettings() {
+        const isEnabled = document.getElementById('dripsEnabled') ? document.getElementById('dripsEnabled').checked : false;
+        const delayDays = document.getElementById('dripsDelayInput')?.value.trim() || '3';
+        const maxFollowups = document.getElementById('dripsMaxInput')?.value || '2';
+        const subject = document.getElementById('dripsSubjectInput')?.value.trim() || '';
+        const template = document.getElementById('dripsTemplateInput')?.value.trim() || '';
+
+        if (isEnabled && (!subject || !template)) {
+            UI.showToast('Drip sequences require a subject and a follow-up body template.', 'warning');
+            return;
+        }
+
+        try {
+            UI.showLoading('Saving follow-up drip campaign settings...');
+            const res = await API.request('/api/config/drips', {
+                method: 'POST',
+                body: JSON.stringify({
+                    is_enabled: isEnabled,
+                    delay_days: parseInt(delayDays),
+                    max_followups: parseInt(maxFollowups),
+                    followup_subject: subject,
+                    followup_template: template
+                })
+            });
+
+            if (res.success) {
+                UI.showToast('Follow-up drip sequences saved successfully!', 'success');
+                await this.checkDripsConfig();
+            } else {
+                UI.showToast(res.error || 'Failed to save Drip configurations.', 'error');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
     }
 };

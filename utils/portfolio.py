@@ -1,9 +1,37 @@
 import urllib.request
 import re
 import ssl
+import socket
+import ipaddress
 import logging
+from urllib.parse import urlparse
 
 class PortfolioParser:
+    BLOCKED_HOSTNAMES = {'localhost', '127.0.0.1', '0.0.0.0', '::1', 'metadata.google.internal'}
+
+    @staticmethod
+    def _is_safe_url(url: str) -> bool:
+        """SSRF protection — block requests to internal/private IPs."""
+        try:
+            parsed = urlparse(url)
+            hostname = parsed.hostname
+            if not hostname:
+                return False
+            if hostname in PortfolioParser.BLOCKED_HOSTNAMES:
+                logging.warning(f"[SSRF Block] Blocked portfolio request to internal hostname: {hostname}")
+                return False
+            try:
+                resolved_ip = socket.gethostbyname(hostname)
+                ip_obj = ipaddress.ip_address(resolved_ip)
+                if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
+                    logging.warning(f"[SSRF Block] Blocked portfolio request to private IP: {hostname} -> {resolved_ip}")
+                    return False
+            except socket.gaierror:
+                pass
+            return True
+        except Exception:
+            return False
+
     @staticmethod
     def fetch_and_parse(url: str) -> list:
         """
@@ -13,6 +41,10 @@ class PortfolioParser:
         url = url.strip()
         if not url.startswith("http://") and not url.startswith("https://"):
             url = "https://" + url
+
+        # SSRF protection
+        if not PortfolioParser._is_safe_url(url):
+            raise Exception("URL targets an internal or private network address. Request blocked for security.")
 
         try:
             # Setup request with a user-agent to bypass basic blocks

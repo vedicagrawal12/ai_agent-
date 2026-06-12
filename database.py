@@ -326,6 +326,61 @@ class Database:
                     value TEXT NOT NULL
                 );
             """)
+
+            # Reply and Drip tracking columns migration
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS is_reply BOOLEAN DEFAULT FALSE;")
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS reply_body TEXT DEFAULT '';")
+            
+            run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS drip_sequence_active BOOLEAN DEFAULT TRUE;")
+            run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_followup_date TIMESTAMP DEFAULT NULL;")
+            run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS followup_count INTEGER DEFAULT 0;")
+
+            # IMAP settings table
+            run_query("""
+                CREATE TABLE IF NOT EXISTS imap_settings (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    imap_host VARCHAR(255) NOT NULL,
+                    imap_port INTEGER DEFAULT 993,
+                    imap_email VARCHAR(255) NOT NULL,
+                    imap_password_encrypted TEXT NOT NULL,
+                    use_ssl BOOLEAN DEFAULT TRUE,
+                    last_synced_at TIMESTAMP DEFAULT NULL,
+                    CONSTRAINT imap_settings_user_id_key UNIQUE (user_id)
+                );
+            """)
+
+            # SMTP settings table (persisted for background drips)
+            run_query("""
+                CREATE TABLE IF NOT EXISTS smtp_settings (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    smtp_host VARCHAR(255) NOT NULL,
+                    smtp_port INTEGER DEFAULT 465,
+                    smtp_email VARCHAR(255) NOT NULL,
+                    smtp_password_encrypted TEXT NOT NULL,
+                    use_ssl BOOLEAN DEFAULT TRUE,
+                    CONSTRAINT smtp_settings_user_id_key UNIQUE (user_id)
+                );
+            """)
+
+            # Drip configuration settings table
+            run_query("""
+                CREATE TABLE IF NOT EXISTS drip_configurations (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    delay_days INTEGER DEFAULT 3,
+                    max_followups INTEGER DEFAULT 2,
+                    followup_subject VARCHAR(255) DEFAULT 'Quick follow up regarding proposal',
+                    followup_template TEXT DEFAULT '',
+                    is_enabled BOOLEAN DEFAULT FALSE,
+                    CONSTRAINT drip_configs_user_id_key UNIQUE (user_id)
+                );
+            """)
+
+            # Extra indexes
+            run_query("CREATE INDEX IF NOT EXISTS idx_msglog_is_reply ON message_log(is_reply);")
+            run_query("CREATE INDEX IF NOT EXISTS idx_leads_drip ON leads(drip_sequence_active, pipeline_stage);")
         finally:
             self._release_connection(conn)
 
@@ -668,28 +723,28 @@ class Database:
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
-            # PostgreSQL date calculations: CURRENT_TIMESTAMP - INTERVAL 'X days'
-            leads_query1 = f"""
+            # PostgreSQL date calculations using parameterized make_interval for safety
+            leads_query1 = """
                 DELETE FROM leads 
                 WHERE contacted = FALSE 
                 AND pipeline_stage = 'NEW'
                 AND (remind_status IS NULL OR remind_status = '' OR remind_status = 'DISMISSED')
-                AND created_at < CURRENT_TIMESTAMP - INTERVAL '{CLEANUP_UNCONTACTED_DAYS} days'
+                AND created_at < CURRENT_TIMESTAMP - make_interval(days => %s)
             """
-            leads_query2 = f"""
+            leads_query2 = """
                 DELETE FROM leads 
                 WHERE priority = 'IGNORE' 
                 AND (remind_status IS NULL OR remind_status = '' OR remind_status = 'DISMISSED')
-                AND created_at < CURRENT_TIMESTAMP - INTERVAL '{CLEANUP_IGNORED_DAYS} days'
+                AND created_at < CURRENT_TIMESTAMP - make_interval(days => %s)
             """
-            history_query = f"""
+            history_query = """
                 DELETE FROM search_history 
-                WHERE searched_at < CURRENT_TIMESTAMP - INTERVAL '{CLEANUP_HISTORY_DAYS} days'
+                WHERE searched_at < CURRENT_TIMESTAMP - make_interval(days => %s)
             """
             
-            params1 = []
-            params2 = []
-            params3 = []
+            params1 = [CLEANUP_UNCONTACTED_DAYS]
+            params2 = [CLEANUP_IGNORED_DAYS]
+            params3 = [CLEANUP_HISTORY_DAYS]
             
             if user_id is not None:
                 leads_query1 += " AND user_id = %s"
@@ -698,6 +753,8 @@ class Database:
                 params2.append(user_id)
                 history_query += " AND user_id = %s"
                 params3.append(user_id)
+            else:
+                logging.warning("[Smart Cleanup] Running system-wide cleanup (no user_id scope).")
                 
             cursor.execute(leads_query1, params1)
             uncontacted_deleted = cursor.rowcount
@@ -992,7 +1049,7 @@ class Database:
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT * FROM users WHERE LOWER(email) = %s", (normalized_email,))
+            cursor.execute("SELECT * FROM users WHERE email = %s", (normalized_email,))
             row = cursor.fetchone()
             return dict(row) if row else None
         except Exception as e:
@@ -1007,7 +1064,7 @@ class Database:
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT * FROM users WHERE username = %s", (normalized_username,))
+            cursor.execute("SELECT * FROM users WHERE LOWER(username) = %s", (normalized_username,))
             row = cursor.fetchone()
             return dict(row) if row else None
         except Exception as e:
@@ -1064,8 +1121,9 @@ class Database:
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
-            # Delete old resets for the email first, then insert new one
+            # Delete old resets for the email first, and also clean up all expired OTP records
             cursor.execute("DELETE FROM password_resets WHERE email = %s", (normalized_email,))
+            cursor.execute("DELETE FROM password_resets WHERE expires_at < CURRENT_TIMESTAMP")
             cursor.execute("""
                 INSERT INTO password_resets (email, otp, expires_at)
                 VALUES (%s, %s, %s)
@@ -1188,7 +1246,7 @@ class Database:
         cursor = conn.cursor()
         try:
             cursor.execute("""
-                SELECT id, template_used, message_sent, sent_at, opened, opened_at, open_count, clicked, clicked_at, click_count, clicked_links
+                SELECT id, template_used, message_sent, sent_at, opened, opened_at, open_count, clicked, clicked_at, click_count, clicked_links, is_reply, reply_body
                 FROM message_log
                 WHERE lead_id = %s AND user_id = %s
                 ORDER BY sent_at DESC;
@@ -1248,6 +1306,211 @@ class Database:
             logging.error(f"[Database] Error recording link click for log {log_id}: {e}")
             conn.rollback()
             return 0
+        finally:
+            self._release_connection(conn)
+
+    # ---- Encryption Helpers ----
+    def _encrypt_password(self, password: str) -> str:
+        if not password:
+            return ""
+        try:
+            from config import Config
+            key_source = Config.SECRET_KEY or "fallback_secret_key_1234567890_!"
+            import hashlib, base64
+            key = hashlib.sha256(key_source.encode('utf-8')).digest()
+            encrypted = bytes(a ^ b for a, b in zip(password.encode('utf-8'), key * (len(password) // len(key) + 1)))
+            return base64.b64encode(encrypted).decode('utf-8')
+        except Exception as e:
+            logging.error(f"[Database] Error encrypting credential password: {e}")
+            return password
+
+    def _decrypt_password(self, encrypted_password: str) -> str:
+        if not encrypted_password:
+            return ""
+        try:
+            from config import Config
+            key_source = Config.SECRET_KEY or "fallback_secret_key_1234567890_!"
+            import hashlib, base64
+            key = hashlib.sha256(key_source.encode('utf-8')).digest()
+            encrypted = base64.b64decode(encrypted_password.encode('utf-8'))
+            decrypted = bytes(a ^ b for a, b in zip(encrypted, key * (len(encrypted) // len(key) + 1)))
+            return decrypted.decode('utf-8')
+        except Exception as e:
+            logging.error(f"[Database] Error decrypting credential password: {e}")
+            return encrypted_password
+
+    # ---- Inbound Reply Helper ----
+    def record_inbound_reply(self, lead_id: int, user_id: int, sender_email: str, reply_text: str) -> bool:
+        """Log incoming email reply and advance pipeline stage to REPLIED."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            # 1. Insert inbound reply into message_log
+            cursor.execute("""
+                INSERT INTO message_log (lead_id, user_id, template_used, message_sent, is_reply, reply_body)
+                VALUES (%s, %s, 'email_reply', %s, TRUE, %s)
+            """, (lead_id, user_id, reply_text, reply_text))
+            
+            # 2. Update lead's pipeline stage and last contact status
+            cursor.execute("""
+                UPDATE leads
+                SET pipeline_stage = 'REPLIED',
+                    contacted = TRUE,
+                    contact_date = CURRENT_TIMESTAMP,
+                    drip_sequence_active = FALSE
+                WHERE id = %s AND user_id = %s
+            """, (lead_id, user_id))
+            
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"[Database] Error recording inbound reply for lead {lead_id}: {e}")
+            conn.rollback()
+            return False
+        finally:
+            self._release_connection(conn)
+
+    # ---- IMAP Settings Accessors ----
+    def get_imap_settings(self, user_id: int) -> Optional[Dict]:
+        """Fetch and decrypt IMAP mail configurations for a user."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT imap_host, imap_port, imap_email, imap_password_encrypted, use_ssl, last_synced_at
+                FROM imap_settings WHERE user_id = %s
+            """, (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            res = dict(row)
+            res["password"] = self._decrypt_password(res.pop("imap_password_encrypted"))
+            res["host"] = res.pop("imap_host")
+            res["port"] = res.pop("imap_port")
+            res["email"] = res.pop("imap_email")
+            return res
+        except Exception as e:
+            logging.error(f"[Database] Error getting IMAP settings for user {user_id}: {e}")
+            return None
+        finally:
+            self._release_connection(conn)
+
+    def save_imap_settings(self, user_id: int, host: str, port: int, email: str, password_raw: str, use_ssl: bool) -> bool:
+        """Encrypt and save IMAP mail configurations for a user."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        encrypted_pass = self._encrypt_password(password_raw)
+        try:
+            cursor.execute("""
+                INSERT INTO imap_settings (user_id, imap_host, imap_port, imap_email, imap_password_encrypted, use_ssl)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE
+                SET imap_host = EXCLUDED.imap_host,
+                    imap_port = EXCLUDED.imap_port,
+                    imap_email = EXCLUDED.imap_email,
+                    imap_password_encrypted = EXCLUDED.imap_password_encrypted,
+                    use_ssl = EXCLUDED.use_ssl
+            """, (user_id, host, port, email, encrypted_pass, use_ssl))
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"[Database] Error saving IMAP settings for user {user_id}: {e}")
+            conn.rollback()
+            return False
+        finally:
+            self._release_connection(conn)
+
+    # ---- SMTP Settings Accessors ----
+    def get_smtp_settings(self, user_id: int) -> Optional[Dict]:
+        """Fetch and decrypt SMTP configurations for a user."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT smtp_host, smtp_port, smtp_email, smtp_password_encrypted, use_ssl
+                FROM smtp_settings WHERE user_id = %s
+            """, (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            res = dict(row)
+            res["password"] = self._decrypt_password(res.pop("smtp_password_encrypted"))
+            res["host"] = res.pop("smtp_host")
+            res["port"] = res.pop("smtp_port")
+            res["email"] = res.pop("smtp_email")
+            return res
+        except Exception as e:
+            logging.error(f"[Database] Error getting SMTP settings for user {user_id}: {e}")
+            return None
+        finally:
+            self._release_connection(conn)
+
+    def save_smtp_settings(self, user_id: int, host: str, port: int, email: str, password_raw: str, use_ssl: bool) -> bool:
+        """Encrypt and save SMTP configurations for a user."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        encrypted_pass = self._encrypt_password(password_raw)
+        try:
+            cursor.execute("""
+                INSERT INTO smtp_settings (user_id, smtp_host, smtp_port, smtp_email, smtp_password_encrypted, use_ssl)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE
+                SET smtp_host = EXCLUDED.smtp_host,
+                    smtp_port = EXCLUDED.smtp_port,
+                    smtp_email = EXCLUDED.smtp_email,
+                    smtp_password_encrypted = EXCLUDED.smtp_password_encrypted,
+                    use_ssl = EXCLUDED.use_ssl
+            """, (user_id, host, port, email, encrypted_pass, use_ssl))
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"[Database] Error saving SMTP settings for user {user_id}: {e}")
+            conn.rollback()
+            return False
+        finally:
+            self._release_connection(conn)
+
+    # ---- Drip Configurations Accessors ----
+    def get_drip_config(self, user_id: int) -> Optional[Dict]:
+        """Fetch Drip Configuration settings for a user."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT delay_days, max_followups, followup_subject, followup_template, is_enabled
+                FROM drip_configurations WHERE user_id = %s
+            """, (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return dict(row)
+        except Exception as e:
+            logging.error(f"[Database] Error getting Drip configuration for user {user_id}: {e}")
+            return None
+        finally:
+            self._release_connection(conn)
+
+    def save_drip_config(self, user_id: int, delay_days: int, max_followups: int, followup_subject: str, followup_template: str, is_enabled: bool) -> bool:
+        """Save Drip Configuration settings for a user."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO drip_configurations (user_id, delay_days, max_followups, followup_subject, followup_template, is_enabled)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE
+                SET delay_days = EXCLUDED.delay_days,
+                    max_followups = EXCLUDED.max_followups,
+                    followup_subject = EXCLUDED.followup_subject,
+                    followup_template = EXCLUDED.followup_template,
+                    is_enabled = EXCLUDED.is_enabled
+            """, (user_id, delay_days, max_followups, followup_subject, followup_template, is_enabled))
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"[Database] Error saving Drip configuration for user {user_id}: {e}")
+            conn.rollback()
+            return False
         finally:
             self._release_connection(conn)
 

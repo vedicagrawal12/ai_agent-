@@ -12,6 +12,7 @@ import { searchModule } from './modules/search.js';
 import { leadsModule } from './modules/leads.js';
 import { outreachModule } from './modules/outreach.js';
 import { settingsModule } from './modules/settings.js';
+import { analyticsModule } from './modules/analytics.js';
 
 const App = {
     // Spread all modular methods into the central App controller
@@ -19,6 +20,7 @@ const App = {
     ...leadsModule,
     ...outreachModule,
     ...settingsModule,
+    ...analyticsModule,
 
     // Local controller helper methods for UI panel slide/toggle transitions
     switchDetailTab(tabId) {
@@ -204,6 +206,21 @@ const App = {
             this.saveSmtpSettings();
         });
 
+        // Save IMAP Settings
+        document.getElementById('saveImapSettingsBtn')?.addEventListener('click', () => {
+            this.saveImapSettings();
+        });
+
+        // Sync Replies on Demand
+        document.getElementById('syncRepliesBtn')?.addEventListener('click', () => {
+            this.syncReplies();
+        });
+
+        // Save Drip Settings
+        document.getElementById('saveDripsSettingsBtn')?.addEventListener('click', () => {
+            this.saveDripsSettings();
+        });
+
         // AI Generate Email Pitch Button
         UI.el.aiGenerateEmailBtn?.addEventListener('click', () => {
             this.generateAIEmail();
@@ -326,6 +343,10 @@ const App = {
             this.switchView('kanban');
         });
 
+        document.getElementById('analyticsViewBtn')?.addEventListener('click', () => {
+            this.switchView('analytics');
+        });
+
         // Table sorting
         document.querySelectorAll('.leads-table th[data-sort]').forEach(th => {
             th.addEventListener('click', () => {
@@ -399,6 +420,8 @@ const App = {
         this.checkSenderProfile();
         this.checkCustomPitchRules();
         await this.checkSmtpConfig();
+        await this.checkImapConfig();
+        await this.checkDripsConfig();
         this.loadReminders();
         await this.loadTemplates();
         

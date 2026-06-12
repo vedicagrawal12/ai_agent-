@@ -12,6 +12,7 @@ import phonenumbers
 from phonenumbers import PhoneNumberType
 from collectors.base_collector import Lead
 import logging
+import requests
 
 
 class DataCleaner:
@@ -156,7 +157,6 @@ class DataCleaner:
         Returns True if working (any server response), False if broken (network exception/DNS failure).
         Optimized: reduced timeouts, HEAD 405/501 treated as alive (BUG #13/#14 fix).
         """
-        import requests
         if not url:
             return False
             

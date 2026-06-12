@@ -1,4 +1,6 @@
 import time
+import socket
+import ipaddress
 import requests
 from html.parser import HTMLParser
 import urllib.parse
@@ -55,6 +57,20 @@ def audit_website(url: str) -> dict:
         parsed_url = urllib.parse.urlparse(url)
 
     ssl_configured = parsed_url.scheme.lower() == "https"
+
+    # SSRF protection — block requests to internal/private IPs
+    _blocked_hosts = {'localhost', '127.0.0.1', '0.0.0.0', '::1', 'metadata.google.internal'}
+    hostname = parsed_url.hostname
+    if hostname:
+        if hostname in _blocked_hosts:
+            return {}
+        try:
+            resolved_ip = socket.gethostbyname(hostname)
+            ip_obj = ipaddress.ip_address(resolved_ip)
+            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
+                return {}
+        except socket.gaierror:
+            pass
     
     start_time = time.time()
     response_time = 9.99

@@ -2,7 +2,7 @@
 Application-wide constants to eliminate magic numbers and strings.
 """
 
-PIPELINE_STAGES = ["NEW", "PITCHED", "INTERESTED", "CONVERTED", "IGNORED"]
+PIPELINE_STAGES = ["NEW", "PITCHED", "INTERESTED", "REPLIED", "CONVERTED", "CLOSED", "IGNORED"]
 PRIORITY_LEVELS = ["HIGH", "MEDIUM", "LOW", "IGNORE"]
 PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2, "IGNORE": 3}
 

@@ -257,7 +257,7 @@ def update_lead_pipeline(lead_id):
     data = request.get_json() or {}
     stage = data.get("stage", "NEW").upper()
     
-    if stage not in ["NEW", "PITCHED", "INTERESTED", "CONVERTED", "IGNORED"]:
+    if stage not in ["NEW", "PITCHED", "INTERESTED", "REPLIED", "CONVERTED", "CLOSED", "IGNORED"]:
         return jsonify({"error": "Invalid pipeline stage"}), 400
         
     success = db.update_lead_pipeline_stage(lead_id, stage, user_id=g.user['id'])
@@ -598,6 +598,127 @@ def audit_lead_website(lead_id):
     except Exception as e:
         logger.error(f"Error auditing website for lead {lead_id}: {e}", exc_info=True)
         return jsonify({"error": f"Audit execution failed: {str(e)}"}), 500
+
+@leads_bp.route("/stats/analytics", methods=["GET"])
+def get_analytics_stats():
+    """Fetch aggregated conversion analytics, daily timeline, and telemetry ratios."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    conn = db._get_connection()
+    cursor = conn.cursor()
+    try:
+        # 1. Funnel Stages Metrics
+        # Scouted (total leads), Pitched (contacted = True), Opened (opened = True in logs),
+        # Clicked (clicked = True in logs or pipeline stage >= INTERESTED),
+        # Replied (is_reply = True in logs or pipeline stage = REPLIED),
+        # Closed (pipeline stage = CLOSED)
+        cursor.execute("""
+            SELECT 
+                COUNT(l.id) as scouted,
+                COUNT(CASE WHEN l.contacted = TRUE OR l.pipeline_stage IN ('PITCHED', 'INTERESTED', 'REPLIED', 'CLOSED') THEN 1 END) as pitched,
+                COUNT(CASE WHEN m.has_opened = TRUE THEN 1 END) as opened,
+                COUNT(CASE WHEN m.has_clicked = TRUE OR l.pipeline_stage IN ('INTERESTED', 'REPLIED', 'CLOSED') THEN 1 END) as clicked,
+                COUNT(CASE WHEN m.has_reply = TRUE OR l.pipeline_stage = 'REPLIED' THEN 1 END) as replied,
+                COUNT(CASE WHEN l.pipeline_stage = 'CLOSED' THEN 1 END) as closed
+            FROM leads l
+            LEFT JOIN (
+                SELECT 
+                    lead_id,
+                    bool_or(opened) as has_opened,
+                    bool_or(clicked) as has_clicked,
+                    bool_or(is_reply) as has_reply
+                FROM message_log
+                GROUP BY lead_id
+            ) m ON l.id = m.lead_id
+            WHERE l.user_id = %s AND l.priority != 'IGNORE'
+        """, (user_id,))
+        funnel_row = cursor.fetchone()
+        funnel_data = dict(funnel_row) if funnel_row else {
+            "scouted": 0, "pitched": 0, "opened": 0, "clicked": 0, "replied": 0, "closed": 0
+        }
+
+        # 2. Daily Timeline (last 14 days)
+        cursor.execute("""
+            SELECT 
+                DATE(sent_at) as date,
+                COUNT(CASE WHEN template_used IN ('website_pitch', 'digital_presence', 'simple_intro', 'custom') THEN 1 END) as whatsapp_count,
+                COUNT(CASE WHEN template_used NOT IN ('website_pitch', 'digital_presence', 'simple_intro', 'custom') THEN 1 END) as email_count
+            FROM message_log
+            WHERE user_id = %s AND sent_at >= CURRENT_DATE - INTERVAL '14 days'
+            GROUP BY DATE(sent_at)
+            ORDER BY DATE(sent_at) ASC
+        """, (user_id,))
+        timeline_rows = cursor.fetchall()
+        
+        # Build timeline map
+        timeline_map = {}
+        for r in timeline_rows:
+            d_str = r['date'].isoformat() if isinstance(r['date'], (date, datetime)) else str(r['date'])
+            timeline_map[d_str] = {
+                "date": d_str,
+                "whatsapp": r['whatsapp_count'],
+                "email": r['email_count']
+            }
+            
+        # Ensure we have all last 14 days present
+        timeline_list = []
+        for i in range(14, -1, -1):
+            day = date.today() - timedelta(days=i)
+            day_str = day.isoformat()
+            if day_str in timeline_map:
+                timeline_list.append(timeline_map[day_str])
+            else:
+                timeline_list.append({
+                    "date": day_str,
+                    "whatsapp": 0,
+                    "email": 0
+                })
+
+        # 3. Telemetry Ratios (Open, Click, Reply rates based on total message logs)
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_sent,
+                COUNT(CASE WHEN opened = TRUE THEN 1 END) as total_opened,
+                COUNT(CASE WHEN clicked = TRUE THEN 1 END) as total_clicked,
+                COUNT(CASE WHEN is_reply = TRUE THEN 1 END) as total_replied
+            FROM message_log
+            WHERE user_id = %s
+        """, (user_id,))
+        ratios_row = cursor.fetchone()
+        
+        open_rate = 0.0
+        click_rate = 0.0
+        reply_rate = 0.0
+        
+        if ratios_row and ratios_row['total_sent'] > 0:
+            total_sent = ratios_row['total_sent']
+            open_rate = round((ratios_row['total_opened'] / total_sent) * 100, 2)
+            click_rate = round((ratios_row['total_clicked'] / total_sent) * 100, 2)
+            reply_rate = round((ratios_row['total_replied'] / total_sent) * 100, 2)
+            
+        ratios_data = {
+            "open_rate": open_rate,
+            "click_rate": click_rate,
+            "reply_rate": reply_rate,
+            "total_sent": ratios_row['total_sent'] if ratios_row else 0,
+            "total_opened": ratios_row['total_opened'] if ratios_row else 0,
+            "total_clicked": ratios_row['total_clicked'] if ratios_row else 0,
+            "total_replied": ratios_row['total_replied'] if ratios_row else 0
+        }
+
+        return jsonify({
+            "success": True,
+            "funnel": funnel_data,
+            "timeline": timeline_list,
+            "ratios": ratios_data
+        })
+    except Exception as e:
+        logger.error(f"Error compiling analytics stats: {e}", exc_info=True)
+        return jsonify({"error": f"Failed to fetch analytics: {str(e)}"}), 500
+    finally:
+        db._release_connection(conn)
 
 @leads_bp.route("/leads/<int:lead_id>/outreach-logs", methods=["GET"])
 def get_lead_outreach_logs(lead_id):

@@ -240,11 +240,14 @@ def export_data():
         
         import json
         from datetime import date
+        from decimal import Decimal
         
         class SafeEncoder(json.JSONEncoder):
             def default(self, o):
                 if isinstance(o, (datetime, date)):
                     return o.isoformat()
+                if isinstance(o, Decimal):
+                    return float(o)
                 return super().default(o)
                 
         json_data = json.dumps(export_payload, cls=SafeEncoder, indent=2)
@@ -298,3 +301,43 @@ def toggle_user_admin(target_user_id):
         return jsonify({"success": True, "message": f"User admin status updated to {status}"})
     else:
         return jsonify({"error": "Failed to update user admin status"}), 500
+
+@config_bp.route("/config/drips", methods=["GET", "POST"])
+def manage_drip_config():
+    """Save or retrieve drip follow-ups configuration for the user."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    if request.method == "POST":
+        data = request.get_json() or {}
+        delay_days = data.get("delay_days", 3)
+        max_followups = data.get("max_followups", 2)
+        followup_subject = data.get("followup_subject", "Quick follow up regarding proposal").strip()
+        followup_template = data.get("followup_template", "").strip()
+        is_enabled = data.get("is_enabled", False)
+        
+        try:
+            delay_days = int(delay_days)
+            max_followups = int(max_followups)
+        except ValueError:
+            return jsonify({"error": "Invalid delay days or max follow-ups format"}), 400
+            
+        success = db.save_drip_config(user_id, delay_days, max_followups, followup_subject, followup_template, bool(is_enabled))
+        if success:
+            return jsonify({"success": True, "message": "Drip campaign configurations saved successfully."})
+        return jsonify({"error": "Failed to save Drip configuration."}), 500
+    else:
+        # GET request
+        config = db.get_drip_config(user_id)
+        if not config:
+            return jsonify({
+                "configured": False,
+                "delay_days": 3,
+                "max_followups": 2,
+                "followup_subject": "Quick follow up regarding proposal",
+                "followup_template": "",
+                "is_enabled": False
+            })
+        config["configured"] = True
+        return jsonify(config)

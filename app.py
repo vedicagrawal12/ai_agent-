@@ -7,6 +7,7 @@ and structured scaling boundaries.
 
 import os
 import sys
+import logging
 from datetime import datetime, date
 from flask import Flask, session, g, request, jsonify, redirect, url_for
 from flask.json.provider import DefaultJSONProvider
@@ -107,14 +108,50 @@ def create_app(config_class=None):
     def verify_csrf():
         if app.config.get('TESTING'):
             return
+            
+        # Exempt public endpoints and paths from CSRF checks
+        public_endpoints = {
+            'auth.login', 
+            'auth.signup', 
+            'auth.forgot_password',
+            'auth.verify_otp',
+            'auth.reset_password',
+            'dashboard.live_preview_mockup', 
+            'static', 
+            'dashboard.index',
+            'health_check',
+            'dashboard.terms',
+            'dashboard.privacy',
+            'dashboard.audit_report_page',
+            'api_outreach.track_open',
+            'api_outreach.track_click'
+        }
+        if request.endpoint in public_endpoints or request.endpoint is None:
+            return
+            
+        path = request.path
+        if (path == '/' or path == '/health' or path == '/terms' or path == '/privacy' or 
+            path.startswith('/login') or path.startswith('/signup') or 
+            path.startswith('/forgot-password') or path.startswith('/verify-otp') or 
+            path.startswith('/reset-password') or path.startswith('/preview/') or 
+            path.startswith('/static/') or path.startswith('/audit/') or 
+            path.startswith('/api/track/')):
+            return
+
         if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
             token_in_session = session.get('csrf_token')
-            if not token_in_session:
-                return jsonify({"error": "CSRF token missing or session expired."}), 400
-            
             token_in_header = request.headers.get("X-CSRF-Token")
             token_in_form = request.form.get("csrf_token")
             token = token_in_header or token_in_form
+            
+            logging.info(f"[CSRF DEBUG] path={request.path} method={request.method}")
+            logging.info(f"[CSRF DEBUG] session={token_in_session}")
+            logging.info(f"[CSRF DEBUG] header={token_in_header}")
+            logging.info(f"[CSRF DEBUG] form={token_in_form}")
+            logging.info(f"[CSRF DEBUG] cookie_csrf_token={request.cookies.get('csrf_token')}")
+            
+            if not token_in_session:
+                return jsonify({"error": "CSRF token missing or session expired."}), 400
             
             import secrets
             if not token or not secrets.compare_digest(token, token_in_session):
@@ -170,6 +207,20 @@ def create_app(config_class=None):
         except Exception as e:
             return jsonify({"status": "unhealthy", "error": str(e)}), 503
             
+    # 8. Start Background IMAP Polling Thread
+    try:
+        from utils.imap_reader import start_background_poller
+        start_background_poller()
+    except Exception as start_err:
+        app.logger.error(f"Could not start background IMAP poller daemon: {start_err}")
+
+    # 9. Start Background Drip Follow-ups Polling Thread
+    try:
+        from utils.drip_scheduler import start_drip_poller
+        start_drip_poller()
+    except Exception as start_err:
+        app.logger.error(f"Could not start background Drip poller daemon: {start_err}")
+
     return app
 
 if __name__ == "__main__":

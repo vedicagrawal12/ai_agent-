@@ -117,9 +117,13 @@ export const API = {
     },
 
     async exportExcel(leads) {
+        const csrfToken = getCookie('csrf_token');
         const response = await fetch('/api/export/excel', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
+            },
             body: JSON.stringify({ leads }),
         });
         

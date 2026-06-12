@@ -8,7 +8,7 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         if not g.user:
             return redirect(url_for('auth.login'))
-        is_admin = db.is_user_admin(g.user['id'])
+        is_admin = g.user.get('is_admin', False)
         if not is_admin:
             if request.path.startswith('/api/'):
                 return jsonify({"error": "Admin access required"}), 403

@@ -150,6 +150,11 @@ class EmailScraper:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             }
+            
+            # SSRF protection on discovery request
+            if not cls._is_safe_url(main_url):
+                return ""
+            
             res = requests.get(main_url, headers=headers, timeout=5)
             if res.status_code != 200:
                 return ""

@@ -239,29 +239,40 @@ export const UI = {
         if (this.el.welcomeHero) this.el.welcomeHero.style.display = 'none';
         this.el.emptyState.style.display = 'none';
         
-        if (AppState.currentView === 'kanban') {
+        const analyticsContainer = document.getElementById('analyticsContainer');
+        if (AppState.currentView === 'analytics') {
             this.el.tableContainer.style.display = 'none';
-            if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'block';
-            this.renderKanbanBoard(leads);
-            if (window.gsap) {
-                window.gsap.fromTo('.kanban-column', 
-                    { opacity: 0, y: 15 }, 
-                    { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power2.out', overwrite: 'auto' }
-                );
-                window.gsap.fromTo('.kanban-card', 
-                    { opacity: 0, y: 10 }, 
-                    { opacity: 1, y: 0, duration: 0.3, stagger: 0.02, ease: 'power1.out', delay: 0.15, overwrite: 'auto' }
-                );
+            if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
+            if (analyticsContainer) analyticsContainer.style.display = 'block';
+            if (window.App && typeof window.App.refreshAnalytics === 'function') {
+                window.App.refreshAnalytics();
             }
         } else {
-            this.el.tableContainer.style.display = 'block';
-            if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
-            this.el.leadsTableBody.innerHTML = leads.map((lead, i) => this.createLeadRow(lead, i)).join('');
-            if (window.gsap) {
-                window.gsap.fromTo('.leads-table tbody tr', 
-                    { opacity: 0, x: -8 }, 
-                    { opacity: 1, x: 0, duration: 0.35, stagger: 0.015, ease: 'power1.out', overwrite: 'auto' }
-                );
+            if (analyticsContainer) analyticsContainer.style.display = 'none';
+            if (AppState.currentView === 'kanban') {
+                this.el.tableContainer.style.display = 'none';
+                if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'block';
+                this.renderKanbanBoard(leads);
+                if (window.gsap) {
+                    window.gsap.fromTo('.kanban-column', 
+                        { opacity: 0, y: 15 }, 
+                        { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power2.out', overwrite: 'auto' }
+                    );
+                    window.gsap.fromTo('.kanban-card', 
+                        { opacity: 0, y: 10 }, 
+                        { opacity: 1, y: 0, duration: 0.3, stagger: 0.02, ease: 'power1.out', delay: 0.15, overwrite: 'auto' }
+                    );
+                }
+            } else {
+                this.el.tableContainer.style.display = 'block';
+                if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
+                this.el.leadsTableBody.innerHTML = leads.map((lead, i) => this.createLeadRow(lead, i)).join('');
+                if (window.gsap) {
+                    window.gsap.fromTo('.leads-table tbody tr', 
+                        { opacity: 0, x: -8 }, 
+                        { opacity: 1, x: 0, duration: 0.35, stagger: 0.015, ease: 'power1.out', overwrite: 'auto' }
+                    );
+                }
             }
         }
         
@@ -381,7 +392,7 @@ export const UI = {
     },
 
     renderKanbanBoard(leads) {
-        const columns = ['NEW', 'PITCHED', 'INTERESTED', 'CONVERTED', 'IGNORED'];
+        const columns = ['NEW', 'PITCHED', 'INTERESTED', 'REPLIED', 'CONVERTED', 'IGNORED'];
         
         columns.forEach(stage => {
             const cardsContainer = document.querySelector(`.kanban-cards[data-stage="${stage}"]`);
@@ -393,7 +404,7 @@ export const UI = {
             if (countBadge) countBadge.textContent = '0';
         });
         
-        const counts = { NEW: 0, PITCHED: 0, INTERESTED: 0, CONVERTED: 0, IGNORED: 0 };
+        const counts = { NEW: 0, PITCHED: 0, INTERESTED: 0, REPLIED: 0, CONVERTED: 0, IGNORED: 0 };
         
         leads.forEach(lead => {
             const stage = (lead.pipeline_stage || 'NEW').toUpperCase();

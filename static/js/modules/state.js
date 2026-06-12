@@ -5,6 +5,7 @@
 export const AppState = {
     leads: [],
     allResults: [],
+    encryptionKey: null,
     stats: {},
     sortColumn: null,
     sortDirection: 'asc',

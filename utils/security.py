@@ -31,10 +31,26 @@ class LoginTracker:
             self._attempts[username] = recent
             return len(recent) >= self.MAX_ATTEMPTS
 
+    def _cleanup_all(self):
+        """Evict all expired attempt entries to prevent unbounded memory growth."""
+        now = time.time()
+        expired_keys = []
+        for username, attempts in self._attempts.items():
+            recent = [t for t in attempts if now - t < self.LOCKOUT_SECONDS]
+            if recent:
+                self._attempts[username] = recent
+            else:
+                expired_keys.append(username)
+        for key in expired_keys:
+            del self._attempts[key]
+
     def record_failure(self, username: str):
         """Record a failed login attempt."""
         with self._lock:
             self._attempts[username].append(time.time())
+            # Periodic global cleanup to prevent memory leak under brute-force
+            if len(self._attempts) > 100:
+                self._cleanup_all()
 
     def clear(self, username: str):
         """Clear all attempts on successful login."""

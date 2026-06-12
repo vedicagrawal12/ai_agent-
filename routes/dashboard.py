@@ -121,6 +121,7 @@ def privacy():
 def admin_dashboard():
     """Serve Admin user management and server statistics dashboard."""
     status_info = {}
+    conn = None
     try:
         conn = db._get_connection()
         cursor = conn.cursor()
@@ -190,7 +191,6 @@ def admin_dashboard():
         status_info["master_serpapi_key_masked"] = f"{master_key[:8]}...{master_key[-4:]}" if master_key and len(master_key) > 12 else ("***" if master_key else "")
         status_info["master_serpapi_key_source"] = "Environment Variable" if using_env else ("Database" if master_key else "Not Configured")
         
-        db._release_connection(conn)
     except Exception as e:
         logger.error(f"Error loading admin dashboard: {e}")
         status_info["stats"] = {
@@ -198,7 +198,10 @@ def admin_dashboard():
             "total_leads": 0, "total_searches": 0, "total_logs": 0
         }
         status_info["users"] = []
-        
+    finally:
+        if conn:
+            db._release_connection(conn)
+            
     return render_template("admin.html", status=status_info)
 
 @dashboard_bp.route("/audit/<int:lead_id>")
