@@ -1,62 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Terms of Service for LeadHunter AI.">
+    <meta name="description" content="Formal Terms of Service agreement for the LeadHunter AI platform.">
     <title>Terms of Service — LeadHunter AI</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
     <style>
         .page-wrapper {
-            max-width: 800px;
+            max-width: 900px;
             margin: 60px auto;
-            padding: var(--space-xl) var(--space-lg);
+            padding: 48px;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
+            box-shadow: var(--shadow-lg), 0 0 30px rgba(0, 240, 255, 0.03);
+            position: relative;
         }
+
+        /* Gold/Cyan legal accent line on top of card */
+        .page-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-cyan) 0%, var(--accent-violet) 100%);
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        }
+
         .page-header {
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
             padding-bottom: var(--space-md);
-            margin-bottom: var(--space-lg);
+            margin-bottom: var(--space-xl);
+            text-align: center;
         }
+
         .page-title {
             font-family: var(--font-display);
-            font-size: 2.2rem;
+            font-size: 2.4rem;
             color: var(--text-primary);
+            letter-spacing: 0.5px;
             margin-bottom: var(--space-xs);
         }
+
         .page-title span {
             color: var(--accent-cyan);
             text-shadow: var(--shadow-glow-cyan);
         }
+
+        .page-subtitle {
+            font-size: 0.95rem;
+            color: var(--accent-orange);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+        }
+
         .page-meta {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-family: var(--font-mono);
+        }
+
+        .legal-notice-box {
+            background: rgba(255, 204, 0, 0.03);
+            border: 1px solid rgba(255, 204, 0, 0.15);
+            padding: 20px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 32px;
+            font-size: 0.88rem;
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            line-height: 1.6;
         }
+
         .content-section {
-            margin-bottom: var(--space-lg);
+            margin-bottom: 32px;
         }
+
         .content-section h2 {
-            font-size: 1.35rem;
+            font-family: var(--font-display);
+            font-size: 1.2rem;
             color: var(--text-primary);
             border-left: 3px solid var(--accent-cyan);
             padding-left: var(--space-sm);
-            margin-bottom: var(--space-sm);
-            margin-top: var(--space-lg);
+            margin-bottom: 16px;
+            margin-top: 24px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .content-section p, .content-section ul {
+
+        .content-section p {
             font-size: 0.95rem;
             color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 16px;
+            text-align: justify;
+        }
+
+        .legal-sub-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin-bottom: 16px;
+        }
+
+        .legal-sub-list li {
+            position: relative;
+            padding-left: 28px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+
+        .legal-sub-list li::before {
+            content: '§';
+            position: absolute;
+            left: 8px;
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        .disclaimer-text {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             line-height: 1.6;
-            margin-bottom: var(--space-sm);
+            margin-top: 16px;
         }
-        .content-section ul {
-            padding-left: 20px;
-            list-style-type: square;
-        }
+
         .back-link {
             display: inline-flex;
             align-items: center;
@@ -65,56 +146,89 @@
             text-decoration: none;
             font-weight: 600;
             margin-top: var(--space-xl);
-            transition: color var(--transition-fast);
+            transition: all var(--transition-fast);
+            padding: 10px 20px;
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            border-radius: var(--radius-sm);
+            background: rgba(0, 240, 255, 0.02);
         }
+
         .back-link:hover {
-            color: var(--accent-violet);
-            text-decoration: underline;
+            color: var(--text-primary);
+            background: rgba(0, 240, 255, 0.1);
+            border-color: var(--accent-cyan);
+            box-shadow: var(--shadow-glow-cyan);
+            transform: translateY(-2px);
         }
     </style>
 </head>
+
 <body>
     <div class="page-wrapper">
         <div class="page-header">
+            <div class="page-subtitle">Standard Operator Licensing Agreement</div>
             <h1 class="page-title">Terms of <span>Service</span></h1>
-            <div class="page-meta">Last updated: June 10, 2026</div>
+            <div class="page-meta">DOCUMENT REF: LH-TOS-2026-V2 | EFFECTIVE DATE: JUNE 12, 2026</div>
         </div>
-        
-        <div class="content-section">
-            <p>Welcome to LeadHunter AI ("we", "our", "us"). By accessing or using our application, you agree to comply with and be bound by the following Terms of Service. Please read them carefully.</p>
+
+        <div class="legal-notice-box">
+            <strong>IMPORTANT LEGAL NOTICE:</strong> PLEASE READ THIS LICENSING AGREEMENT CAREFULLY BEFORE REGISTRATION. BY ACCESSING OR USING THE LEADHUNTER AI PLATFORM, YOU EXPRESSLY CONFIRM AND ACKNOWLEDGE THAT YOU ARE ENTERING INTO A LEGALLY BINDING AGREEMENT AND ACCEPT ALL STIPULATED TERMS, POLICIES, AND OBLIGATIONS HEREIN.
         </div>
 
         <div class="content-section">
-            <h2>1. Acceptance of Terms</h2>
-            <p>By registering an account and using LeadHunter AI, you agree that you have read, understood, and accept these Terms of Service. If you do not agree, you are not permitted to use our services.</p>
+            <h2>Article I: Definitions and Interpretation</h2>
+            <p>Under this Agreement, the following terms shall be defined as follows:
+                "Platform" refers to the LeadHunter AI lead generation software, dashboard, backend modules, database, and templates.
+                "Operator" or "User" refers to any individual, corporate entity, or agency registering an account and using the software.
+                "Master Core" refers to the centralized, white-labeled Google Maps data retrieval engine integrated into the server environment.
+            </p>
         </div>
 
         <div class="content-section">
-            <h2>2. Permitted Use</h2>
-            <p>You agree to use the services solely for lawful commercial or agency outreach purposes. You shall not:</p>
-            <ul>
-                <li>Engage in massive automated crawling of Google Maps outside the standard limits of SerpApi.</li>
-                <li>Send unsolicited spam email or WhatsApp outreach messages violating local telecommunication guidelines.</li>
-                <li>Attempt to bypass authentication, reverse engineer backend databases, or perform unauthorized security scans.</li>
+            <h2>Article II: Account Registration & Credential Security</h2>
+            <p>1. Operators must compile accurate profile registrations containing an active email address, secure credentials, and phone details. System access privileges are personal, non-transferable, and subject to revocation for unauthorized credential sharing.</p>
+            <p>2. The Platform operates under a secure local storage policy. Third-party keys (specifically Google Maps API credentials, custom Gemini API keys, and operator SMTP credentials) are processed in-memory or securely inside the Operator's browser storage. The Operator accepts sole accountability for securing their client-side credentials and monitoring individual third-party billing accounts.</p>
+        </div>
+
+        <div class="content-section">
+            <h2>Article III: Permitted Licensing & Data Capture</h2>
+            <p>1. The Platform grants the Operator a limited, non-exclusive, revocable license to query Google Maps directories for commercial outreach and client acquisition services. All operations must align with system safety limits.</p>
+            <p>2. The Operator is strictly prohibited from engaging in the following activities:</p>
+            <ul class="legal-sub-list">
+                <li>Deploying parallelized high-volume automated scripts to scrape or query Google Maps beyond the system's white-labeled credit allocations.</li>
+                <li>Leveraging extracted telephone lines or addresses to disseminate unsolicited messages in violation of international telecommunication acts (including the CAN-SPAM Act and Telephone Consumer Protection Act).</li>
+                <li>Executing penetration testing, reverse-engineering database structures, or attempting to compromise authentication protocols on the Platform server.</li>
             </ul>
         </div>
 
         <div class="content-section">
-            <h2>3. API Keys & Local Configuration</h2>
-            <p>To run searches and utilize AI models, you must provide valid SerpApi and Gemini API credentials. You are solely responsible for all billing costs incurred under your API keys. We do not store your API credentials permanently unless you configure them as environmental variables on your server instance.</p>
+            <h2>Article IV: Outreach Automation & Click-Tracking Compliance</h2>
+            <p>1. The Platform facilitates direct SMTP email dispatch and WhatsApp redirection utilities. The Operator confirms that any outgoing cold emails are fully compliant with legal standards, including the mandatory provision of a clear opt-out mechanism for recipients.</p>
+            <p>2. The Operator acknowledges that the Platform integrates automated real-time read and click trackers. Mockup URLs dispatched to prospective business clients redirect through tracking gateways. This tracking is intended solely to verify client interest and update the internal sales pipeline, and the Operator must ensure that their outreach privacy notice discloses tracking mechanisms where legally required.</p>
         </div>
 
         <div class="content-section">
-            <h2>4. Limitation of Liability</h2>
-            <p>LeadHunter AI is provided "as is" without warranty of any kind. We shall not be held liable for any direct, indirect, or incidental damages resulting from the use of our maps collection or outreach generation routines.</p>
+            <h2>Article V: Limitation of Liability & Warranty Disclaimers</h2>
+            <div class="disclaimer-text">
+                THE LEADHUNTER AI PLATFORM IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS. WE EXPRESSLY DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL WE BE HELD LIABLE FOR ANY INDIRECT, CONSEQUENTIAL, OR SPECIAL DAMAGES, OR ACCOUNT INJURIES (INCLUDING RECIPIENT OUTREACH REJECTIONS, MAIL SERVERS BLACKLISTING, OR GOOGLE API BILLING SURGES) ENCOUNTERED BY THE OPERATOR.
+            </div>
         </div>
 
         <div class="content-section">
-            <h2>5. Account Termination</h2>
-            <p>We reserve the right to suspend or terminate accounts that fail to comply with these terms or engage in abusive platform traffic. You have the right to request full account and data deletion at any time via the user dashboard settings panel.</p>
+            <h2>Article VI: Account Deactivation & Data Portability</h2>
+            <p>1. The Platform reserves the absolute right to deactivate, restrict, or terminate account access for any Operator found in breach of this Licensing Agreement or engaging in abusive query traffic.</p>
+            <p>2. Pursuant to GDPR requirements, the Operator holds the right to trigger complete profile deletions at any time. Triggering account termination initiates an automated cascading delete script that immediately erases all associated leads, search history, and outreach logs from the PostgreSQL database server.</p>
         </div>
 
-        <a href="/" class="back-link">← Return to Dashboard</a>
+        <div class="content-section">
+            <h2>Article VII: Governing Law and Dispute Resolution</h2>
+            <p>This Licensing Agreement shall be interpreted and governed in accordance with the laws of the jurisdiction where the server administration is situated. Any dispute or claim arising out of or in connection with these terms shall be settled exclusively in the competent courts of the governing jurisdiction.</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="/" class="back-link">← Return to Dashboard Console</a>
+        </div>
     </div>
 </body>
+
 </html>

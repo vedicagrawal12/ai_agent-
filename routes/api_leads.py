@@ -564,3 +564,43 @@ def import_leads():
     except Exception as e:
         logger.error(f"Error importing CSV leads: {e}")
         return jsonify({"error": f"Failed to parse CSV file: {str(e)}"}), 500
+
+@leads_bp.route("/leads/<int:lead_id>/audit", methods=["POST"])
+@limiter.limit("5 per minute")
+def audit_lead_website(lead_id):
+    """Run an on-demand SEO and Speed audit on the lead's website."""
+    lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
+    if not lead:
+        return jsonify({"error": "Lead not found"}), 404
+        
+    website = lead.get("website", "").strip()
+    if not website:
+        return jsonify({"error": "Lead does not have a website URL listed."}), 400
+        
+    try:
+        from utils.website_auditor import audit_website
+        import json
+        
+        logger.info(f"Auditing website for lead {lead_id} ({lead.get('name')}): {website}")
+        audit_results = audit_website(website)
+        
+        if not audit_results:
+            return jsonify({"error": "Failed to scan website. Please verify the link is active."}), 400
+            
+        audit_data_str = json.dumps(audit_results)
+        db.update_lead_audit_data(lead_id, audit_data_str, user_id=g.user['id'])
+        
+        return jsonify({
+            "success": True,
+            "message": "SEO and Performance Audit completed successfully!",
+            "audit_data": audit_results
+        })
+    except Exception as e:
+        logger.error(f"Error auditing website for lead {lead_id}: {e}", exc_info=True)
+        return jsonify({"error": f"Audit execution failed: {str(e)}"}), 500
+
+@leads_bp.route("/leads/<int:lead_id>/outreach-logs", methods=["GET"])
+def get_lead_outreach_logs(lead_id):
+    """Fetch outreach logs for a specific lead."""
+    logs = db.get_lead_outreach_logs(lead_id, g.user['id'])
+    return jsonify(logs)

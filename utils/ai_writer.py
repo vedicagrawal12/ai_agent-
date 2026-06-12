@@ -36,7 +36,9 @@ class AIOutreachWriter:
         mockup_link: str = "",
         custom_pitch_rules: str = "",
         min_words: int = 150,
-        language: str = "hinglish"
+        language: str = "hinglish",
+        audit_link: str = "",
+        audit_data: dict = None
     ) -> str:
         """
         Generates a highly personalized, human-like sales pitch using the Gemini API.
@@ -48,6 +50,26 @@ class AIOutreachWriter:
         custom_rules_directive = ""
         if custom_pitch_rules:
             custom_rules_directive = f"\n- CUSTOM USER PROFILE & OUTREACH RULES (CRITICAL: You must strictly incorporate these personalized preferences and details in your pitch writing):\n{custom_pitch_rules}\n"
+
+        if audit_data and audit_link:
+            overall_score = audit_data.get("overall_score", 0)
+            scores = audit_data.get("scores", {})
+            recommendations = audit_data.get("recommendations", [])
+            warnings_text = []
+            for rec in recommendations:
+                warnings_text.append(f"  - [{rec.get('category')}] {rec.get('title')}: {rec.get('description')}")
+            warnings_str = "\n".join(warnings_text) if warnings_text else "  - None (website has a perfect score!)"
+            
+            audit_directive = f"""
+- WEBSITE SEO & PERFORMANCE AUDIT RESULTS (CRITICAL: Mention these specific real-world data points and critical issues to show the prospect you did a real audit of their website):
+  * Public Audit Report URL: {audit_link}
+  * Overall Site Score: {overall_score}/100
+  * Category Scores: Speed={scores.get('speed', 0)}/100, SEO={scores.get('seo', 0)}/100, Mobile Responsiveness={scores.get('mobile', 0)}/100, SSL Security={scores.get('ssl', 0)}/100, Image Alt Tags={scores.get('alt', 0)}/100
+  * Key Identified Issues:
+{warnings_str}
+  * CRITICAL COPYWRITING DIRECTIVE: Mention specific low scores (e.g. speed, missing SSL, or missing viewport/mobile responsiveness) to create urgency, and invite them to view their complete public report card at {audit_link}.
+"""
+            custom_rules_directive += "\n" + audit_directive
 
         # Resolve persona and service directives based on target service
         persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)
@@ -202,45 +224,34 @@ class AIOutreachWriter:
             is_broken = bool(lead_data.get('is_broken_website'))
             website_url = lead_data.get('website', '')
 
-            if is_broken:
+            if website_url and is_broken:
                 template = prompts.get("whatsapp_pitch_broken", "")
-                prompt = template.format(
-                    persona_directive=persona_directive,
-                    business_name=lead_data.get('name', 'Business'),
-                    category=lead_data.get('category', 'Business'),
-                    city=lead_data.get('city', 'your city'),
-                    rating=lead_data.get('rating', '0'),
-                    reviews=lead_data.get('reviews', '0'),
-                    website_url=website_url,
-                    custom_rules_directive=custom_rules_directive,
-                    mockup_link=mockup_link,
-                    project_sample=project_sample,
-                    service_directives=service_directives,
-                    tone_directives=tone_directives,
-                    length_directives=length_directives,
-                    hook_type_directive=hook_type_directive,
-                    signoff_directive=signoff_directive,
-                    language_directives=whatsapp_lang_dir
-                )
+            elif website_url and not is_broken:
+                template = prompts.get("whatsapp_pitch_working_website", "")
             else:
                 template = prompts.get("whatsapp_pitch_no_website", "")
-                prompt = template.format(
-                    persona_directive=persona_directive,
-                    business_name=lead_data.get('name', 'Business'),
-                    category=lead_data.get('category', 'Business'),
-                    city=lead_data.get('city', 'your city'),
-                    rating=lead_data.get('rating', '0'),
-                    reviews=lead_data.get('reviews', '0'),
-                    custom_rules_directive=custom_rules_directive,
-                    mockup_link=mockup_link,
-                    project_sample=project_sample,
-                    service_directives=service_directives,
-                    tone_directives=tone_directives,
-                    length_directives=length_directives,
-                    hook_type_directive=hook_type_directive,
-                    signoff_directive=signoff_directive,
-                    language_directives=whatsapp_lang_dir
-                )
+
+            if not template:
+                template = prompts.get("whatsapp_pitch_no_website", "")
+
+            prompt = template.format(
+                persona_directive=persona_directive,
+                business_name=lead_data.get('name', 'Business'),
+                category=lead_data.get('category', 'Business'),
+                city=lead_data.get('city', 'your city'),
+                rating=lead_data.get('rating', '0'),
+                reviews=lead_data.get('reviews', '0'),
+                website_url=website_url,
+                custom_rules_directive=custom_rules_directive,
+                mockup_link=mockup_link,
+                project_sample=project_sample,
+                service_directives=service_directives,
+                tone_directives=tone_directives,
+                length_directives=length_directives,
+                hook_type_directive=hook_type_directive,
+                signoff_directive=signoff_directive,
+                language_directives=whatsapp_lang_dir
+            )
 
         return AIOutreachWriter._call_gemini_api(prompt, api_key)
 
@@ -255,7 +266,9 @@ class AIOutreachWriter:
         mockup_link: str = "",
         custom_pitch_rules: str = "",
         min_words: int = 150,
-        language: str = "hinglish"
+        language: str = "hinglish",
+        audit_link: str = "",
+        audit_data: dict = None
     ) -> str:
         """
         Generates a highly personalized, human-like sales cold email with a Subject Line and Body.
@@ -266,6 +279,26 @@ class AIOutreachWriter:
         custom_rules_directive = ""
         if custom_pitch_rules:
             custom_rules_directive = f"\n- CUSTOM USER PROFILE & OUTREACH RULES (CRITICAL: You must strictly incorporate these personalized preferences and details in your pitch writing):\n{custom_pitch_rules}\n"
+
+        if audit_data and audit_link:
+            overall_score = audit_data.get("overall_score", 0)
+            scores = audit_data.get("scores", {})
+            recommendations = audit_data.get("recommendations", [])
+            warnings_text = []
+            for rec in recommendations:
+                warnings_text.append(f"  - [{rec.get('category')}] {rec.get('title')}: {rec.get('description')}")
+            warnings_str = "\n".join(warnings_text) if warnings_text else "  - None (website has a perfect score!)"
+            
+            audit_directive = f"""
+- WEBSITE SEO & PERFORMANCE AUDIT RESULTS (CRITICAL: Mention these specific real-world data points and critical issues to show the prospect you did a real audit of their website):
+  * Public Audit Report URL: {audit_link}
+  * Overall Site Score: {overall_score}/100
+  * Category Scores: Speed={scores.get('speed', 0)}/100, SEO={scores.get('seo', 0)}/100, Mobile Responsiveness={scores.get('mobile', 0)}/100, SSL Security={scores.get('ssl', 0)}/100, Image Alt Tags={scores.get('alt', 0)}/100
+  * Key Identified Issues:
+{warnings_str}
+  * CRITICAL COPYWRITING DIRECTIVE: Mention specific low scores (e.g. speed, missing SSL, or missing viewport/mobile responsiveness) to create urgency, and invite them to view their complete public report card at {audit_link}.
+"""
+            custom_rules_directive += "\n" + audit_directive
 
         # Resolve persona and service directives based on target service
         persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)

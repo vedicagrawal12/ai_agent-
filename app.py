@@ -84,14 +84,17 @@ def create_app(config_class=None):
             'dashboard.index',
             'health_check',
             'dashboard.terms',
-            'dashboard.privacy'
+            'dashboard.privacy',
+            'dashboard.audit_report_page',
+            'api_outreach.track_open',
+            'api_outreach.track_click'
         ]
         if request.endpoint in public_endpoints or request.endpoint is None:
             return
             
         # Path-based fallback whitelist
         path = request.path
-        if path == '/' or path == '/health' or path == '/terms' or path == '/privacy' or path.startswith('/login') or path.startswith('/signup') or path.startswith('/forgot-password') or path.startswith('/verify-otp') or path.startswith('/reset-password') or path.startswith('/preview/') or path.startswith('/static/'):
+        if path == '/' or path == '/health' or path == '/terms' or path == '/privacy' or path.startswith('/login') or path.startswith('/signup') or path.startswith('/forgot-password') or path.startswith('/verify-otp') or path.startswith('/reset-password') or path.startswith('/preview/') or path.startswith('/static/') or path.startswith('/audit/') or path.startswith('/api/track/'):
             return
             
         # Enforce authentication for protected paths

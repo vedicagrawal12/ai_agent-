@@ -200,3 +200,22 @@ def admin_dashboard():
         status_info["users"] = []
         
     return render_template("admin.html", status=status_info)
+
+@dashboard_bp.route("/audit/<int:lead_id>")
+def audit_report_page(lead_id):
+    """Serve the public dynamic SEO/Performance Audit Report page for a business lead."""
+    # Note: We do NOT enforce login or user_id mapping so that the link is publicly shareable with the client!
+    lead = db.get_lead_by_id(lead_id)
+    if not lead:
+        return "Audit report not found", 404
+        
+    audit_data_str = lead.get("audit_data", "")
+    audit = {}
+    if audit_data_str:
+        try:
+            import json
+            audit = json.loads(audit_data_str)
+        except Exception as e:
+            logger.error(f"Error parsing audit data for lead {lead_id}: {e}")
+            
+    return render_template("audit_report.html", lead=lead, audit=audit)

@@ -1,8 +1,12 @@
 import logging
 import smtplib
+import html
+import re
+import urllib.parse
+from io import BytesIO
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, send_file, redirect
 from extensions import db, limiter
 from utils.whatsapp import WhatsAppMessenger
 from utils.ai_writer import AIOutreachWriter
@@ -97,8 +101,21 @@ def generate_ai_pitch():
         lead_id = lead_data.get("id")
         
         mockup_link = ""
+        audit_link = ""
+        audit_data = None
         if lead_id:
             mockup_link = f"{base_host}/preview/{lead_id}?sender_name={sender_name}&sender_brand={sender_brand}"
+            lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
+            if lead:
+                lead_data = dict(lead)
+                audit_data_str = lead.get("audit_data", "")
+                if audit_data_str:
+                    try:
+                        import json
+                        audit_data = json.loads(audit_data_str)
+                        audit_link = f"{base_host}/audit/{lead_id}"
+                    except Exception as e:
+                        logger.error(f"Error parsing audit data: {e}")
   
         pitch = AIOutreachWriter.generate_pitch(
             lead_data=lead_data,
@@ -113,7 +130,9 @@ def generate_ai_pitch():
             mockup_link=mockup_link,
             custom_pitch_rules=custom_pitch_rules,
             min_words=min_words,
-            language=language
+            language=language,
+            audit_link=audit_link,
+            audit_data=audit_data
         )
         
         lead_id = lead_data.get("id")
@@ -158,8 +177,21 @@ def generate_email_ai_pitch():
         lead_id = lead_data.get("id")
         
         mockup_link = ""
+        audit_link = ""
+        audit_data = None
         if lead_id:
             mockup_link = f"{base_host}/preview/{lead_id}?sender_name={sender_name}&sender_brand={sender_brand}"
+            lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
+            if lead:
+                lead_data = dict(lead)
+                audit_data_str = lead.get("audit_data", "")
+                if audit_data_str:
+                    try:
+                        import json
+                        audit_data = json.loads(audit_data_str)
+                        audit_link = f"{base_host}/audit/{lead_id}"
+                    except Exception as e:
+                        logger.error(f"Error parsing audit data: {e}")
             
         raw_pitch = AIOutreachWriter.generate_email_pitch(
             lead_data=lead_data,
@@ -171,7 +203,9 @@ def generate_email_ai_pitch():
             mockup_link=mockup_link,
             custom_pitch_rules=custom_pitch_rules,
             min_words=min_words,
-            language=language
+            language=language,
+            audit_link=audit_link,
+            audit_data=audit_data
         )
         
         subject = "Digital Storefront Design Proposal"
@@ -200,7 +234,7 @@ def generate_email_ai_pitch():
 @outreach_bp.route("/outreach/send-smtp-email", methods=["POST"])
 @limiter.limit("10 per hour")
 def send_smtp_email():
-    """Send cold email statelessly using user SMTP details."""
+    """Send cold email statelessly using user SMTP details, wrapping links for tracking."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
@@ -223,13 +257,65 @@ def send_smtp_email():
     if not smtp_host or not smtp_port or not sender_email or not smtp_password:
         return jsonify({"error": "Complete SMTP credentials are required to send direct email."}), 400
     
+    # 1. Log the message to get a log_id
+    log_id = 0
+    if lead_id:
+        user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+        if not user_id:
+            lead = db.get_lead_by_id(lead_id)
+            if lead:
+                user_id = lead.get('user_id')
+        if not user_id:
+            user_id = 1
+        
+        try:
+            log_id = db.log_message(lead_id, template="cold_email", message=body, user_id=user_id)
+        except Exception as db_err:
+            logger.error(f"Error logging outreach message: {db_err}")
+
+    # 2. HTML body conversion and link wrapping
+    # Escape HTML to prevent injection
+    html_body = html.escape(body)
+    
+    # Find all HTTP/HTTPS links
+    url_pattern = re.compile(r'(https?://[^\s<>"]+)')
+    base_host = request.host_url.rstrip('/')
+    
+    def replace_url(match):
+        url = match.group(1)
+        # Strip trailing punctuation that is not part of the URL
+        clean_url = url
+        trailing = ""
+        while clean_url and clean_url[-1] in ".,;:!?()":
+            trailing = clean_url[-1] + trailing
+            clean_url = clean_url[:-1]
+            
+        if log_id:
+            encoded_url = urllib.parse.quote(clean_url)
+            tracking_url = f"{base_host}/api/track/click/{log_id}?dest={encoded_url}"
+            return f'<a href="{tracking_url}" target="_blank">{clean_url}</a>{trailing}'
+        else:
+            return f'<a href="{clean_url}" target="_blank">{clean_url}</a>{trailing}'
+            
+    html_body = url_pattern.sub(replace_url, html_body)
+    # Convert newlines to breaks
+    html_body = html_body.replace("\n", "<br>\n")
+    
+    # Append tracking pixel if we have a log_id
+    if log_id:
+        pixel_url = f"{base_host}/api/track/open/{log_id}"
+        html_body += f'\n<img src="{pixel_url}" width="1" height="1" style="display:none;" alt="" />'
+    
     try:
-        msg = MIMEMultipart()
+        msg = MIMEMultipart('alternative')
         msg['From'] = sender_email
         msg['To'] = to_email
         msg['Subject'] = subject
         
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        part1 = MIMEText(body, 'plain', 'utf-8')
+        part2 = MIMEText(html_body, 'html', 'utf-8')
+        msg.attach(part1)
+        msg.attach(part2)
         
         port = int(smtp_port)
         if use_ssl:
@@ -248,11 +334,45 @@ def send_smtp_email():
         server.quit()
         
         if lead_id:
-            db.update_lead_pipeline_stage(lead_id, "PITCHED", user_id=g.user['id'])
+            # Enforce owner scope for stage update if user context is available
+            user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+            db.update_lead_pipeline_stage(lead_id, "PITCHED", user_id=user_id)
             
         return jsonify({
             "success": True,
             "message": f"Email successfully dispatched directly to {to_email}!"
         })
     except Exception as e:
+        logger.error(f"SMTP Delivery failed: {e}")
         return jsonify({"error": f"SMTP Delivery failed: {str(e)}"}), 500
+
+@outreach_bp.route("/track/open/<int:log_id>", methods=["GET"])
+def track_open(log_id):
+    """Track email open event and return a 1x1 transparent pixel."""
+    try:
+        db.record_email_open(log_id)
+    except Exception as e:
+        logger.error(f"Error tracking open for log {log_id}: {e}")
+    
+    # 1x1 transparent GIF
+    pixel_data = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+    return send_file(BytesIO(pixel_data), mimetype='image/gif')
+
+@outreach_bp.route("/track/click/<int:log_id>", methods=["GET"])
+def track_click(log_id):
+    """Track link click and redirect to the destination URL."""
+    dest = request.args.get('dest', '').strip()
+    lead_id = 0
+    try:
+        lead_id = db.record_link_click(log_id, dest)
+        if lead_id:
+            # Automatically advance the lead's pipeline stage to INTERESTED
+            # Since click occurs outside user session, update without scoping to user
+            db.update_lead_pipeline_stage(lead_id, "INTERESTED")
+    except Exception as e:
+        logger.error(f"Error tracking click for log {log_id}: {e}")
+    
+    if not dest:
+        dest = "/"
+        
+    return redirect(dest)

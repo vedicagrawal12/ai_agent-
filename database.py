@@ -185,8 +185,18 @@ class Database:
 
             # Safe migration: add columns and update constraints for existing tables
             run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id INTEGER;")
+            run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS audit_data TEXT DEFAULT '';")
             run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS user_id INTEGER;")
             run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS user_id INTEGER;")
+            
+            # Category 3: Outreach & Tracking columns
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS opened BOOLEAN DEFAULT FALSE;")
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP DEFAULT NULL;")
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS open_count INTEGER DEFAULT 0;")
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS clicked BOOLEAN DEFAULT FALSE;")
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMP DEFAULT NULL;")
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS click_count INTEGER DEFAULT 0;")
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS clicked_links TEXT DEFAULT '';")
             
             # Add search metadata columns to search_history table (BUG-M10)
             run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS deep_scan BOOLEAN DEFAULT FALSE;")
@@ -561,16 +571,23 @@ class Database:
         finally:
             self._release_connection(conn)
 
-    def log_message(self, lead_id: int, template: str, message: str, user_id: int):
-        """Log a WhatsApp message sent to a lead for a specific user."""
+    def log_message(self, lead_id: int, template: str, message: str, user_id: int) -> int:
+        """Log a WhatsApp or Email message sent to a lead and return its ID."""
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
             cursor.execute("""
                 INSERT INTO message_log (lead_id, user_id, template_used, message_sent)
                 VALUES (%s, %s, %s, %s)
+                RETURNING id
             """, (lead_id, user_id, template, message))
+            log_id = cursor.fetchone()[0]
             conn.commit()
+            return log_id
+        except Exception as e:
+            logging.error(f"[Database] Error logging message: {e}")
+            conn.rollback()
+            return 0
         finally:
             self._release_connection(conn)
 
@@ -1142,6 +1159,95 @@ class Database:
             logging.error(f"[Database] Error saving system setting '{key}': {e}")
             conn.rollback()
             return False
+        finally:
+            self._release_connection(conn)
+
+    def update_lead_audit_data(self, lead_id: int, audit_data_str: str, user_id: int = None) -> bool:
+        """Update the audit_data JSON string for a specific lead."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            query = "UPDATE leads SET audit_data = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s"
+            params = [audit_data_str, lead_id]
+            if user_id is not None:
+                query += " AND user_id = %s"
+                params.append(user_id)
+            cursor.execute(query, params)
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"[Database] Error updating audit data for lead {lead_id}: {e}")
+            conn.rollback()
+            return False
+        finally:
+            self._release_connection(conn)
+
+    def get_lead_outreach_logs(self, lead_id: int, user_id: int) -> List[Dict]:
+        """Retrieve message logs with tracking parameters for a specific lead."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT id, template_used, message_sent, sent_at, opened, opened_at, open_count, clicked, clicked_at, click_count, clicked_links
+                FROM message_log
+                WHERE lead_id = %s AND user_id = %s
+                ORDER BY sent_at DESC;
+            """, (lead_id, user_id))
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        except Exception as e:
+            logging.error(f"[Database] Error retrieving outreach logs for lead {lead_id}: {e}")
+            return []
+        finally:
+            self._release_connection(conn)
+
+    def record_email_open(self, log_id: int) -> bool:
+        """Record an email open event for the given log ID."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE message_log
+                SET opened = TRUE,
+                    opened_at = CURRENT_TIMESTAMP,
+                    open_count = open_count + 1
+                WHERE id = %s
+            """, (log_id,))
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"[Database] Error recording email open for log {log_id}: {e}")
+            conn.rollback()
+            return False
+        finally:
+            self._release_connection(conn)
+
+    def record_link_click(self, log_id: int, dest_url: str) -> int:
+        """Record a link click event and return the associated lead_id (or 0)."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            # First, update the message log
+            cursor.execute("""
+                UPDATE message_log
+                SET clicked = TRUE,
+                    clicked_at = CURRENT_TIMESTAMP,
+                    click_count = click_count + 1,
+                    clicked_links = CASE 
+                        WHEN clicked_links IS NULL OR clicked_links = '' THEN %s 
+                        ELSE clicked_links || ', ' || %s 
+                    END
+                WHERE id = %s
+                RETURNING lead_id;
+            """, (dest_url, dest_url, log_id))
+            row = cursor.fetchone()
+            lead_id = row[0] if row else 0
+            conn.commit()
+            return lead_id
+        except Exception as e:
+            logging.error(f"[Database] Error recording link click for log {log_id}: {e}")
+            conn.rollback()
+            return 0
         finally:
             self._release_connection(conn)
 

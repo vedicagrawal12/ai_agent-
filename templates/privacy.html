@@ -1,62 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Privacy Policy for LeadHunter AI.">
+    <meta name="description" content="Formal Privacy Policy for LeadHunter AI platform.">
     <title>Privacy Policy — LeadHunter AI</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
     <style>
         .page-wrapper {
-            max-width: 800px;
+            max-width: 900px;
             margin: 60px auto;
-            padding: var(--space-xl) var(--space-lg);
+            padding: 48px;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
+            box-shadow: var(--shadow-lg), 0 0 30px rgba(0, 240, 255, 0.03);
+            position: relative;
         }
+
+        /* Gold/Cyan legal accent line on top of card */
+        .page-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-cyan) 0%, var(--accent-violet) 100%);
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        }
+
         .page-header {
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
             padding-bottom: var(--space-md);
-            margin-bottom: var(--space-lg);
+            margin-bottom: var(--space-xl);
+            text-align: center;
         }
+
         .page-title {
             font-family: var(--font-display);
-            font-size: 2.2rem;
+            font-size: 2.4rem;
             color: var(--text-primary);
+            letter-spacing: 0.5px;
             margin-bottom: var(--space-xs);
         }
+
         .page-title span {
             color: var(--accent-cyan);
             text-shadow: var(--shadow-glow-cyan);
         }
+
+        .page-subtitle {
+            font-size: 0.95rem;
+            color: var(--accent-orange);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+        }
+
         .page-meta {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-family: var(--font-mono);
+        }
+
+        .legal-notice-box {
+            background: rgba(0, 240, 255, 0.03);
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            padding: 20px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 32px;
+            font-size: 0.88rem;
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            line-height: 1.6;
         }
+
         .content-section {
-            margin-bottom: var(--space-lg);
+            margin-bottom: 32px;
         }
+
         .content-section h2 {
-            font-size: 1.35rem;
+            font-family: var(--font-display);
+            font-size: 1.2rem;
             color: var(--text-primary);
             border-left: 3px solid var(--accent-cyan);
             padding-left: var(--space-sm);
-            margin-bottom: var(--space-sm);
-            margin-top: var(--space-lg);
+            margin-bottom: 16px;
+            margin-top: 24px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .content-section p, .content-section ul {
+
+        .content-section p {
             font-size: 0.95rem;
             color: var(--text-secondary);
-            line-height: 1.6;
-            margin-bottom: var(--space-sm);
+            line-height: 1.7;
+            margin-bottom: 16px;
+            text-align: justify;
         }
-        .content-section ul {
-            padding-left: 20px;
-            list-style-type: square;
+
+        .legal-sub-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin-bottom: 16px;
         }
+
+        .legal-sub-list li {
+            position: relative;
+            padding-left: 28px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+
+        .legal-sub-list li::before {
+            content: '§';
+            position: absolute;
+            left: 8px;
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
         .back-link {
             display: inline-flex;
             align-items: center;
@@ -65,55 +134,79 @@
             text-decoration: none;
             font-weight: 600;
             margin-top: var(--space-xl);
-            transition: color var(--transition-fast);
+            transition: all var(--transition-fast);
+            padding: 10px 20px;
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            border-radius: var(--radius-sm);
+            background: rgba(0, 240, 255, 0.02);
         }
+
         .back-link:hover {
-            color: var(--accent-violet);
-            text-decoration: underline;
+            color: var(--text-primary);
+            background: rgba(0, 240, 255, 0.1);
+            border-color: var(--accent-cyan);
+            box-shadow: var(--shadow-glow-cyan);
+            transform: translateY(-2px);
         }
     </style>
 </head>
+
 <body>
     <div class="page-wrapper">
         <div class="page-header">
+            <div class="page-subtitle">Data Protection Policy & GDPR Disclosure</div>
             <h1 class="page-title">Privacy <span>Policy</span></h1>
-            <div class="page-meta">Last updated: June 10, 2026</div>
+            <div class="page-meta">DOCUMENT REF: LH-PRIV-2026-V2 | EFFECTIVE DATE: JUNE 12, 2026</div>
         </div>
-        
-        <div class="content-section">
-            <p>LeadHunter AI respects your privacy and is committed to protecting your personal data. This Privacy Policy details how we handle your login profile, search logs, and saved business leads.</p>
+
+        <div class="legal-notice-box">
+            <strong>DATA PRIVACY COMMITMENT:</strong> LEADHUNTER AI IS COMMITTED TO EXCELLENCE IN USER PRIVACY AND GDPR DATA PROTECTION. THIS DOCUMENT STIPULATES OUR METHODS OF PROCESSING, SECURING, SCRAPING, AND DISCLOSING OPERATIONAL ASSETS AND PERSONAL IDENTIFYING INFORMATION (PII).
         </div>
 
         <div class="content-section">
-            <h2>1. Information We Collect</h2>
-            <p>We collect and store only the minimal necessary information to execute local lead generation tasks:</p>
-            <ul>
-                <li><strong>Account Registration Details:</strong> Username, email, and hashed password.</li>
-                <li><strong>Business Leads and Search History:</strong> Saved listings fetched via SerpApi mapping.</li>
-                <li><strong>Outreach Logs:</strong> A record of custom messages generated and emails dispatched.</li>
+            <h2>1. Information Processing & Data Minimization</h2>
+            <p>The Platform strictly collects and stores only the minimum necessary operational data required to coordinate lead tracking pipelines:</p>
+            <ul class="legal-sub-list">
+                <li><strong>Account Parameters:</strong> Username, contact telephone numbers, email details, and cryptographically hashed passwords.</li>
+                <li><strong>Scouted Leads & Directories:</strong> Public local listings data (e.g. name, reviews, business address, coordinates, active URLs) retrieved via Google Maps APIs.</li>
+                <li><strong>Outreach Logs:</strong> Metrics of generated outreach drafts, dispatched email dates, open tracking status counts, and click analytics.</li>
             </ul>
         </div>
 
         <div class="content-section">
-            <h2>2. Credential Security & Local Storage</h2>
-            <p>To maximize security, third-party credentials (such as your private SerpApi key, Gemini API key, and SMTP login details) are processed in-memory and can be stored in your browser's local storage rather than on our backend database, ensuring complete client-side control.</p>
+            <h2>2. Local Credential Encryption & Sandbox Policy</h2>
+            <p>To establish enterprise-grade security, all external API keys (Google Maps API keys, Gemini AI private keys) and SMTP sender accounts credentials are processed in-memory or saved directly inside the Operator's local browser storage sandbox. These private keys are never permanently persisted on our backend database, ensuring complete client-side control and mitigating the risk of central server database leaks.</p>
         </div>
 
         <div class="content-section">
-            <h2>3. Data Deletion & Portability</h2>
-            <p>In accordance with GDPR compliance standards, you possess the right to portability and the right to be forgotten:</p>
-            <ul>
-                <li><strong>Export Data:</strong> You can download all your stored records (user profile, saved leads, history) at any time from your settings console.</li>
-                <li><strong>Delete Account:</strong> Triggering the account deletion will instantly and permanently delete all your information from our database server.</li>
+            <h2>3. GDPR Compliance: Portability and Right of Erasure</h2>
+            <p>In full compliance with General Data Protection Regulation standards (specifically Articles 17 and 20), the Platform guarantees the following user rights:</p>
+            <ul class="legal-sub-list">
+                <li><strong>Data Portability:</strong> Operators can trigger a complete export request. The Platform dynamically packages and downloads all saved records, users data, leads pipelines, and tracking metrics in a structured JSON schema via the `/api/config/export-data` endpoint.</li>
+                <li><strong>Right of Erasure (Cascading Cleanup):</strong> Triggering the account deletion parameter in settings instantly deletes the Operator profile. The server cascades the delete command, permanently purging all associated history, leads, tracking pixels logs, and configuration records from the database.</li>
             </ul>
         </div>
 
         <div class="content-section">
-            <h2>4. Third-Party Services</h2>
-            <p>Our service communicates with SerpApi and Google Gemini platforms to execute searches and draft content. Please review their respective privacy agreements regarding external query analytics.</p>
+            <h2>4. Third-Party Sub-processors & External Flows</h2>
+            <p>Our search mechanisms communicate with Google Maps database directories to extract local businesses info, and transmit sanitized prompts to Google Gemini AI to compose cold outreach letters. Operators are advised to review the specific privacy policies of Google and Google Cloud Services to examine how external API data queries are processed.</p>
         </div>
 
-        <a href="/" class="back-link">← Return to Dashboard</a>
+        <div class="content-section">
+            <h2>5. SMTP Email Tracking & Mockup Redirections Disclosure</h2>
+            <p>1. The Platform integrates outreach telemetry to monitor lead engagement. Dispatched cold emails contain a transparent tracking pixel (1x1 GIF) to monitor read status and open count increments.</p>
+            <p>2. Outreach messages containing custom portfolio link references are wrapped inside tracking redirect routes. When a recipient clicks the link, the tracking server registers the click event, automatically elevates the corresponding lead's status to **INTERESTED**, and redirects the client browser to the destination URL. Operators must ensure that their cold email lists conform to local permissions regulations before executing campaigns.</p>
+        </div>
+
+        <div class="content-section">
+            <h2>6. CSRF Shields & Browser Cookies</h2>
+            <p>The Platform uses standard session cookies and enforces secure CSRF (Cross-Site Request Forgery) verification tokens for all status-modifying operations (POST, PUT, DELETE). Cookies are flagged with secure, SameSite=Lax headers to prevent session hijacking and cross-site scripting vulnerabilities.</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="/" class="back-link">← Return to Dashboard Console</a>
+        </div>
     </div>
 </body>
+
 </html>

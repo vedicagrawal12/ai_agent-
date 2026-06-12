@@ -71,6 +71,107 @@ export const leadsModule = {
             }
         }
 
+        // Populate SEO Audit Section
+        const seoSection = document.getElementById('detailSEOAuditSection');
+        if (seoSection) {
+            const hasWebsite = lead.website && lead.website.trim() !== '';
+            let auditHtml = '';
+
+            if (!hasWebsite) {
+                auditHtml = `
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);">🔍 No website URL found for this business.</span>
+                    </div>
+                `;
+            } else {
+                let auditData = null;
+                if (lead.audit_data) {
+                    try {
+                        auditData = typeof lead.audit_data === 'string' ? JSON.parse(lead.audit_data) : lead.audit_data;
+                    } catch (e) {
+                        console.error('Error parsing audit_data:', e);
+                    }
+                }
+
+                if (auditData && auditData.overall_score !== undefined) {
+                    const score = auditData.overall_score;
+                    let scoreColor = 'var(--accent-red)';
+                    if (score >= 80) {
+                        scoreColor = 'var(--accent-green)';
+                    } else if (score >= 50) {
+                        scoreColor = 'var(--accent-orange)';
+                    }
+
+                    const auditLink = `/audit/${lead.id}`;
+
+                    auditHtml = `
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; width: 100%;">
+                            <div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                    <span>🔍 Website Audit Score:</span>
+                                    <strong style="color: ${scoreColor}; font-size: 0.95rem;">${score}/100</strong>
+                                </div>
+                                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+                                    Audited on: ${auditData.audited_at || 'Recently'}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <a href="${auditLink}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 6px 10px; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); text-decoration: none; border-radius: var(--radius-sm); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                                    📄 Report Card
+                                </a>
+                                <button id="copyAuditReportLinkBtn" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 6px 10px; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                    📋 Copy URL
+                                </button>
+                                <button id="runWebsiteAuditBtn" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 6px 6px; border: 1px solid var(--border-color); color: var(--text-muted); background: transparent; border-radius: var(--radius-sm); cursor: pointer;" title="Re-run Audit">
+                                    🔄
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    auditHtml = `
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; width: 100%;">
+                            <div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">🔍 Website not audited yet.</div>
+                                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${lead.website}">${lead.website}</div>
+                            </div>
+                            <button id="runWebsiteAuditBtn" class="btn btn-primary btn-sm" style="font-size: 0.8rem; padding: 8px 14px; background: var(--accent-blue); color: white; border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                ⚡ Generate SEO Audit Score
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+
+            seoSection.innerHTML = auditHtml;
+
+            // Bind click handlers
+            const runAuditBtn = document.getElementById('runWebsiteAuditBtn');
+            if (runAuditBtn) {
+                runAuditBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await this.runWebsiteAudit(lead.id);
+                });
+            }
+
+            const copyReportLinkBtn = document.getElementById('copyAuditReportLinkBtn');
+            if (copyReportLinkBtn) {
+                copyReportLinkBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.copyAuditReportLink(lead.id);
+                });
+            }
+        }
+
+        if (lead.id) {
+            this.loadOutreachLogs(lead.id);
+        } else {
+            const containers = document.querySelectorAll('#detailPane .outreach-history-list');
+            containers.forEach(el => {
+                el.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-secondary);">No outreach history (unsaved lead).</div>';
+            });
+        }
+
         const detailPane = document.getElementById('detailPane');
         if (detailPane) {
             detailPane.classList.add('active');
@@ -81,6 +182,63 @@ export const leadsModule = {
                     window.gsap.to(detailPane, { x: 0, y: 0, duration: 0.45, ease: 'power2.out', overwrite: 'auto' });
                 }
             }
+        }
+    },
+
+    async loadOutreachLogs(leadId) {
+        const containers = document.querySelectorAll('#detailPane .outreach-history-list');
+        containers.forEach(el => {
+            el.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-secondary);">Loading history...</div>';
+        });
+
+        try {
+            const data = await API.request(`/api/leads/${leadId}/outreach-logs`, {
+                method: 'GET'
+            });
+
+            let html = '';
+            if (data && data.length > 0) {
+                data.forEach(log => {
+                    const sentAt = new Date(log.sent_at).toLocaleString();
+                    const isEmail = log.template_used === 'cold_email';
+                    const icon = isEmail ? '📧' : '📱';
+                    const channel = isEmail ? 'Email' : 'WhatsApp';
+
+                    let trackingInfo = '';
+                    if (isEmail) {
+                        const openedText = log.opened ? `🟢 Opened (${log.open_count}x)` : '⚪ Unopened';
+                        const clickedText = log.clicked ? `🟢 Clicked (${log.click_count}x)` : '⚪ Unclicked';
+                        trackingInfo = `<div style="font-size: 0.72rem; display: flex; gap: 8px; margin-top: 4px;">
+                            <span style="color: ${log.opened ? 'var(--accent-green)' : 'var(--text-muted)'};">${openedText}</span>
+                            <span style="color: ${log.clicked ? 'var(--accent-green)' : 'var(--text-muted)'};">${clickedText}</span>
+                        </div>`;
+                    }
+
+                    html += `
+                        <div style="padding: 8px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.8rem; margin-bottom: 6px; text-align: left;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                                <strong>${icon} ${channel}</strong>
+                                <span style="font-size: 0.7rem; color: var(--text-muted);">${sentAt}</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 250px;" title="${log.message_sent}">
+                                ${log.message_sent}
+                            </div>
+                            ${trackingInfo}
+                        </div>
+                    `;
+                });
+            } else {
+                html = '<div style="font-size: 0.8rem; color: var(--text-secondary);">No outreach history.</div>';
+            }
+
+            containers.forEach(el => {
+                el.innerHTML = html;
+            });
+        } catch (error) {
+            console.error('Error fetching outreach logs:', error);
+            containers.forEach(el => {
+                el.innerHTML = '<div style="font-size: 0.8rem; color: var(--accent-red);">Failed to load history.</div>';
+            });
         }
     },
 
@@ -99,7 +257,7 @@ export const leadsModule = {
             if (data.success) {
                 AppState.leads[index].instagram = data.instagram || '';
                 AppState.leads[index].facebook = data.facebook || '';
-                
+
                 const placeId = AppState.leads[index].place_id;
                 const matchedAll = AppState.allResults.find(l => l.place_id === placeId);
                 if (matchedAll) {
@@ -181,7 +339,7 @@ export const leadsModule = {
             UI.showToast('No phone number available', 'error');
             return;
         }
-        
+
         navigator.clipboard.writeText(lead.phone).then(() => {
             UI.showToast(`Copied: ${lead.phone}`, 'success');
         }).catch(() => {
@@ -201,11 +359,11 @@ export const leadsModule = {
             UI.showToast('Lead must be saved to database to generate mockup', 'error');
             return;
         }
-        
+
         const senderName = localStorage.getItem('sender_name') || '';
         const senderBrand = localStorage.getItem('sender_brand') || '';
         const url = `${window.location.origin}/preview/${id}?sender_name=${encodeURIComponent(senderName)}&sender_brand=${encodeURIComponent(senderBrand)}`;
-        
+
         navigator.clipboard.writeText(url).then(() => {
             UI.showToast('🚀 Mockup Link copied to clipboard! Ready to share!', 'success');
         }).catch(() => {
@@ -225,11 +383,11 @@ export const leadsModule = {
             UI.showToast('No leads to export', 'error');
             return;
         }
-        
+
         try {
             UI.showToast('Generating Excel file...', 'info');
             const blob = await API.exportExcel(AppState.leads);
-            
+
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -238,7 +396,7 @@ export const leadsModule = {
             a.click();
             window.URL.revokeObjectURL(url);
             a.remove();
-            
+
             UI.showToast(`Exported ${AppState.leads.length} leads to Excel`, 'success');
         } catch (error) {
             UI.showToast('Export failed: ' + error.message, 'error');
@@ -252,7 +410,7 @@ export const leadsModule = {
         }
 
         UI.el.bulkScanSocialsBtn.disabled = true;
-        
+
         UI.el.bulkProgressBanner.style.display = 'block';
         UI.el.bulkProgressLabel.textContent = 'Preparing bulk social scan...';
         UI.el.bulkProgressPercentage.textContent = '0%';
@@ -266,7 +424,7 @@ export const leadsModule = {
             return;
         }
 
-        if (!confirm(`Kya aap sabhi ${leadsToScan.length} leads ke socials scan karna chahte hain?\n\nIs bulk operation se aapke SerpApi search credits consume honge (har lead ke liye 1 search credit).`)) {
+        if (!confirm(`Kya aap sabhi ${leadsToScan.length} leads ke socials scan karna chahte hain?\n\nIs bulk operation se aapke  search credits consume honge (har lead ke liye 1 search credit).`)) {
             UI.el.bulkScanSocialsBtn.disabled = false;
             UI.el.bulkProgressBanner.style.display = 'none';
             return;
@@ -324,10 +482,64 @@ export const leadsModule = {
 
         UI.showToast(`🎉 Bulk social scan completed! Scanned ${total} leads.`, 'success');
         UI.el.bulkProgressLabel.textContent = 'Bulk scan complete!';
-        
+
         setTimeout(() => {
             UI.el.bulkProgressBanner.style.display = 'none';
             UI.el.bulkScanSocialsBtn.disabled = false;
         }, 3000);
+    },
+
+    async runWebsiteAudit(leadId) {
+        const btn = document.getElementById('runWebsiteAuditBtn');
+        const originalHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.innerHTML = '⏳ Auditing...';
+            btn.disabled = true;
+        }
+
+        try {
+            const data = await API.request(`/api/leads/${leadId}/audit`, {
+                method: 'POST'
+            });
+
+            if (data.success && data.audit_data) {
+                // Update the lead in AppState
+                const index = AppState.leads.findIndex(l => l.id === leadId);
+                if (index !== -1) {
+                    AppState.leads[index].audit_data = JSON.stringify(data.audit_data);
+                }
+
+                // Refresh detail pane and list
+                this.selectLead(leadId);
+                UI.renderLeads(AppState.leads);
+                UI.showToast('✨ SEO and Performance Audit completed successfully!', 'success');
+            } else {
+                UI.showToast(data.error || 'Audit execution failed.', 'error');
+            }
+        } catch (error) {
+            UI.showToast('Audit failed: ' + error.message, 'error');
+        } finally {
+            if (btn) {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        }
+    },
+
+    copyAuditReportLink(leadId) {
+        const absoluteUrl = `${window.location.origin}/audit/${leadId}`;
+        navigator.clipboard.writeText(absoluteUrl).then(() => {
+            UI.showToast('📋 Audit report card link copied to clipboard!', 'success');
+        }).catch((err) => {
+            console.error('Failed to copy to clipboard:', err);
+            // Fallback copy method
+            const textArea = document.createElement('textarea');
+            textArea.value = absoluteUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            UI.showToast('📋 Audit report card link copied to clipboard!', 'success');
+        });
     }
 };
