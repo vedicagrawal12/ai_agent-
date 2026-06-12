@@ -107,3 +107,19 @@ def test_remove_duplicates():
     assert "Gym Beta" in names
     assert "Gym Gamma" in names
     assert "Gym Delta" in names
+
+def test_portfolio_ssl_error():
+    """Verify that PortfolioParser.fetch_and_parse raises an exception on SSL certificate verification failure (BUG-M8)."""
+    from utils.portfolio import PortfolioParser
+    import ssl
+    from unittest.mock import patch
+
+    # Mock urllib.request.urlopen to raise ssl.SSLError
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_urlopen.side_effect = ssl.SSLError("self-signed certificate")
+        
+        with pytest.raises(Exception) as exc_info:
+            PortfolioParser.fetch_and_parse("https://self-signed.badssl.com/")
+        
+        # Verify the exception propagates the certificate error
+        assert "self-signed certificate" in str(exc_info.value)

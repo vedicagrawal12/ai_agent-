@@ -609,8 +609,12 @@ export const UI = {
     showToast(message, type = 'info') {
         const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
         
-        if (message && (message.includes('run out of searches') || message.includes('quota') || message.includes('SerpApi Error'))) {
-            message = "⚠️ Aapka SerpApi Free Search Limit khatm ho gaya hai! Please Settings Panel (⚙️) me jakar naya free API key update karein.";
+        if (message && (message.includes('run out of searches') || message.includes('quota') || message.includes('SerpApi Error') || message.includes('SerpApi key') || message.includes('SerpApi Key'))) {
+            if (window.IS_ADMIN) {
+                message = "⚠️ Master SerpApi key limit has been crossed or it is invalid. Please update the key in the Admin Console.";
+            } else {
+                message = "⚠️ Server busy or under maintenance... take a while, have a teacup and come back.";
+            }
             type = 'error';
         }
         

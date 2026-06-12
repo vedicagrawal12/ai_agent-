@@ -9,7 +9,7 @@ def not_found(e):
     """Handle 404 Not Found errors globally."""
     if request.path.startswith('/api/'):
         return jsonify({"error": "Resource not found"}), 404
-    return render_template("login.html"), 404
+    return render_template("404.html"), 404
 
 @errors_bp.app_errorhandler(500)
 def server_error(e):

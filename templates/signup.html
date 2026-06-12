@@ -317,6 +317,7 @@
                 {% endwith %}
 
                 <form action="/signup" method="POST" class="auth-form">
+                    <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token', '') }}">
                     <div class="form-group">
                         <label class="form-label" for="username">Username</label>
                         <input type="text" id="username" name="username" class="form-input form-input-glow" placeholder="Choose a username" autocomplete="off" required>
@@ -324,6 +325,10 @@
                     <div class="form-group">
                         <label class="form-label" for="email">Email Address</label>
                         <input type="email" id="email" name="email" class="form-input form-input-glow" placeholder="Enter your email address" autocomplete="off" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Contact Number</label>
+                        <input type="tel" id="phone" name="phone" class="form-input form-input-glow" placeholder="Enter contact number (e.g. +91 98765 43210)" autocomplete="off" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="password">Password</label>

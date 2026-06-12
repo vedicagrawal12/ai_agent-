@@ -12,6 +12,16 @@ leads_bp = Blueprint('api_leads', __name__)
 # To share API keys, we import from extensions
 from extensions import API_KEY_STORE
 
+def get_resolved_serpapi_key():
+    """Resolve the active SerpApi key from Database, fallback to Env, then request headers."""
+    db_key = db.get_system_setting("serpapi_key")
+    if db_key:
+        return db_key
+    env_key = API_KEY_STORE.get("serpapi", "")
+    if env_key:
+        return env_key
+    return request.headers.get("X-SerpApi-Key", "")
+
 def enrich_lead_dict(lead, db_leads_dict):
     lead_dict = lead.to_dict()
     db_lead = db_leads_dict.get(lead.place_id)
@@ -74,8 +84,17 @@ def run_background_search(user_id, query, city, max_results, include_with_websit
     filtered_leads = filtered_leads[:max_results]
     all_leads = all_leads[:max_results]
     
-    search_query_log = f"{query} (Deep Scan)" if deep_scan else query
-    db.save_search(search_query_log, city, len(all_leads), len(filtered_leads), user_id=user_id)
+    db.save_search(
+        query=query,
+        city=city,
+        results_count=len(all_leads),
+        leads_count=len(filtered_leads),
+        user_id=user_id,
+        deep_scan=deep_scan,
+        zones=zones,
+        include_with_website=include_with_website,
+        hide_saved=hide_saved
+    )
     
     # Fetch the saved leads from DB to get database IDs and social links
     db_leads_dict = {}
@@ -136,7 +155,15 @@ def search_businesses():
     deep_scan = data.get("deep_scan", False)
     zones = data.get("zones", [])
     if isinstance(zones, list):
-        zones = zones[:10]
+        cleaned_zones = []
+        for z in zones[:10]:
+            if isinstance(z, str):
+                z_clean = z.strip()[:50]
+                z_clean = re.sub(r'[^a-zA-Z0-9\s\-\.]', '', z_clean)
+                z_clean = ' '.join(z_clean.split())
+                if z_clean:
+                    cleaned_zones.append(z_clean)
+        zones = cleaned_zones
     else:
         zones = []
     start_offset = data.get("start_offset", 0)
@@ -148,9 +175,12 @@ def search_businesses():
         return jsonify({"error": "Please enter a city name"}), 400
     
     # Check API key
-    api_key = request.headers.get("X-SerpApi-Key") or API_KEY_STORE.get("serpapi", "")
+    api_key = get_resolved_serpapi_key()
     if not api_key:
-        return jsonify({"error": "SerpApi key not configured. Please set it in Settings."}), 401
+        if g.user and g.user.get('is_admin'):
+            return jsonify({"error": "SerpApi key not configured. Please configure the master key in the Admin Console."}), 401
+        else:
+            return jsonify({"error": "Server busy or under maintenance... take a while, have a teacup and come back."}), 401
     
     try:
         task_id = TaskRunner.submit(
@@ -312,9 +342,12 @@ def scan_lead_socials(lead_id):
     if not lead:
         return jsonify({"error": "Lead not found"}), 404
         
-    api_key = request.headers.get("X-SerpApi-Key") or API_KEY_STORE.get("serpapi", "")
+    api_key = get_resolved_serpapi_key()
     if not api_key:
-        return jsonify({"error": "SerpApi key not configured"}), 401
+        if g.user and g.user.get('is_admin'):
+            return jsonify({"error": "SerpApi key not configured. Please configure the master key in the Admin Console."}), 401
+        else:
+            return jsonify({"error": "Server busy or under maintenance... take a while, have a teacup and come back."}), 401
         
     instagram_link = ""
     facebook_link = ""
@@ -359,7 +392,7 @@ def scan_lead_email(lead_id):
         return jsonify({"error": "Lead not found"}), 404
         
     website = lead.get("website", "").strip()
-    api_key = request.headers.get("X-SerpApi-Key") or API_KEY_STORE.get("serpapi", "")
+    api_key = get_resolved_serpapi_key()
     
     email = None
     scraped_via = "direct_website"
@@ -374,14 +407,22 @@ def scan_lead_email(lead_id):
     if not email:
         if not api_key:
             if not website:
+                if g.user and g.user.get('is_admin'):
+                    err = "Lead does not have a website URL listed. Please configure your master SerpApi Key in the Admin Console to enable Web-Search Fallback."
+                else:
+                    err = "Server busy or under maintenance... take a while, have a teacup and come back."
                 return jsonify({
                     "success": False,
-                    "error": "Lead does not have a website URL listed. Configure your SerpApi Key in Settings to enable Web-Search Fallback."
+                    "error": err
                 }), 400
             else:
+                if g.user and g.user.get('is_admin'):
+                    err = "No email found via website scraper. Please configure your master SerpApi Key in the Admin Console to try Web-Search Fallback."
+                else:
+                    err = "Server busy or under maintenance... take a while, have a teacup and come back."
                 return jsonify({
                     "success": False,
-                    "error": "No email found via website scraper. Configure SerpApi Key in Settings to try Web-Search Fallback."
+                    "error": err
                 })
                 
         try:
@@ -490,11 +531,12 @@ def import_leads():
             if priority not in ["HIGH", "MEDIUM", "LOW", "IGNORE"]:
                 priority = "LOW"
                 
-            # Place ID (use a generated hash if place_id is empty, so ON CONFLICT doesn't fail on nulls)
             place_id = row.get('place_id', '').strip()
             if not place_id:
-                import uuid
-                place_id = f"imported_{uuid.uuid4().hex[:12]}"
+                import hashlib
+                hash_input = f"{name.lower().strip()}_{city.lower().strip()}_{phone.strip()}"
+                hasher = hashlib.md5(hash_input.encode('utf-8'))
+                place_id = f"imported_{hasher.hexdigest()[:16]}"
                 
             lead_obj = Lead(
                 name=name,

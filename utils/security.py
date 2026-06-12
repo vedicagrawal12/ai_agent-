@@ -8,13 +8,14 @@ After MAX_ATTEMPTS failures within LOCKOUT_SECONDS, the account is temporarily l
 import time
 from collections import defaultdict
 import threading
+from constants import LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT_SECONDS
 
 
 class LoginTracker:
     """Thread-safe login attempt tracker with automatic lockout."""
     
-    MAX_ATTEMPTS = 5          # Lock after 5 failed attempts
-    LOCKOUT_SECONDS = 300     # Lock for 5 minutes
+    MAX_ATTEMPTS = LOGIN_MAX_ATTEMPTS          # Lock attempts limit
+    LOCKOUT_SECONDS = LOGIN_LOCKOUT_SECONDS     # Lock duration seconds
 
     def __init__(self):
         self._attempts = defaultdict(list)  # username -> [timestamp, ...]

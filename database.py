@@ -8,6 +8,7 @@ import threading
 from datetime import datetime
 from typing import List, Optional, Dict
 from collectors.base_collector import Lead
+from constants import CLEANUP_UNCONTACTED_DAYS, CLEANUP_IGNORED_DAYS, CLEANUP_HISTORY_DAYS
 
 
 class Database:
@@ -15,6 +16,7 @@ class Database:
 
     # Class-level connection pool
     _pool = None
+    _pool_dsn = None
     _pool_lock = threading.Lock()
 
     # Class-level flag to prevent double cleanup in Flask debug mode (reloader runs __init__ twice)
@@ -27,28 +29,32 @@ class Database:
             db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/leadhunter_db")
         # Handle case where DATABASE_URL still has the placeholder
         if "YOUR_POSTGRES_PASSWORD" in db_url:
-            print("[Database] WARNING: DATABASE_URL contains placeholder password. Falling back to default 'postgres' password.")
+            logging.warning("[Database] DATABASE_URL contains placeholder password. Falling back to default 'postgres' password.")
             db_url = db_url.replace("YOUR_POSTGRES_PASSWORD", "postgres")
         self.db_url = db_url
 
         # Initialize thread-safe connection pool once
         with Database._pool_lock:
+            # If the database URL has changed, close the old pool and allow recreation
+            if Database._pool is not None and Database._pool_dsn != self.db_url:
+                logging.info("[Database] Database URL changed. Re-creating connection pool...")
+                try:
+                    Database._pool.closeall()
+                except Exception as close_err:
+                    logging.error(f"[Database] Error closing connection pool: {close_err}")
+                Database._pool = None
+
             if Database._pool is None:
-                logging.info("[Database] Initializing connection pool...")
+                logging.info(f"[Database] Initializing connection pool with URL: {self.db_url}...")
                 Database._pool = pool.ThreadedConnectionPool(
                     minconn=2,
                     maxconn=20,
                     dsn=self.db_url,
                     cursor_factory=psycopg2.extras.DictCursor
                 )
+                Database._pool_dsn = self.db_url
 
         self._init_db()
-        # Run startup cleanup once, outside of _init_db
-        # BUG-M8 fix: Use lock to prevent race condition in multi-worker environments
-        with Database._cleanup_lock:
-            if not Database._cleanup_done:
-                Database._cleanup_done = True
-                self.cleanup_old_data()
 
     def _get_connection(self):
         """Get a database connection from the connection pool."""
@@ -59,208 +65,259 @@ class Database:
         if conn:
             Database._pool.putconn(conn)
 
+    def close(self):
+        """Close the database connection pool."""
+        with Database._pool_lock:
+            if Database._pool is not None:
+                try:
+                    Database._pool.closeall()
+                except Exception:
+                    pass
+                Database._pool = None
+                Database._pool_dsn = None
+
     def _init_db(self):
         """Create database tables if they don't exist."""
         conn = self._get_connection()
+        try:
+            def run_query(query, params=None):
+                cursor = conn.cursor()
+                try:
+                    cursor.execute(query, params)
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    logging.debug(f"[Database Init] Query skipped/failed: {query}. Error: {e}")
 
-        def run_query(query, params=None):
+            # Users table (created if not exists, with password_hash as TEXT, email column, and phone column)
+            run_query("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(100) NOT NULL,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    phone VARCHAR(50) DEFAULT '',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            # Safe migration: ensure existing password_hash column is TYPE TEXT, email, phone, is_admin, and is_active columns exist
+            run_query("ALTER TABLE users ALTER COLUMN password_hash TYPE TEXT;")
+            run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) DEFAULT '';")
+            run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50) DEFAULT '';")
+            run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
+            run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;")
+            
+            # Migrate duplicate/empty emails to ensure UNIQUE and NOT NULL constraint can be safely applied
+            run_query("UPDATE users SET email = username || '@example.com' WHERE email IS NULL OR email = '' OR email = 'placeholder@example.com';")
+            run_query("ALTER TABLE users ALTER COLUMN email SET NOT NULL;")
+            run_query("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_username_key;")
+            run_query("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_email_key') THEN
+                        ALTER TABLE users ADD CONSTRAINT users_email_key UNIQUE (email);
+                    END IF;
+                END
+                $$;
+            """)
+            run_query("UPDATE users SET is_admin = TRUE WHERE id = (SELECT MIN(id) FROM users) AND NOT EXISTS (SELECT 1 FROM users WHERE is_admin = TRUE);")
+
+            # Leads table
+            run_query("""
+                CREATE TABLE IF NOT EXISTS leads (
+                    id SERIAL PRIMARY KEY,
+                    place_id VARCHAR(255),
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    name VARCHAR(255) NOT NULL,
+                    phone VARCHAR(50) DEFAULT '',
+                    address TEXT DEFAULT '',
+                    website TEXT DEFAULT '',
+                    rating REAL DEFAULT 0.0,
+                    reviews INTEGER DEFAULT 0,
+                    category VARCHAR(255) DEFAULT '',
+                    city VARCHAR(255) DEFAULT '',
+                    priority VARCHAR(50) DEFAULT 'LOW',
+                    whatsapp_number VARCHAR(50) DEFAULT '',
+                    source VARCHAR(100) DEFAULT 'google_maps',
+                    contacted BOOLEAN DEFAULT FALSE,
+                    contact_date TIMESTAMP DEFAULT NULL,
+                    notes TEXT DEFAULT '',
+                    instagram VARCHAR(255) DEFAULT '',
+                    facebook VARCHAR(255) DEFAULT '',
+                    custom_pitch TEXT DEFAULT '',
+                    is_broken_website BOOLEAN DEFAULT FALSE,
+                    line_type VARCHAR(100) DEFAULT '',
+                    pipeline_stage VARCHAR(100) DEFAULT 'NEW',
+                    email VARCHAR(255) DEFAULT '',
+                    remind_date DATE DEFAULT NULL,
+                    remind_status VARCHAR(100) DEFAULT '',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT leads_place_id_user_id_key UNIQUE (place_id, user_id)
+                )
+            """)
+
+            # Search history table
+            run_query("""
+                CREATE TABLE IF NOT EXISTS search_history (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    query TEXT NOT NULL,
+                    city VARCHAR(255) NOT NULL,
+                    results_count INTEGER DEFAULT 0,
+                    leads_count INTEGER DEFAULT 0,
+                    searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # WhatsApp message log
+            run_query("""
+                CREATE TABLE IF NOT EXISTS message_log (
+                    id SERIAL PRIMARY KEY,
+                    lead_id INTEGER,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    template_used VARCHAR(255) DEFAULT '',
+                    message_sent TEXT DEFAULT '',
+                    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
+                )
+            """)
+
+            # Safe migration: add columns and update constraints for existing tables
+            run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id INTEGER;")
+            run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS user_id INTEGER;")
+            run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS user_id INTEGER;")
+            
+            # Add search metadata columns to search_history table (BUG-M10)
+            run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS deep_scan BOOLEAN DEFAULT FALSE;")
+            run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS zones TEXT DEFAULT '';")
+            run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS include_with_website BOOLEAN DEFAULT FALSE;")
+            run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS hide_saved BOOLEAN DEFAULT FALSE;")
+            
+            # Clean up orphan records before adding constraint to prevent ForeignKeyViolation
+            run_query("DELETE FROM leads WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);")
+            run_query("DELETE FROM search_history WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);")
+            run_query("DELETE FROM message_log WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);")
+
+            run_query("""
+                DO $$
+                BEGIN
+                    -- For leads
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint 
+                        WHERE conrelid = 'leads'::regclass AND contype = 'f' 
+                        AND (conname = 'fk_leads_users' OR pg_get_constraintdef(oid) ILIKE '%references users(id)%')
+                    ) THEN
+                        ALTER TABLE leads ADD CONSTRAINT fk_leads_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                    END IF;
+                    
+                    -- For search_history
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint 
+                        WHERE conrelid = 'search_history'::regclass AND contype = 'f' 
+                        AND (conname = 'fk_search_history_users' OR pg_get_constraintdef(oid) ILIKE '%references users(id)%')
+                    ) THEN
+                        ALTER TABLE search_history ADD CONSTRAINT fk_search_history_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                    END IF;
+
+                    -- For message_log
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint 
+                        WHERE conrelid = 'message_log'::regclass AND contype = 'f' 
+                        AND (conname = 'fk_message_log_users' OR pg_get_constraintdef(oid) ILIKE '%references users(id)%')
+                    ) THEN
+                        ALTER TABLE message_log ADD CONSTRAINT fk_message_log_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                    END IF;
+                END
+                $$;
+            """)
+
+            # Map existing orphan records to the first user
             cursor = conn.cursor()
             try:
-                cursor.execute(query, params)
+                cursor.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1;")
+                first_user = cursor.fetchone()
+                if first_user:
+                    first_user_id = first_user[0]
+                    cursor.execute("UPDATE leads SET user_id = %s WHERE user_id IS NULL;", (first_user_id,))
+                    cursor.execute("UPDATE search_history SET user_id = %s WHERE user_id IS NULL;", (first_user_id,))
+                    cursor.execute("UPDATE message_log SET user_id = %s WHERE user_id IS NULL;", (first_user_id,))
                 conn.commit()
             except Exception as e:
                 conn.rollback()
-                logging.debug(f"[Database Init] Query skipped/failed: {query}. Error: {e}")
 
-        # Users table (created if not exists, with password_hash as TEXT and email column)
-        run_query("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                username VARCHAR(100) UNIQUE NOT NULL,
-                email VARCHAR(255) DEFAULT '',
-                password_hash TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        # Safe migration: ensure existing password_hash column is TYPE TEXT, email, is_admin, and is_active columns exist
-        run_query("ALTER TABLE users ALTER COLUMN password_hash TYPE TEXT;")
-        run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) DEFAULT '';")
-        run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
-        run_query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;")
-        run_query("UPDATE users SET is_admin = TRUE WHERE id = (SELECT MIN(id) FROM users) AND is_admin = FALSE;")
+            # Drop old single place_id constraint and add composite unique constraint
+            run_query("ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_place_id_key;")
+            run_query("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'leads_place_id_user_id_key') THEN
+                        ALTER TABLE leads ADD CONSTRAINT leads_place_id_user_id_key UNIQUE (place_id, user_id);
+                    END IF;
+                END
+                $$;
+            """)
 
-        # Leads table
-        run_query("""
-            CREATE TABLE IF NOT EXISTS leads (
-                id SERIAL PRIMARY KEY,
-                place_id VARCHAR(255),
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                name VARCHAR(255) NOT NULL,
-                phone VARCHAR(50) DEFAULT '',
-                address TEXT DEFAULT '',
-                website TEXT DEFAULT '',
-                rating REAL DEFAULT 0.0,
-                reviews INTEGER DEFAULT 0,
-                category VARCHAR(255) DEFAULT '',
-                city VARCHAR(255) DEFAULT '',
-                priority VARCHAR(50) DEFAULT 'LOW',
-                whatsapp_number VARCHAR(50) DEFAULT '',
-                source VARCHAR(100) DEFAULT 'google_maps',
-                contacted BOOLEAN DEFAULT FALSE,
-                contact_date TIMESTAMP DEFAULT NULL,
-                notes TEXT DEFAULT '',
-                instagram VARCHAR(255) DEFAULT '',
-                facebook VARCHAR(255) DEFAULT '',
-                custom_pitch TEXT DEFAULT '',
-                is_broken_website BOOLEAN DEFAULT FALSE,
-                line_type VARCHAR(100) DEFAULT '',
-                pipeline_stage VARCHAR(100) DEFAULT 'NEW',
-                email VARCHAR(255) DEFAULT '',
-                remind_date DATE DEFAULT NULL,
-                remind_status VARCHAR(100) DEFAULT '',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT leads_place_id_user_id_key UNIQUE (place_id, user_id)
-            )
-        """)
+            # ---- PHASE 3: Database Type Migrations ----
+            type_migrations = [
+                # contacted: INTEGER → BOOLEAN
+                "ALTER TABLE leads ALTER COLUMN contacted DROP DEFAULT;",
+                "ALTER TABLE leads ALTER COLUMN contacted TYPE BOOLEAN USING contacted::boolean;",
+                "ALTER TABLE leads ALTER COLUMN contacted SET DEFAULT FALSE;",
+                # is_broken_website: INTEGER → BOOLEAN
+                "ALTER TABLE leads ALTER COLUMN is_broken_website DROP DEFAULT;",
+                "ALTER TABLE leads ALTER COLUMN is_broken_website TYPE BOOLEAN USING is_broken_website::boolean;",
+                "ALTER TABLE leads ALTER COLUMN is_broken_website SET DEFAULT FALSE;",
+                # remind_date: VARCHAR → DATE (nullable)
+                "ALTER TABLE leads ALTER COLUMN remind_date DROP DEFAULT;",
+                "ALTER TABLE leads ALTER COLUMN remind_date TYPE DATE USING NULLIF(remind_date, '')::date;",
+                "ALTER TABLE leads ALTER COLUMN remind_date SET DEFAULT NULL;",
+                # contact_date: VARCHAR → TIMESTAMP (nullable)
+                "ALTER TABLE leads ALTER COLUMN contact_date DROP DEFAULT;",
+                "ALTER TABLE leads ALTER COLUMN contact_date TYPE TIMESTAMP USING NULLIF(contact_date, '')::timestamp;",
+                "ALTER TABLE leads ALTER COLUMN contact_date SET DEFAULT NULL;",
+            ]
+            for query in type_migrations:
+                run_query(query)
 
-        # Search history table
-        run_query("""
-            CREATE TABLE IF NOT EXISTS search_history (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                query TEXT NOT NULL,
-                city VARCHAR(255) NOT NULL,
-                results_count INTEGER DEFAULT 0,
-                leads_count INTEGER DEFAULT 0,
-                searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+            # ---- PHASE 3: Database Indexes ----
+            index_queries = [
+                "CREATE INDEX IF NOT EXISTS idx_leads_user_id ON leads(user_id);",
+                "CREATE INDEX IF NOT EXISTS idx_leads_city ON leads(city);",
+                "CREATE INDEX IF NOT EXISTS idx_leads_priority ON leads(priority);",
+                "CREATE INDEX IF NOT EXISTS idx_leads_pipeline ON leads(pipeline_stage);",
+                "CREATE INDEX IF NOT EXISTS idx_leads_contacted ON leads(contacted);",
+                "CREATE INDEX IF NOT EXISTS idx_leads_remind ON leads(remind_status, remind_date);",
+                "CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at);",
+                "CREATE INDEX IF NOT EXISTS idx_search_user_id ON search_history(user_id);",
+                "CREATE INDEX IF NOT EXISTS idx_search_date ON search_history(searched_at);",
+                "CREATE INDEX IF NOT EXISTS idx_msglog_lead ON message_log(lead_id);",
+                "CREATE INDEX IF NOT EXISTS idx_msglog_user ON message_log(user_id);",
+            ]
+            for query in index_queries:
+                run_query(query)
 
-        # WhatsApp message log
-        run_query("""
-            CREATE TABLE IF NOT EXISTS message_log (
-                id SERIAL PRIMARY KEY,
-                lead_id INTEGER,
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                template_used VARCHAR(255) DEFAULT '',
-                message_sent TEXT DEFAULT '',
-                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
-            )
-        """)
+            # Create password_resets table and index for OTP storage
+            run_query("""
+                CREATE TABLE IF NOT EXISTS password_resets (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) NOT NULL,
+                    otp VARCHAR(6) NOT NULL,
+                    expires_at TIMESTAMP NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            run_query("CREATE INDEX IF NOT EXISTS idx_password_resets_email ON password_resets(email);")
 
-        # Safe migration: add columns and update constraints for existing tables
-        run_query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id INTEGER;")
-        run_query("ALTER TABLE search_history ADD COLUMN IF NOT EXISTS user_id INTEGER;")
-        run_query("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS user_id INTEGER;")
-        
-        # Clean up orphan records before adding constraint to prevent ForeignKeyViolation
-        run_query("DELETE FROM leads WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);")
-        run_query("DELETE FROM search_history WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);")
-        run_query("DELETE FROM message_log WHERE user_id IS NOT NULL AND user_id NOT IN (SELECT id FROM users);")
-
-        
-        run_query("""
-            DO $$
-            BEGIN
-                -- For leads
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_constraint 
-                    WHERE conrelid = 'leads'::regclass AND contype = 'f' 
-                    AND (conname = 'fk_leads_users' OR pg_get_constraintdef(oid) ILIKE '%references users(id)%')
-                ) THEN
-                    ALTER TABLE leads ADD CONSTRAINT fk_leads_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-                END IF;
-                
-                -- For search_history
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_constraint 
-                    WHERE conrelid = 'search_history'::regclass AND contype = 'f' 
-                    AND (conname = 'fk_search_history_users' OR pg_get_constraintdef(oid) ILIKE '%references users(id)%')
-                ) THEN
-                    ALTER TABLE search_history ADD CONSTRAINT fk_search_history_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-                END IF;
-
-                -- For message_log
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_constraint 
-                    WHERE conrelid = 'message_log'::regclass AND contype = 'f' 
-                    AND (conname = 'fk_message_log_users' OR pg_get_constraintdef(oid) ILIKE '%references users(id)%')
-                ) THEN
-                    ALTER TABLE message_log ADD CONSTRAINT fk_message_log_users FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-                END IF;
-            END
-            $$;
-        """)
-
-        
-        # Map existing orphan records to the first user
-        cursor = conn.cursor()
-        try:
-            cursor.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1;")
-            first_user = cursor.fetchone()
-            if first_user:
-                first_user_id = first_user[0]
-                cursor.execute("UPDATE leads SET user_id = %s WHERE user_id IS NULL;", (first_user_id,))
-                cursor.execute("UPDATE search_history SET user_id = %s WHERE user_id IS NULL;", (first_user_id,))
-                cursor.execute("UPDATE message_log SET user_id = %s WHERE user_id IS NULL;", (first_user_id,))
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-
-        # Drop old single place_id constraint and add composite unique constraint
-        run_query("ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_place_id_key;")
-        run_query("""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'leads_place_id_user_id_key') THEN
-                    ALTER TABLE leads ADD CONSTRAINT leads_place_id_user_id_key UNIQUE (place_id, user_id);
-                END IF;
-            END
-            $$;
-        """)
-
-        # ---- PHASE 3: Database Type Migrations ----
-        type_migrations = [
-            # contacted: INTEGER → BOOLEAN
-            "ALTER TABLE leads ALTER COLUMN contacted DROP DEFAULT;",
-            "ALTER TABLE leads ALTER COLUMN contacted TYPE BOOLEAN USING contacted::boolean;",
-            "ALTER TABLE leads ALTER COLUMN contacted SET DEFAULT FALSE;",
-            # is_broken_website: INTEGER → BOOLEAN
-            "ALTER TABLE leads ALTER COLUMN is_broken_website DROP DEFAULT;",
-            "ALTER TABLE leads ALTER COLUMN is_broken_website TYPE BOOLEAN USING is_broken_website::boolean;",
-            "ALTER TABLE leads ALTER COLUMN is_broken_website SET DEFAULT FALSE;",
-            # remind_date: VARCHAR → DATE (nullable)
-            "ALTER TABLE leads ALTER COLUMN remind_date DROP DEFAULT;",
-            "ALTER TABLE leads ALTER COLUMN remind_date TYPE DATE USING NULLIF(remind_date, '')::date;",
-            "ALTER TABLE leads ALTER COLUMN remind_date SET DEFAULT NULL;",
-            # contact_date: VARCHAR → TIMESTAMP (nullable)
-            "ALTER TABLE leads ALTER COLUMN contact_date DROP DEFAULT;",
-            "ALTER TABLE leads ALTER COLUMN contact_date TYPE TIMESTAMP USING NULLIF(contact_date, '')::timestamp;",
-            "ALTER TABLE leads ALTER COLUMN contact_date SET DEFAULT NULL;",
-        ]
-        for query in type_migrations:
-            run_query(query)
-
-        # ---- PHASE 3: Database Indexes ----
-        index_queries = [
-            "CREATE INDEX IF NOT EXISTS idx_leads_user_id ON leads(user_id);",
-            "CREATE INDEX IF NOT EXISTS idx_leads_city ON leads(city);",
-            "CREATE INDEX IF NOT EXISTS idx_leads_priority ON leads(priority);",
-            "CREATE INDEX IF NOT EXISTS idx_leads_pipeline ON leads(pipeline_stage);",
-            "CREATE INDEX IF NOT EXISTS idx_leads_contacted ON leads(contacted);",
-            "CREATE INDEX IF NOT EXISTS idx_leads_remind ON leads(remind_status, remind_date);",
-            "CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at);",
-            "CREATE INDEX IF NOT EXISTS idx_search_user_id ON search_history(user_id);",
-            "CREATE INDEX IF NOT EXISTS idx_search_date ON search_history(searched_at);",
-            "CREATE INDEX IF NOT EXISTS idx_msglog_lead ON message_log(lead_id);",
-            "CREATE INDEX IF NOT EXISTS idx_msglog_user ON message_log(user_id);",
-        ]
-        for query in index_queries:
-            run_query(query)
-
-        self._release_connection(conn)
+            # Create system_settings table
+            run_query("""
+                CREATE TABLE IF NOT EXISTS system_settings (
+                    key VARCHAR(255) PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
+            """)
+        finally:
+            self._release_connection(conn)
 
     def is_user_admin(self, user_id: int) -> bool:
         """Check if a user has admin privileges."""
@@ -306,7 +363,7 @@ class Database:
             for lead in leads:
                 try:
                     is_new = lead.place_id and lead.place_id not in existing_place_ids
-
+                    cursor.execute("SAVEPOINT save_lead_sp;")
                     # ON CONFLICT update logic matches Postgres syntax with composite key
                     cursor.execute("""
                         INSERT INTO leads (place_id, user_id, name, phone, address, website, rating, 
@@ -334,34 +391,41 @@ class Database:
                         lead.city, lead.priority, lead.whatsapp_number, lead.source,
                         lead.is_broken_website, lead.line_type, lead.email
                     ))
+                    cursor.execute("RELEASE SAVEPOINT save_lead_sp;")
                     
                     if is_new:
                         new_count += 1
                         existing_place_ids.add(lead.place_id)
                 except Exception as e:
-                    print(f"Error saving lead {lead.name}: {e}")
+                    try:
+                        cursor.execute("ROLLBACK TO SAVEPOINT save_lead_sp;")
+                    except Exception:
+                        pass
+                    logging.error(f"Error saving lead {lead.name}: {e}", exc_info=True)
                     continue
 
             conn.commit()
         except Exception as e:
-            print(f"Error in save_leads batch: {e}")
+            logging.error(f"Error in save_leads batch: {e}", exc_info=True)
             conn.rollback()
         finally:
             self._release_connection(conn)
         return new_count
 
-    def save_search(self, query: str, city: str, results_count: int, leads_count: int, user_id: int):
+    def save_search(self, query: str, city: str, results_count: int, leads_count: int, user_id: int,
+                    deep_scan: bool = False, zones: list = None, include_with_website: bool = False, hide_saved: bool = False):
         """Log a search to the history for a specific user."""
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
+            zones_str = ",".join(zones) if zones else ""
             cursor.execute("""
-                INSERT INTO search_history (user_id, query, city, results_count, leads_count)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (user_id, query, city, results_count, leads_count))
+                INSERT INTO search_history (user_id, query, city, results_count, leads_count, deep_scan, zones, include_with_website, hide_saved)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, query, city, results_count, leads_count, deep_scan, zones_str, include_with_website, hide_saved))
             conn.commit()
         except Exception as e:
-            print(f"Error saving search history: {e}")
+            logging.error(f"Error saving search history: {e}", exc_info=True)
             conn.rollback()
         finally:
             self._release_connection(conn)
@@ -458,7 +522,7 @@ class Database:
             query = "SELECT * FROM search_history"
             params = []
             
-            if user_id:
+            if user_id is not None:
                 query += " WHERE user_id = %s"
                 params.append(user_id)
                 
@@ -485,7 +549,7 @@ class Database:
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s
             """
-            params = [datetime.now().isoformat(), notes, lead_id]
+            params = [datetime.now(), notes, lead_id]
             
             # BUG-L4 fix: Always enforce user_id filter when provided
             if user_id is not None:
@@ -520,7 +584,7 @@ class Database:
             # Build query filtering helpers
             where_clause = " WHERE priority != 'IGNORE'"
             params = []
-            if user_id:
+            if user_id is not None:
                 where_clause += " AND user_id = %s"
                 params.append(user_id)
                 
@@ -545,7 +609,7 @@ class Database:
             # Total searches
             search_where = ""
             search_params = []
-            if user_id:
+            if user_id is not None:
                 search_where = " WHERE user_id = %s"
                 search_params.append(user_id)
             cursor.execute("SELECT COUNT(*) FROM search_history" + search_where, search_params)
@@ -576,9 +640,9 @@ class Database:
         finally:
             self._release_connection(conn)
 
-    def cleanup_old_data(self):
+    def cleanup_old_data(self, user_id: int = None):
         """
-        Automatically cleans up old data on startup:
+        Automatically cleans up old data:
         - Keeps all contacted leads
         - Deletes uncontacted leads older than 14 days
         - Deletes IGNORE priority leads older than 7 days
@@ -588,37 +652,53 @@ class Database:
         cursor = conn.cursor()
         try:
             # PostgreSQL date calculations: CURRENT_TIMESTAMP - INTERVAL 'X days'
-            cursor.execute("""
+            leads_query1 = f"""
                 DELETE FROM leads 
                 WHERE contacted = FALSE 
                 AND pipeline_stage = 'NEW'
                 AND (remind_status IS NULL OR remind_status = '' OR remind_status = 'DISMISSED')
-                AND created_at < CURRENT_TIMESTAMP - INTERVAL '14 days'
-            """)
-            uncontacted_deleted = cursor.rowcount
-
-            cursor.execute("""
+                AND created_at < CURRENT_TIMESTAMP - INTERVAL '{CLEANUP_UNCONTACTED_DAYS} days'
+            """
+            leads_query2 = f"""
                 DELETE FROM leads 
                 WHERE priority = 'IGNORE' 
                 AND (remind_status IS NULL OR remind_status = '' OR remind_status = 'DISMISSED')
-                AND created_at < CURRENT_TIMESTAMP - INTERVAL '7 days'
-            """)
+                AND created_at < CURRENT_TIMESTAMP - INTERVAL '{CLEANUP_IGNORED_DAYS} days'
+            """
+            history_query = f"""
+                DELETE FROM search_history 
+                WHERE searched_at < CURRENT_TIMESTAMP - INTERVAL '{CLEANUP_HISTORY_DAYS} days'
+            """
+            
+            params1 = []
+            params2 = []
+            params3 = []
+            
+            if user_id is not None:
+                leads_query1 += " AND user_id = %s"
+                params1.append(user_id)
+                leads_query2 += " AND user_id = %s"
+                params2.append(user_id)
+                history_query += " AND user_id = %s"
+                params3.append(user_id)
+                
+            cursor.execute(leads_query1, params1)
+            uncontacted_deleted = cursor.rowcount
+
+            cursor.execute(leads_query2, params2)
             ignored_deleted = cursor.rowcount
 
-            cursor.execute("""
-                DELETE FROM search_history 
-                WHERE searched_at < CURRENT_TIMESTAMP - INTERVAL '30 days'
-            """)
+            cursor.execute(history_query, params3)
             history_deleted = cursor.rowcount
 
             conn.commit()
             if uncontacted_deleted or ignored_deleted or history_deleted:
-                print(f"[Smart Cleanup] Auto-cleaned old database entries:")
-                print(f"  - Deleted {uncontacted_deleted} uncontacted leads (>14 days)")
-                print(f"  - Deleted {ignored_deleted} ignored website leads (>7 days)")
-                print(f"  - Deleted {history_deleted} old search history entries (>30 days)")
+                logging.info(f"[Smart Cleanup] Auto-cleaned old database entries:")
+                logging.info(f"  - Deleted {uncontacted_deleted} uncontacted leads (>14 days)")
+                logging.info(f"  - Deleted {ignored_deleted} ignored website leads (>7 days)")
+                logging.info(f"  - Deleted {history_deleted} old search history entries (>30 days)")
         except Exception as e:
-            print(f"[Smart Cleanup] Error cleaning up old data: {e}")
+            logging.error(f"[Smart Cleanup] Error cleaning up old data: {e}")
         finally:
             self._release_connection(conn)
 
@@ -634,7 +714,7 @@ class Database:
             history_clause = ""
             params = []
             
-            if user_id:
+            if user_id is not None:
                 leads_clause += " AND user_id = %s"
                 history_clause = " WHERE user_id = %s"
                 params = [user_id]
@@ -655,6 +735,7 @@ class Database:
                 "history_deleted": history_count
             }
         except Exception as e:
+            conn.rollback()
             return {
                 "success": False,
                 "error": str(e)
@@ -683,7 +764,7 @@ class Database:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error updating socials for lead {lead_id}: {e}")
+            logging.error(f"Error updating socials for lead {lead_id}: {e}")
             return False
         finally:
             self._release_connection(conn)
@@ -700,7 +781,7 @@ class Database:
             row = cursor.fetchone()
             return dict(row) if row else None
         except Exception as e:
-            print(f"Error fetching lead by ID {lead_id}: {e}")
+            logging.error(f"Error fetching lead by ID {lead_id}: {e}")
             return None
         finally:
             self._release_connection(conn)
@@ -725,7 +806,7 @@ class Database:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error updating custom pitch for lead {lead_id}: {e}")
+            logging.error(f"Error updating custom pitch for lead {lead_id}: {e}")
             return False
         finally:
             self._release_connection(conn)
@@ -744,7 +825,7 @@ class Database:
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """
-                params = [stage, datetime.now().isoformat(), lead_id]
+                params = [stage, datetime.now(), lead_id]
             else:
                 query = """
                     UPDATE leads
@@ -762,7 +843,7 @@ class Database:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error updating pipeline stage for lead {lead_id}: {e}")
+            logging.error(f"Error updating pipeline stage for lead {lead_id}: {e}")
             return False
         finally:
             self._release_connection(conn)
@@ -787,7 +868,7 @@ class Database:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error updating email for lead {lead_id}: {e}")
+            logging.error(f"Error updating email for lead {lead_id}: {e}")
             return False
         finally:
             self._release_connection(conn)
@@ -813,7 +894,7 @@ class Database:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error scheduling reminder for lead {lead_id}: {e}")
+            logging.error(f"Error scheduling reminder for lead {lead_id}: {e}")
             return False
         finally:
             self._release_connection(conn)
@@ -829,7 +910,7 @@ class Database:
                 AND remind_status = 'PENDING'
             """
             params = []
-            if user_id:
+            if user_id is not None:
                 query += " AND user_id = %s"
                 params.append(user_id)
             query += " ORDER BY remind_date ASC"
@@ -838,7 +919,7 @@ class Database:
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         except Exception as e:
-            print(f"Error fetching pending reminders: {e}")
+            logging.error(f"Error fetching pending reminders: {e}")
             return []
         finally:
             self._release_connection(conn)
@@ -863,27 +944,43 @@ class Database:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error dismissing reminder for lead {lead_id}: {e}")
+            logging.error(f"Error dismissing reminder for lead {lead_id}: {e}")
             return False
         finally:
             self._release_connection(conn)
 
-    def create_user(self, username, email, password_hash) -> bool:
-        """Create a new user with hashed password and email."""
-        normalized_username = username.strip().lower()
-        normalized_email = email.strip()
+    def create_user(self, username, email, password_hash, phone="") -> bool:
+        """Create a new user with hashed password, email, and contact number."""
+        normalized_username = username.strip()
+        normalized_email = email.strip().lower()
+        normalized_phone = phone.strip()
         conn = self._get_connection()
         cursor = conn.cursor()
         try:
             cursor.execute("""
-                INSERT INTO users (username, email, password_hash)
-                VALUES (%s, %s, %s)
-            """, (normalized_username, normalized_email, password_hash))
+                INSERT INTO users (username, email, password_hash, phone)
+                VALUES (%s, %s, %s, %s)
+            """, (normalized_username, normalized_email, password_hash, normalized_phone))
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error creating user {normalized_username}: {e}")
+            logging.error(f"Error creating user {normalized_username} ({normalized_email}): {e}")
             return False
+        finally:
+            self._release_connection(conn)
+
+    def get_user_by_email(self, email) -> Optional[Dict]:
+        """Fetch a user by email (case-insensitive)."""
+        normalized_email = email.strip().lower()
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM users WHERE LOWER(email) = %s", (normalized_email,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        except Exception as e:
+            logging.error(f"Error fetching user by email {normalized_email}: {e}")
+            return None
         finally:
             self._release_connection(conn)
 
@@ -897,7 +994,7 @@ class Database:
             row = cursor.fetchone()
             return dict(row) if row else None
         except Exception as e:
-            print(f"Error fetching user by username {normalized_username}: {e}")
+            logging.error(f"Error fetching user by username {normalized_username}: {e}")
             return None
         finally:
             self._release_connection(conn)
@@ -911,7 +1008,7 @@ class Database:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error toggling active status for user {user_id}: {e}")
+            logging.error(f"Error toggling active status for user {user_id}: {e}")
             return False
         finally:
             self._release_connection(conn)
@@ -925,7 +1022,7 @@ class Database:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error toggling admin status for user {user_id}: {e}")
+            logging.error(f"Error toggling admin status for user {user_id}: {e}")
             return False
         finally:
             self._release_connection(conn)
@@ -939,7 +1036,111 @@ class Database:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Error deleting user {user_id}: {e}")
+            logging.error(f"Error deleting user {user_id}: {e}")
+            return False
+        finally:
+            self._release_connection(conn)
+
+    def save_password_reset_otp(self, email, otp, expires_at) -> bool:
+        """Save or update an OTP code for password resets."""
+        normalized_email = email.strip().lower()
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            # Delete old resets for the email first, then insert new one
+            cursor.execute("DELETE FROM password_resets WHERE email = %s", (normalized_email,))
+            cursor.execute("""
+                INSERT INTO password_resets (email, otp, expires_at)
+                VALUES (%s, %s, %s)
+            """, (normalized_email, otp, expires_at))
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"Error saving password reset OTP for {normalized_email}: {e}")
+            return False
+        finally:
+            self._release_connection(conn)
+
+    def verify_password_reset_otp(self, email, otp) -> bool:
+        """Verify if the OTP is correct and hasn't expired."""
+        normalized_email = email.strip().lower()
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT 1 FROM password_resets
+                WHERE email = %s AND otp = %s AND expires_at > CURRENT_TIMESTAMP
+            """, (normalized_email, otp))
+            row = cursor.fetchone()
+            return bool(row)
+        except Exception as e:
+            logging.error(f"Error verifying password reset OTP for {normalized_email}: {e}")
+            return False
+        finally:
+            self._release_connection(conn)
+
+    def delete_password_reset_otp(self, email) -> bool:
+        """Clear the password reset entries for an email."""
+        normalized_email = email.strip().lower()
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM password_resets WHERE email = %s", (normalized_email,))
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"Error deleting password reset records for {normalized_email}: {e}")
+            return False
+        finally:
+            self._release_connection(conn)
+
+    def update_user_password(self, email, password_hash) -> bool:
+        """Update a user's password hash in the users table."""
+        normalized_email = email.strip().lower()
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE users SET password_hash = %s
+                WHERE LOWER(email) = %s
+            """, (password_hash, normalized_email))
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"Error updating password for {normalized_email}: {e}")
+            return False
+        finally:
+            self._release_connection(conn)
+
+    def get_system_setting(self, key: str, default: str = "") -> str:
+        """Retrieve a system setting value by key."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT value FROM system_settings WHERE key = %s", (key,))
+            row = cursor.fetchone()
+            return row[0] if row else default
+        except Exception as e:
+            logging.error(f"[Database] Error retrieving system setting '{key}': {e}")
+            return default
+        finally:
+            self._release_connection(conn)
+
+    def save_system_setting(self, key: str, value: str) -> bool:
+        """Save or update a system setting value by key."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO system_settings (key, value)
+                VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+            """, (key, value))
+            conn.commit()
+            return True
+        except Exception as e:
+            logging.error(f"[Database] Error saving system setting '{key}': {e}")
+            conn.rollback()
             return False
         finally:
             self._release_connection(conn)

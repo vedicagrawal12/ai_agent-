@@ -23,4 +23,4 @@ RUN mkdir -p logs
 EXPOSE 5000
 
 # Set run command to Gunicorn configuration
-CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:create_app()"]
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "--factory", "app:create_app"]

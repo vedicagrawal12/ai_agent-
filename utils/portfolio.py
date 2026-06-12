@@ -1,6 +1,7 @@
 import urllib.request
 import re
 import ssl
+import logging
 
 class PortfolioParser:
     @staticmethod
@@ -20,35 +21,14 @@ class PortfolioParser:
                 headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
             )
             
-            # Try with secure SSL verification first (fixes BUG #20)
-            try:
-                ctx = ssl.create_default_context()
-                with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
-                    html = response.read().decode('utf-8')
-            except Exception as ssl_err:
-                # Detect if the error is related to SSL/certificates
-                is_ssl_issue = False
-                if isinstance(ssl_err, ssl.SSLError):
-                    is_ssl_issue = True
-                elif hasattr(ssl_err, 'reason') and isinstance(getattr(ssl_err, 'reason'), ssl.SSLError):
-                    is_ssl_issue = True
-                elif "certificate" in str(ssl_err).lower() or "ssl" in str(ssl_err).lower():
-                    is_ssl_issue = True
-                
-                if is_ssl_issue:
-                    print(f"⚠️  [SECURITY WARNING] SSL verification failed for {url}. Falling back to unverified connection: {ssl_err}")
-                    print(f"⚠️  This means the connection is vulnerable to MITM attacks. Consider updating the site's SSL certificate.")
-                    ctx = ssl.create_default_context()
-                    ctx.check_hostname = False
-                    ctx.verify_mode = ssl.CERT_NONE
-                    with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
-                        html = response.read().decode('utf-8')
-                else:
-                    raise ssl_err
+            # Try with secure SSL verification (BUG-M8)
+            ctx = ssl.create_default_context()
+            with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
+                html = response.read().decode('utf-8')
                 
             return PortfolioParser.parse_html(html)
         except Exception as e:
-            print(f"Error fetching portfolio from {url}: {e}")
+            logging.error(f"Error fetching portfolio from {url}: {e}")
             raise Exception(f"Failed to fetch portfolio: {str(e)}")
 
     @staticmethod
@@ -117,6 +97,6 @@ class PortfolioParser:
                     "demo_url": demo_url
                 })
             except Exception as err:
-                print(f"Error parsing card chunk: {err}")
+                logging.warning(f"Error parsing card chunk: {err}")
                 
         return projects

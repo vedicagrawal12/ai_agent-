@@ -15,5 +15,8 @@ export const AppState = {
     hasApiKey: false,
     currentOffset: 0,
     activeSearchParams: null,
-    currentView: 'list'
+    currentView: 'list',
+    selectedLead: null,
+    currentEmailLead: null,
+    searchHistory: []
 };

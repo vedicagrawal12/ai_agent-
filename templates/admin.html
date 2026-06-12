@@ -224,6 +224,7 @@
                             <th>ID</th>
                             <th>Username</th>
                             <th>Email</th>
+                            <th>Contact</th>
                             <th>Role</th>
                             <th>Status</th>
                             <th>Registered At</th>
@@ -236,6 +237,7 @@
                             <td style="font-family: var(--font-mono); color: var(--text-secondary);">#{{ u.id }}</td>
                             <td style="font-weight: 700; color: var(--accent-cyan);">{{ u.username }}</td>
                             <td style="word-break: break-all;">{{ u.email }}</td>
+                            <td style="font-family: var(--font-mono); font-size: 0.85rem;">{{ u.phone or '-' }}</td>
                             <td>
                                 {% if u.is_admin %}
                                 <span class="user-badge admin" id="badge-admin-{{ u.id }}">Admin</span>
@@ -256,14 +258,14 @@
                                     {% set is_self = (u.id == g.user.id) %}
                                     <button 
                                         class="action-btn" 
-                                        onclick="toggleUserActive({{ u.id }}, {{ 'false' if u.is_active else 'true' }})"
+                                        onclick="toggleUserActive(Number('{{ u.id }}'), String('{{ u.is_active }}').toLowerCase() !== 'true')"
                                         id="btn-active-{{ u.id }}"
                                         {{ 'disabled' if is_self }}>
                                         {% if u.is_active %}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="stroke: var(--accent-red);"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>Deactivate{% else %}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="stroke: var(--accent-green);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Activate{% endif %}
                                     </button>
                                     <button 
                                         class="action-btn" 
-                                        onclick="toggleUserAdmin({{ u.id }}, {{ 'false' if u.is_admin else 'true' }})"
+                                        onclick="toggleUserAdmin(Number('{{ u.id }}'), String('{{ u.is_admin }}').toLowerCase() !== 'true')"
                                         id="btn-admin-{{ u.id }}"
                                         {{ 'disabled' if is_self }}>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="stroke: var(--accent-purple);"><path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" /></svg>Toggle Role
@@ -275,6 +277,26 @@
                     </tbody>
                 </table>
             </div>
+            
+            {% if status.pagination and status.pagination.total_pages > 1 %}
+            <div class="pagination-container" style="display: flex; justify-content: center; align-items: center; gap: var(--space-md); margin-top: var(--space-md); margin-bottom: var(--space-lg);">
+                {% if status.pagination.has_prev %}
+                <a href="/admin?page={{ status.pagination.page - 1 }}" class="action-btn" style="text-decoration: none;">« Previous</a>
+                {% else %}
+                <button class="action-btn" disabled>« Previous</button>
+                {% endif %}
+                
+                <span style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 600;">
+                    Page {{ status.pagination.page }} of {{ status.pagination.total_pages }}
+                </span>
+                
+                {% if status.pagination.has_next %}
+                <a href="/admin?page={{ status.pagination.page + 1 }}" class="action-btn" style="text-decoration: none;">Next »</a>
+                {% else %}
+                <button class="action-btn" disabled>Next »</button>
+                {% endif %}
+            </div>
+            {% endif %}
             {% else %}
             <div style="text-align: center; padding: 40px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: var(--radius-md);">
                 No user accounts registered.
@@ -284,6 +306,61 @@
             <div class="footer-actions">
                 <button onclick="window.location.reload();" class="action-btn" style="padding: 10px 16px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; display: inline-block; vertical-align: middle; margin-right: 6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>Reload User Listings</button>
                 <a href="/verify-db" class="action-btn" style="padding: 10px 16px; border-color: var(--accent-cyan); color: var(--accent-cyan);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; display: inline-block; vertical-align: middle; margin-right: 6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.43l-1.003.828c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.43l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>View Database Diagnostic Panel</a>
+            </div>
+        </div>
+
+        <!-- System Configuration Panel -->
+        <div class="panel-card" style="margin-top: var(--space-xl);">
+            <h2 class="panel-title">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: var(--text-secondary); fill: none; stroke-width: 2; display: inline-block; vertical-align: middle; margin-right: 8px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.43l-1.003.828c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.43l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+                System Configuration
+            </h2>
+            
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6;">
+                Configure the master API keys and system credentials. These defaults are maintained on the backend, ensuring normal operators can query without ever viewing or inputting raw third-party keys.
+            </p>
+            
+            <div style="max-width: 600px;">
+                <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px;">
+                    <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span>🔑</span> Master SerpApi Key
+                    </div>
+                    
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">
+                        Used dynamically for Google Maps searches and directory lookup.
+                    </p>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <input 
+                            type="password" 
+                            id="masterSerpApiKey" 
+                            class="form-input" 
+                            placeholder="Enter master SerpApi key..." 
+                            style="flex: 1; min-width: 200px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: var(--radius-md); font-family: var(--font-mono);"
+                            value="{{ status.master_serpapi_key_masked or '' }}"
+                        >
+                        <button 
+                            id="saveMasterSerpApiKeyBtn" 
+                            class="btn btn-primary" 
+                            onclick="saveMasterSerpApiKey()" 
+                            style="padding: 10px 20px; font-weight: 700; background: var(--accent-cyan); color: var(--bg-primary); border: none; border-radius: var(--radius-md); cursor: pointer; transition: all var(--transition-fast);"
+                        >
+                            Save Master Key
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <span id="masterSerpApiKeyStatus" class="user-badge {% if status.master_serpapi_key_configured %}active{% else %}inactive{% endif %}" style="display: inline-flex; align-items: center; gap: 4px;">
+                            {% if status.master_serpapi_key_configured %}✓ Configured ({% if status.master_serpapi_key_source == 'Database' %}DB{% else %}Env{% endif %}){% else %}✗ Not Set{% endif %}
+                        </span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
+                            Active Source: {{ status.master_serpapi_key_source }}
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -394,6 +471,45 @@
                 }
             } catch (err) {
                 showToast('Network error updating user privileges.', 'error');
+            }
+        }
+
+        async function saveMasterSerpApiKey() {
+            const apiKeyInput = document.getElementById('masterSerpApiKey');
+            const saveBtn = document.getElementById('saveMasterSerpApiKeyBtn');
+            const apiKey = apiKeyInput.value.trim();
+            
+            try {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+                
+                const response = await fetch('/api/admin/config/serpapi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: apiKey })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showToast('Master SerpApi key updated successfully!', 'success');
+                    
+                    const badge = document.getElementById('masterSerpApiKeyStatus');
+                    if (apiKey) {
+                        badge.className = 'user-badge active';
+                        badge.textContent = '✓ Configured (DB)';
+                    } else {
+                        badge.className = 'user-badge inactive';
+                        badge.textContent = '✗ Not Set';
+                    }
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToast(data.error || 'Failed to save master API key.', 'error');
+                }
+            } catch (err) {
+                showToast('Network error saving master API key.', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Master Key';
             }
         }
     </script>

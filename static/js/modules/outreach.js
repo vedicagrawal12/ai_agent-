@@ -5,6 +5,7 @@
 import { API } from './api.js';
 import { UI } from './ui.js';
 import { AppState } from './state.js';
+import { CryptoHelper } from './crypto.js';
 
 export const outreachModule = {
     openWhatsApp(indexOrLead) {
@@ -211,7 +212,8 @@ export const outreachModule = {
         const lead = AppState.currentWhatsAppLead;
         if (!lead) return;
 
-        const geminiKey = localStorage.getItem('gemini_api_key');
+        const geminiKeyRaw = localStorage.getItem('gemini_api_key');
+        const geminiKey = geminiKeyRaw ? await CryptoHelper.decrypt(geminiKeyRaw, AppState.encryptionKey) : '';
         if (!geminiKey) {
             UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
             UI.openModal('settingsModal');
@@ -286,7 +288,8 @@ export const outreachModule = {
         const lead = AppState.currentWhatsAppLead;
         if (!lead) return;
 
-        const geminiKey = localStorage.getItem('gemini_api_key');
+        const geminiKeyRaw = localStorage.getItem('gemini_api_key');
+        const geminiKey = geminiKeyRaw ? await CryptoHelper.decrypt(geminiKeyRaw, AppState.encryptionKey) : '';
         if (!geminiKey) {
             UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
             UI.openModal('settingsModal');
@@ -494,7 +497,8 @@ export const outreachModule = {
         const lead = AppState.currentEmailLead;
         if (!lead) return;
 
-        const geminiKey = localStorage.getItem('gemini_api_key');
+        const geminiKeyRaw = localStorage.getItem('gemini_api_key');
+        const geminiKey = geminiKeyRaw ? await CryptoHelper.decrypt(geminiKeyRaw, AppState.encryptionKey) : '';
         if (!geminiKey) {
             UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
             UI.openModal('settingsModal');
@@ -597,7 +601,8 @@ export const outreachModule = {
         const host = localStorage.getItem('smtp_host') || '';
         const port = localStorage.getItem('smtp_port') || '';
         const email = localStorage.getItem('smtp_email') || '';
-        const password = localStorage.getItem('smtp_password') || '';
+        const passwordRaw = localStorage.getItem('smtp_password') || '';
+        const password = passwordRaw ? await CryptoHelper.decrypt(passwordRaw, AppState.encryptionKey) : '';
         const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
 
         if (!host || !port || !email || !password) {
@@ -1093,7 +1098,8 @@ export const outreachModule = {
         const lead = (AppState.campaignLeads || []).find(l => l.id === leadId);
         if (!lead) return;
 
-        const geminiKey = localStorage.getItem('gemini_api_key');
+        const geminiKeyRaw = localStorage.getItem('gemini_api_key');
+        const geminiKey = geminiKeyRaw ? await CryptoHelper.decrypt(geminiKeyRaw, AppState.encryptionKey) : '';
         if (!geminiKey) {
             UI.showToast('Gemini API key set karein pehle Settings me!', 'error');
             UI.openModal('settingsModal');
@@ -1192,7 +1198,8 @@ export const outreachModule = {
         const host = localStorage.getItem('smtp_host');
         const port = localStorage.getItem('smtp_port');
         const email = localStorage.getItem('smtp_email');
-        const password = localStorage.getItem('smtp_password');
+        const passwordRaw = localStorage.getItem('smtp_password');
+        const password = passwordRaw ? await CryptoHelper.decrypt(passwordRaw, AppState.encryptionKey) : '';
         const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
 
         if (!host || !port || !email || !password) {
@@ -1334,7 +1341,8 @@ export const outreachModule = {
     },
 
     async bulkDraftCampaignAI() {
-        const geminiKey = localStorage.getItem('gemini_api_key');
+        const geminiKeyRaw = localStorage.getItem('gemini_api_key');
+        const geminiKey = geminiKeyRaw ? await CryptoHelper.decrypt(geminiKeyRaw, AppState.encryptionKey) : '';
         if (!geminiKey) {
             UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
             UI.openModal('settingsModal');
@@ -1433,7 +1441,8 @@ export const outreachModule = {
         const host = localStorage.getItem('smtp_host');
         const port = localStorage.getItem('smtp_port');
         const email = localStorage.getItem('smtp_email');
-        const password = localStorage.getItem('smtp_password');
+        const passwordRaw = localStorage.getItem('smtp_password');
+        const password = passwordRaw ? await CryptoHelper.decrypt(passwordRaw, AppState.encryptionKey) : '';
         const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
 
         if (!host || !port || !email || !password) {

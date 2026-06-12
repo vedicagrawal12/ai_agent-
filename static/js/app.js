@@ -129,7 +129,7 @@ const App = {
         });
 
         // Save API key
-        document.getElementById('saveApiKeyBtn').addEventListener('click', () => {
+        document.getElementById('saveApiKeyBtn')?.addEventListener('click', () => {
             this.saveApiKey();
         });
 
@@ -381,12 +381,24 @@ const App = {
     async init() {
         UI.init();
         this.bindEvents();
+        
+        // Fetch encryption key from backend for local credential storage security
+        try {
+            const keyResponse = await fetch('/api/encryption-key');
+            if (keyResponse.ok) {
+                const keyData = await keyResponse.json();
+                AppState.encryptionKey = keyData.key;
+            }
+        } catch (error) {
+            console.error('Failed to load session encryption key:', error);
+        }
+
         await this.checkConfig();
         this.checkPortfolio();
-        this.checkGeminiConfig();
+        await this.checkGeminiConfig();
         this.checkSenderProfile();
         this.checkCustomPitchRules();
-        this.checkSmtpConfig();
+        await this.checkSmtpConfig();
         this.loadReminders();
         await this.loadTemplates();
         

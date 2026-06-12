@@ -76,18 +76,62 @@ def export_excel():
     except Exception as e:
         return jsonify({"error": f"Failed to generate Excel file: {str(e)}"}), 500
 
+@config_bp.route("/encryption-key", methods=["GET"])
+def get_encryption_key():
+    """
+    Get a secure, session-bound random key for the frontend to encrypt/decrypt values in localStorage.
+    Only authenticated users can fetch this.
+    """
+    if 'local_storage_key' not in session:
+        import secrets
+        session['local_storage_key'] = secrets.token_hex(32)
+    return jsonify({"key": session['local_storage_key']})
+
 @config_bp.route("/config", methods=["GET"])
 def get_config():
     """Check if the server has a default master API key configured."""
-    api_key = API_KEY_STORE.get("serpapi", "")
+    api_key = db.get_system_setting("serpapi_key")
+    if not api_key:
+        api_key = API_KEY_STORE.get("serpapi", "")
+        
     has_key = bool(api_key)
-    masked_key = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else ("***" if api_key else "")
+    is_admin = g.user and g.user.get('is_admin')
+    
+    if is_admin:
+        masked_key = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else ("***" if api_key else "")
+    else:
+        masked_key = ""
     
     return jsonify({
         "success": True,
         "has_api_key": has_key,
         "masked_key": masked_key
     })
+
+@config_bp.route("/admin/config/serpapi", methods=["POST"])
+@admin_required
+def update_admin_serpapi_key():
+    """Update system-wide master SerpApi Key. Admin only."""
+    data = request.get_json() or {}
+    api_key = data.get("api_key", "").strip()
+    
+    # Validate the key if one is provided
+    if api_key:
+        try:
+            import requests as req
+            test_url = "https://serpapi.com/account"
+            params = {"api_key": api_key}
+            response = req.get(test_url, params=params, timeout=10)
+            if response.status_code == 401:
+                return jsonify({"error": "Invalid SerpApi key"}), 400
+        except Exception as e:
+            return jsonify({"error": f"Failed to validate API key: {str(e)}"}), 500
+            
+    success = db.save_system_setting("serpapi_key", api_key)
+    if success:
+        return jsonify({"success": True, "message": "Master SerpApi key updated successfully"})
+    else:
+        return jsonify({"error": "Failed to update master SerpApi key in database"}), 500
 
 @config_bp.route("/config/validate", methods=["POST"])
 def validate_config():
@@ -170,7 +214,7 @@ def export_data():
     cursor = conn.cursor()
     try:
         # User details
-        cursor.execute("SELECT id, username, email, created_at, is_admin FROM users WHERE id = %s", (user_id,))
+        cursor.execute("SELECT id, username, email, phone, created_at, is_admin FROM users WHERE id = %s", (user_id,))
         user_row = cursor.fetchone()
         user_data = dict(user_row) if user_row else {}
         

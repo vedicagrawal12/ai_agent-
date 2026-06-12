@@ -42,7 +42,13 @@ Iska dynamic web dashboard premium modern aesthetics (glassmorphism), high-perfo
    - **Data Portability:** Ek click mein apna sara data (user registry, leads, search history, message logs) structure format mein JSON format mein export karein.
    - **Right to be Forgotten:** "Delete My Account" option ke zariye user account ke sath-sath usse linked leads, history aur outreach log records cascade deletes ke sath complete clean-up ho jaate hain.
 
-8. **Centralized Admin Dashboard Panel:**
+8. **Secure Email + Password Authentication with OTP Reset & Welcome Emails:**
+   - **Email Sign-In:** Login system ko Username se migrate karke **Email + Password** par shift kiya gaya hai. Usernames ko display name ki tarah treat kiya jata hai aur same username se multiple accounts create ho sakte hain.
+   - **Contact Details Collection:** Signup ke samay user ka active Contact Number (phone) save kiya jata hai.
+   - **Forgot Password OTP Recovery:** 6-digit One-Time Password (OTP) validation system ke zariye secured password reset logic.
+   - **Automated Onboarding Welcome Emails:** Signup karte hi system background thread me user ke inbox par onboarding guidance mail send karta hai.
+
+9. **Centralized Admin Dashboard Panel:**
    - Role-based control grid. `is_admin = true` accounts se login karne par header mein dynamic access icon (`👑`) dikhta hai jahan se server accounts (Users deactivation/activation, Admin promotions) aur global statistics manage ho paati hain.
    - Safety guards integrated: Admin accounts khud ko deactivate nahi kar sakte na hi khud ki admin privileges revoke kar sakte hain.
 
@@ -177,14 +183,21 @@ Requirements list me add kiye gaye packages ko install karein (requires Python 3
 pip install -r requirements.txt
 ```
 
-#### 3. API Key setup in Environment
+#### 3. API Key & SMTP setup in Environment
 `env` configuration ke liye workspace mein `.env` file banayein ya `.env.example` ko copy karke save karein. 
-Isme apni SerpApi key aur Postgres DB details input karein:
+Isme apni SerpApi key, Postgres DB details aur **System SMTP server configurations** input karein:
 ```env
 SERPAPI_KEY=your_serpapi_private_key_here
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/leadhunter_db
+
+# System SMTP details (Gmail / custom SMTP for OTP and onboarding mails)
+SYSTEM_SMTP_HOST=smtp.gmail.com
+SYSTEM_SMTP_PORT=465
+SYSTEM_SMTP_EMAIL=your_system_email@gmail.com
+SYSTEM_SMTP_PASSWORD=your_16_character_gmail_app_password
+SYSTEM_SMTP_USE_SSL=true
 ```
-*(Note: Aap direct dashboard par run-time me settings button click karke bhi dynamic key update kar sakte hain jo automatically `.env` par persist ho jaati hai).*
+*(Note: Gmail settings ke liye normal password ki jagah Google Security panel se generated 16-character App Password use karein. SerpApi key ko aap direct dashboard settings se bhi dynamically update kar sakte hain jo automatically `.env` par persist ho jaati hai).*
 
 #### 4. Run the Application
 Start the Flask dev server:

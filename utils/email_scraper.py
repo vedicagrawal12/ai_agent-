@@ -3,6 +3,7 @@ import re
 import socket
 import ipaddress
 from urllib.parse import urljoin, urlparse
+import logging
 
 class EmailScraper:
     """Robust utility to extract public business email addresses from websites."""
@@ -59,7 +60,7 @@ class EmailScraper:
             
             # Block known dangerous hostnames
             if hostname in cls.BLOCKED_HOSTNAMES:
-                print(f"[SSRF Block] Blocked request to internal hostname: {hostname}")
+                logging.warning(f"[SSRF Block] Blocked request to internal hostname: {hostname}")
                 return False
             
             # Resolve hostname to IP and check if it's private
@@ -67,7 +68,7 @@ class EmailScraper:
                 resolved_ip = socket.gethostbyname(hostname)
                 ip_obj = ipaddress.ip_address(resolved_ip)
                 if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
-                    print(f"[SSRF Block] Blocked request to private IP: {hostname} -> {resolved_ip}")
+                    logging.warning(f"[SSRF Block] Blocked request to private IP: {hostname} -> {resolved_ip}")
                     return False
             except socket.gaierror:
                 # DNS resolution failed — probably safe (external), let requests handle the error
@@ -102,10 +103,10 @@ class EmailScraper:
         }
         
         try:
-            print(f"Fetching website for email scraping: {url}...")
+            logging.info(f"Fetching website for email scraping: {url}...")
             response = requests.get(url, headers=headers, timeout=5)
             if not response.ok:
-                print(f"Failed to fetch {url} - Status: {response.status_code}")
+                logging.warning(f"Failed to fetch {url} - Status: {response.status_code}")
                 return []
                 
             html_content = response.text
@@ -119,7 +120,7 @@ class EmailScraper:
                     
             return valid_emails
         except Exception as e:
-            print(f"Error scraping {url}: {e}")
+            logging.error(f"Error scraping {url}: {e}")
             return []
 
     @classmethod
@@ -137,7 +138,7 @@ class EmailScraper:
         # Step 1: Scrape Home Page
         emails = cls.scrape_emails_from_url(main_url)
         if emails:
-            print(f"Found emails on home page: {emails}")
+            logging.info(f"Found emails on home page: {emails}")
             return emails[0]
             
         # Step 2: Try to discover and scrape Contact Pages
@@ -171,19 +172,19 @@ class EmailScraper:
                 for path in ['/contact', '/contact-us', '/about']:
                     contact_links.add(urljoin(main_url, path))
                     
-            print(f"Discovered contact paths to deep scan: {contact_links}")
+            logging.info(f"Discovered contact paths to deep scan: {contact_links}")
             
             # Step 3: Deep Scan Contact Pages
             for contact_url in list(contact_links)[:3]: # limit to top 3 links to save time
                 try:
                     c_emails = cls.scrape_emails_from_url(contact_url)
                     if c_emails:
-                        print(f"Found emails on contact page {contact_url}: {c_emails}")
+                        logging.info(f"Found emails on contact page {contact_url}: {c_emails}")
                         return c_emails[0]
                 except Exception:
                     continue
                     
         except Exception as e:
-            print(f"Deep scraping error: {e}")
+            logging.error(f"Deep scraping error: {e}")
             
         return ""

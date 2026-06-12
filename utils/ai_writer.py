@@ -3,6 +3,7 @@ import requests
 import json
 import time
 import yaml
+import logging
 
 class AIOutreachWriter:
     _prompts = None
@@ -17,7 +18,7 @@ class AIOutreachWriter:
                 with open(prompts_path, "r", encoding="utf-8") as f:
                     AIOutreachWriter._prompts = yaml.safe_load(f)
             except Exception as e:
-                print(f"Error loading prompts YAML from {prompts_path}: {e}")
+                logging.error(f"Error loading prompts YAML from {prompts_path}: {e}")
                 AIOutreachWriter._prompts = {}
         return AIOutreachWriter._prompts
 
@@ -379,13 +380,18 @@ class AIOutreachWriter:
         prompts = AIOutreachWriter._load_prompts()
         template = prompts.get("email_pitch", "")
         
+        if website_url:
+            website_state = f"Has a working website listed: {website_url}" if not is_broken else f"Broken/Down listed URL: {website_url}"
+        else:
+            website_state = "DOES NOT HAVE A WEBSITE YET"
+            
         prompt = template.format(
             business_name=lead_data.get('name', 'Business'),
             category=lead_data.get('category', 'Business'),
             city=lead_data.get('city', 'your city'),
             rating=lead_data.get('rating', '0'),
             reviews=lead_data.get('reviews', '0'),
-            website_state="Broken/Down listed URL: " + website_url if is_broken else "DOES NOT HAVE A WEBSITE YET",
+            website_state=website_state,
             custom_rules_directive=custom_rules_directive,
             project_sample=project_sample,
             mockup_link=mockup_link,
@@ -404,7 +410,7 @@ class AIOutreachWriter:
     def _call_gemini_api(prompt: str, api_key: str) -> str:
         """Helper method to handle the stateless requests to the Google Gemini API."""
         if not api_key.startswith("AIza") and not api_key.startswith("AQ."):
-            print("WARNING: Gemini API Key does not start with standard 'AIza' or 'AQ.' prefix. Proceeding anyway.")
+            logging.warning("WARNING: Gemini API Key does not start with standard 'AIza' or 'AQ.' prefix. Proceeding anyway.")
 
         prompt_len = len(prompt)
         if prompt_len > 4000:

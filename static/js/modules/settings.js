@@ -5,6 +5,7 @@
 import { API } from './api.js';
 import { UI } from './ui.js';
 import { AppState } from './state.js';
+import { CryptoHelper } from './crypto.js';
 
 export const settingsModule = {
     async checkConfig() {
@@ -50,6 +51,7 @@ export const settingsModule = {
     },
 
     async saveApiKey() {
+        if (!UI.el.apiKeyInput) return;
         const apiKey = UI.el.apiKeyInput.value.trim();
         
         if (!apiKey) {
@@ -65,7 +67,8 @@ export const settingsModule = {
             UI.showLoading('Validating API key...');
             await API.saveConfig(apiKey);
             
-            localStorage.setItem('serpapi_key', apiKey);
+            const encryptedKey = await CryptoHelper.encrypt(apiKey, AppState.encryptionKey);
+            localStorage.setItem('serpapi_key', encryptedKey);
             AppState.hasApiKey = true;
             UI.el.apiKeyInput.value = '';
             UI.closeModal('settingsModal');
@@ -131,31 +134,35 @@ export const settingsModule = {
         }
     },
 
-    checkGeminiConfig() {
+    async checkGeminiConfig() {
         const geminiKey = localStorage.getItem('gemini_api_key');
+        const decryptedKey = geminiKey ? await CryptoHelper.decrypt(geminiKey, AppState.encryptionKey) : '';
         const statusEl = UI.el.geminiApiKeyStatus;
-        if (geminiKey) {
+        if (decryptedKey) {
             if (statusEl) {
                 statusEl.className = 'api-key-status active';
                 statusEl.textContent = '✓ Configured';
             }
             if (UI.el.geminiApiKeyInput) {
-                UI.el.geminiApiKeyInput.value = geminiKey;
+                UI.el.geminiApiKeyInput.value = decryptedKey;
             }
         } else {
             if (statusEl) {
                 statusEl.className = 'api-key-status inactive';
                 statusEl.textContent = '✗ Not Set';
             }
+            if (UI.el.geminiApiKeyInput) {
+                UI.el.geminiApiKeyInput.value = '';
+            }
         }
     },
 
-    saveGeminiApiKey() {
+    async saveGeminiApiKey() {
         const geminiKey = UI.el.geminiApiKeyInput.value.trim();
         
         if (!geminiKey) {
             localStorage.removeItem('gemini_api_key');
-            this.checkGeminiConfig();
+            await this.checkGeminiConfig();
             UI.showToast('Gemini API key cleared successfully!', 'info');
             return;
         }
@@ -165,8 +172,9 @@ export const settingsModule = {
             return;
         }
 
-        localStorage.setItem('gemini_api_key', geminiKey);
-        this.checkGeminiConfig();
+        const encryptedKey = await CryptoHelper.encrypt(geminiKey, AppState.encryptionKey);
+        localStorage.setItem('gemini_api_key', encryptedKey);
+        await this.checkGeminiConfig();
         UI.showToast('Gemini API key saved locally!', 'success');
     },
 
@@ -242,17 +250,18 @@ export const settingsModule = {
         }
     },
 
-    checkSmtpConfig() {
+    async checkSmtpConfig() {
         const host = localStorage.getItem('smtp_host') || '';
         const port = localStorage.getItem('smtp_port') || '';
         const email = localStorage.getItem('smtp_email') || '';
         const password = localStorage.getItem('smtp_password') || '';
+        const decryptedPassword = password ? await CryptoHelper.decrypt(password, AppState.encryptionKey) : '';
         const useSSL = localStorage.getItem('smtp_use_ssl') !== 'false';
 
         if (UI.el.smtpHostInput) UI.el.smtpHostInput.value = host;
         if (UI.el.smtpPortInput) UI.el.smtpPortInput.value = port;
         if (UI.el.smtpEmailInput) UI.el.smtpEmailInput.value = email;
-        if (UI.el.smtpPasswordInput) UI.el.smtpPasswordInput.value = password;
+        if (UI.el.smtpPasswordInput) UI.el.smtpPasswordInput.value = decryptedPassword;
         if (UI.el.smtpUseSSL) UI.el.smtpUseSSL.checked = useSSL;
 
         const statusEl = UI.el.smtpStatus;
@@ -267,7 +276,7 @@ export const settingsModule = {
         }
     },
 
-    saveSmtpSettings() {
+    async saveSmtpSettings() {
         const host = UI.el.smtpHostInput?.value.trim() || '';
         const port = UI.el.smtpPortInput?.value.trim() || '';
         const email = UI.el.smtpEmailInput?.value.trim() || '';
@@ -279,13 +288,14 @@ export const settingsModule = {
             return;
         }
 
+        const encryptedPassword = await CryptoHelper.encrypt(password, AppState.encryptionKey);
         localStorage.setItem('smtp_host', host);
         localStorage.setItem('smtp_port', port);
         localStorage.setItem('smtp_email', email);
-        localStorage.setItem('smtp_password', password);
+        localStorage.setItem('smtp_password', encryptedPassword);
         localStorage.setItem('smtp_use_ssl', useSSL ? 'true' : 'false');
 
-        this.checkSmtpConfig();
+        await this.checkSmtpConfig();
         UI.showToast('SMTP credentials saved securely to your browser!', 'success');
     }
 };

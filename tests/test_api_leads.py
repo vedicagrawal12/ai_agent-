@@ -48,11 +48,11 @@ def test_delete_lead(auth_client, db):
 def test_delete_lead_cross_user(client, db):
     """Verify that User A cannot delete User B's lead."""
     # Create User A
-    client.post('/signup', data={'username': 'usera', 'email': 'usera@example.com', 'password': 'password123', 'confirm_password': 'password123'})
+    client.post('/signup', data={'username': 'usera', 'email': 'usera@example.com', 'password': 'password123', 'confirm_password': 'password123', 'phone': '1234567890'})
     user_a = db.get_user_by_username("usera")
     
     # Create User B
-    client.post('/signup', data={'username': 'userb', 'email': 'userb@example.com', 'password': 'password123', 'confirm_password': 'password123'})
+    client.post('/signup', data={'username': 'userb', 'email': 'userb@example.com', 'password': 'password123', 'confirm_password': 'password123', 'phone': '1234567890'})
     user_b = db.get_user_by_username("userb")
     
     # Save a lead for User A
@@ -61,7 +61,7 @@ def test_delete_lead_cross_user(client, db):
     saved_lead = db.get_all_leads(user_id=user_a["id"])[0]
     
     # Log in as User B
-    client.post('/login', data={'username': 'userb', 'password': 'password123'})
+    client.post('/login', data={'email': 'userb@example.com', 'password': 'password123'})
     
     # Try to delete User A's lead using User B's credentials
     resp = client.delete(f'/api/leads/{saved_lead["id"]}')

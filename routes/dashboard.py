@@ -2,6 +2,7 @@ import logging
 from flask import Blueprint, render_template, request, g, redirect, url_for
 from extensions import db
 from utils.decorators import admin_required
+from psycopg2 import sql
 
 logger = logging.getLogger(__name__)
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -16,6 +17,7 @@ def index():
 def verify_db():
     """Check database connection and schemas, and render diagnostic dashboard. Admin only."""
     status_info = {}
+    conn = None
     try:
         conn = db._get_connection()
         cursor = conn.cursor()
@@ -32,7 +34,7 @@ def verify_db():
         
         for table in tables:
             try:
-                cursor.execute(f"SELECT COUNT(*) FROM {table};")
+                cursor.execute(sql.SQL("SELECT COUNT(*) FROM {};").format(sql.Identifier(table)))
                 count = cursor.fetchone()[0]
                 table_statuses[table] = {
                     "exists": True,
@@ -53,7 +55,7 @@ def verify_db():
         users_list = []
         if table_statuses.get("users", {}).get("exists"):
             try:
-                cursor.execute("SELECT id, username, email, created_at FROM users ORDER BY created_at DESC;")
+                cursor.execute("SELECT id, username, email, phone, created_at FROM users ORDER BY created_at DESC;")
                 for row in cursor.fetchall():
                     user_dict = dict(row)
                     if user_dict.get("created_at"):
@@ -67,13 +69,15 @@ def verify_db():
         status_info["users_list"] = users_list
         
         status_info["error"] = None
-        db._release_connection(conn)
     except Exception as e:
         status_info["connection"] = "FAILED"
         status_info["error"] = str(e)
         status_info["tables"] = {}
         status_info["version"] = "N/A"
         status_info["users_list"] = []
+    finally:
+        if conn:
+            db._release_connection(conn)
         
     return render_template("db_status.html", status=status_info)
 
@@ -146,8 +150,14 @@ def admin_dashboard():
             "total_logs": total_logs
         }
         
-        # Users list
-        cursor.execute("SELECT id, username, email, created_at, is_admin, is_active FROM users ORDER BY created_at DESC;")
+        # Users list with pagination
+        page = request.args.get('page', 1, type=int)
+        if page < 1:
+            page = 1
+        per_page = 10
+        offset = (page - 1) * per_page
+        
+        cursor.execute("SELECT id, username, email, phone, created_at, is_admin, is_active FROM users ORDER BY created_at DESC LIMIT %s OFFSET %s;", (per_page, offset))
         users_list = []
         for row in cursor.fetchall():
             u = dict(row)
@@ -157,6 +167,29 @@ def admin_dashboard():
                 u["created_at_str"] = "N/A"
             users_list.append(u)
         status_info["users"] = users_list
+        
+        total_pages = (total_users + per_page - 1) // per_page if total_users > 0 else 1
+        status_info["pagination"] = {
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "total_users": total_users,
+            "has_prev": page > 1,
+            "has_next": page < total_pages
+        }
+        
+        # System Configuration info
+        master_key = db.get_system_setting("serpapi_key")
+        using_env = False
+        if not master_key:
+            import os
+            master_key = os.getenv("SERPAPI_KEY", "")
+            using_env = bool(master_key)
+            
+        status_info["master_serpapi_key_configured"] = bool(master_key)
+        status_info["master_serpapi_key_masked"] = f"{master_key[:8]}...{master_key[-4:]}" if master_key and len(master_key) > 12 else ("***" if master_key else "")
+        status_info["master_serpapi_key_source"] = "Environment Variable" if using_env else ("Database" if master_key else "Not Configured")
+        
         db._release_connection(conn)
     except Exception as e:
         logger.error(f"Error loading admin dashboard: {e}")

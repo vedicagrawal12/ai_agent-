@@ -5,6 +5,7 @@
 import { API } from './api.js';
 import { UI } from './ui.js';
 import { AppState } from './state.js';
+import { outreachModule } from './outreach.js';
 
 export const leadsModule = {
     handleRowClick(event, index) {
@@ -141,7 +142,7 @@ export const leadsModule = {
             message = templateData ? templateData.message : 'Hello {business_name}!';
         }
 
-        const projectSampleText = this.getBestPortfolioProjectSample(lead);
+        const projectSampleText = outreachModule.getBestPortfolioProjectSample(lead);
         message = message
             .replace(/\{business_name\}/g, lead.name || 'there')
             .replace(/\{city\}/g, lead.city || 'your city')
@@ -160,6 +161,7 @@ export const leadsModule = {
             textArea.value = message;
             document.body.appendChild(textArea);
             textArea.select();
+            // Deprecated copy fallback for older browsers
             document.execCommand('copy');
             document.body.removeChild(textArea);
             UI.showToast('📋 Pitch copied to clipboard! Opening Instagram...', 'success');
@@ -187,6 +189,7 @@ export const leadsModule = {
             textArea.value = lead.phone;
             document.body.appendChild(textArea);
             textArea.select();
+            // Deprecated copy fallback for older browsers
             document.execCommand('copy');
             document.body.removeChild(textArea);
             UI.showToast(`Copied: ${lead.phone}`, 'success');
@@ -210,6 +213,7 @@ export const leadsModule = {
             textArea.value = url;
             document.body.appendChild(textArea);
             textArea.select();
+            // Deprecated copy fallback for older browsers
             document.execCommand('copy');
             document.body.removeChild(textArea);
             UI.showToast('🚀 Mockup Link copied to clipboard! Ready to share!', 'success');

@@ -232,7 +232,7 @@ export const searchModule = {
                 container.innerHTML = data.history.map((item, idx) => `
                     <div class="history-item" data-history-index="${idx}">
                         <div>
-                            <div class="history-query">🔍 ${UI.escapeHtml(item.query)} in ${UI.escapeHtml(item.city)}</div>
+                            <div class="history-query">🔍 ${UI.escapeHtml(item.query)}${item.deep_scan ? ' (Deep Scan)' : ''} in ${UI.escapeHtml(item.city)}</div>
                         </div>
                         <div class="history-meta">
                             <span>📊 ${item.results_count} found</span>
@@ -247,7 +247,7 @@ export const searchModule = {
                         const idx = parseInt(el.getAttribute('data-history-index'));
                         const item = AppState.searchHistory[idx];
                         if (item) {
-                            this.rerunSearch(item.query, item.city);
+                            this.rerunSearch(item);
                         }
                     });
                 });
@@ -265,9 +265,26 @@ export const searchModule = {
         }
     },
 
-    rerunSearch(query, city) {
-        UI.el.queryInput.value = query;
-        UI.el.cityInput.value = city;
+    rerunSearch(item) {
+        UI.el.queryInput.value = item.query;
+        UI.el.cityInput.value = item.city;
+        
+        // Restore deep_scan, zones, include_with_website, and hide_saved options
+        if (UI.el.deepScanToggle) {
+            UI.el.deepScanToggle.checked = item.deep_scan || false;
+            // Dispatch change event to update the zones container visibility
+            UI.el.deepScanToggle.dispatchEvent(new Event('change'));
+        }
+        if (UI.el.deepScanZonesInput) {
+            UI.el.deepScanZonesInput.value = item.zones || "";
+        }
+        if (UI.el.includeWebsiteToggle) {
+            UI.el.includeWebsiteToggle.checked = item.include_with_website || false;
+        }
+        if (UI.el.hideSavedLeadsToggle) {
+            UI.el.hideSavedLeadsToggle.checked = item.hide_saved || false;
+        }
+        
         UI.closeModal('historyModal');
         this.handleSearch();
     }

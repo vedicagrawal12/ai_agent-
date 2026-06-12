@@ -50,4 +50,12 @@ def setup_logging(app):
     app.logger.addHandler(console_handler)
     app.logger.setLevel(logging.DEBUG)
 
+    # Attach handlers to root logger to capture all module-level logging
+    root_logger = logging.getLogger()
+    for h in root_logger.handlers[:]:
+        root_logger.removeHandler(h)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+    root_logger.setLevel(logging.DEBUG if app.debug else logging.INFO)
+
     return app.logger

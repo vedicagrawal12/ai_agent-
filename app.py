@@ -38,9 +38,21 @@ def create_app(config_class=None):
     
     # 3. Setup Structured Logging
     logger = setup_logging(app)
+
+    import atexit
+    @atexit.register
+    def shutdown_db_pool():
+        try:
+            from extensions import db
+            db.close()
+        except Exception as e:
+            app.logger.error(f"Error closing database pool at exit: {e}")
     
     # 4. Initialize Extensions
-    cors.init_app(app)
+    allowed_origins = app.config.get("CORS_ALLOWED_ORIGINS", "*")
+    if allowed_origins != "*":
+        allowed_origins = [orig.strip() for orig in allowed_origins.split(",") if orig.strip()]
+    cors.init_app(app, resources={r"/api/*": {"origins": allowed_origins}})
     limiter.init_app(app)
     cache.init_app(app)
     
@@ -54,6 +66,7 @@ def create_app(config_class=None):
             g.user = {
                 "id": user_id, 
                 "username": session.get('username'),
+                "email": session.get('email'),
                 "is_admin": is_admin
             }
         else:
@@ -63,6 +76,9 @@ def create_app(config_class=None):
         public_endpoints = [
             'auth.login', 
             'auth.signup', 
+            'auth.forgot_password',
+            'auth.verify_otp',
+            'auth.reset_password',
             'dashboard.live_preview_mockup', 
             'static', 
             'dashboard.index',
@@ -70,12 +86,12 @@ def create_app(config_class=None):
             'dashboard.terms',
             'dashboard.privacy'
         ]
-        if request.endpoint in public_endpoints:
+        if request.endpoint in public_endpoints or request.endpoint is None:
             return
             
         # Path-based fallback whitelist
         path = request.path
-        if path == '/' or path == '/health' or path == '/terms' or path == '/privacy' or path.startswith('/login') or path.startswith('/signup') or path.startswith('/preview/') or path.startswith('/static/'):
+        if path == '/' or path == '/health' or path == '/terms' or path == '/privacy' or path.startswith('/login') or path.startswith('/signup') or path.startswith('/forgot-password') or path.startswith('/verify-otp') or path.startswith('/reset-password') or path.startswith('/preview/') or path.startswith('/static/'):
             return
             
         # Enforce authentication for protected paths
@@ -83,6 +99,35 @@ def create_app(config_class=None):
             if path.startswith('/api/'):
                 return jsonify({"error": "Unauthorized. Please login."}), 401
             return redirect(url_for('auth.login'))
+
+    @app.before_request
+    def verify_csrf():
+        if app.config.get('TESTING'):
+            return
+        if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+            token_in_session = session.get('csrf_token')
+            if not token_in_session:
+                return jsonify({"error": "CSRF token missing or session expired."}), 400
+            
+            token_in_header = request.headers.get("X-CSRF-Token")
+            token_in_form = request.form.get("csrf_token")
+            token = token_in_header or token_in_form
+            
+            import secrets
+            if not token or not secrets.compare_digest(token, token_in_session):
+                if request.path.startswith('/api/') or request.accept_mimetypes.accept_json:
+                    return jsonify({"error": "CSRF validation failed."}), 403
+                from flask import flash
+                flash("CSRF verification failed. Please try again.", "error")
+                return redirect(request.referrer or url_for('auth.login'))
+
+    @app.after_request
+    def set_csrf_cookie(response):
+        if 'csrf_token' not in session:
+            import secrets
+            session['csrf_token'] = secrets.token_hex(32)
+        response.set_cookie('csrf_token', session['csrf_token'], samesite='Lax', secure=app.config.get('SESSION_COOKIE_SECURE', False))
+        return response
 
     # 5.5 Register Context Processor for Template variables
     @app.context_processor

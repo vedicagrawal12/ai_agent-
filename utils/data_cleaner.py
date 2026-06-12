@@ -7,9 +7,11 @@ Ensures all collected lead data is clean, consistent, and ready for outreach.
 import re
 import concurrent.futures
 from typing import List
+from constants import WEBSITE_CHECK_MAX_WORKERS, WEBSITE_CHECK_TIMEOUT, WEBSITE_CHECK_MAX_SITES
 import phonenumbers
 from phonenumbers import PhoneNumberType
 from collectors.base_collector import Lead
+import logging
 
 
 class DataCleaner:
@@ -144,7 +146,7 @@ class DataCleaner:
                 "line_type": line_type
             }
         except Exception as e:
-            print(f"Error parsing phone {phone}: {e}")
+            logging.error(f"Error parsing phone {phone}: {e}")
             return {"is_valid": False, "whatsapp_number": "", "line_type": "UNKNOWN"}
 
     @staticmethod
@@ -271,36 +273,36 @@ class DataCleaner:
         # 2. Parallel Website status check (Only test leads that HAVE a website listed)
         leads_with_websites = [l for l in leads if l.website]
         if leads_with_websites:
-            # BUG-M5 fix: Cap at 20 websites to check — beyond that, skip (not worth the delay)
-            if len(leads_with_websites) > 20:
-                print(f"Limiting website health checks to 20 of {len(leads_with_websites)} leads")
-                leads_with_websites = leads_with_websites[:20]
-            print(f"Checking health of {len(leads_with_websites)} websites in parallel...")
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            # BUG-M5 fix: Cap at max websites to check — beyond that, skip (not worth the delay)
+            if len(leads_with_websites) > WEBSITE_CHECK_MAX_SITES:
+                logging.info(f"Limiting website health checks to {WEBSITE_CHECK_MAX_SITES} of {len(leads_with_websites)} leads")
+                leads_with_websites = leads_with_websites[:WEBSITE_CHECK_MAX_SITES]
+            logging.info(f"Checking health of {len(leads_with_websites)} websites in parallel...")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=WEBSITE_CHECK_MAX_WORKERS) as executor:
                 # Map futures
                 future_to_lead = {
                     executor.submit(DataCleaner.check_website_health, l.website): l 
                     for l in leads_with_websites
                 }
                 try:
-                    # BUG-M5 fix: Reduced global timeout from 30s to 15s for faster search responses
-                    for future in concurrent.futures.as_completed(future_to_lead, timeout=15):
+                    # BUG-M5 fix: Reduced global timeout from 30s to WEBSITE_CHECK_TIMEOUT for faster search responses
+                    for future in concurrent.futures.as_completed(future_to_lead, timeout=WEBSITE_CHECK_TIMEOUT):
                         lead = future_to_lead[future]
                         try:
                             is_online = future.result()
                             # If NOT online, mark as broken website!
                             lead.is_broken_website = False if is_online else True
                         except Exception as e:
-                            print(f"Error checking website for {lead.name}: {e}")
+                            logging.error(f"Error checking website for {lead.name}: {e}")
                             lead.is_broken_website = True # Treat failures as broken
                 except concurrent.futures.TimeoutError:
-                    print("Warning: Website health check timed out after 30s. Marking remaining as broken.")
+                    logging.warning(f"Warning: Website health check timed out after {WEBSITE_CHECK_TIMEOUT}s. Marking remaining as broken.")
                     for future, lead in future_to_lead.items():
                         if not future.done():
                             lead.is_broken_website = True
                             future.cancel()
                 except Exception as loop_err:
-                    print(f"Error during parallel website checks: {loop_err}")
+                    logging.error(f"Error during parallel website checks: {loop_err}")
 
         # 3. Assign priority based on website status & reviews
         priority_order = {"HIGH": 0, "MEDIUM": 1, "LOW": 2, "IGNORE": 3}

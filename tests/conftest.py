@@ -10,9 +10,38 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Load env variables and override DATABASE_URL for testing BEFORE importing database/extensions
 load_dotenv()
 db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/leadhunter_db")
+
+def create_test_db_if_missing(original_db_url, test_db_name):
+    import psycopg2
+    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+    
+    slash_idx = original_db_url.rfind('/')
+    if slash_idx == -1:
+        return
+    base_url = original_db_url[:slash_idx + 1]
+    admin_url = base_url + "postgres"
+    
+    conn = None
+    try:
+        conn = psycopg2.connect(admin_url)
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = %s;", (test_db_name,))
+        exists = cursor.fetchone()
+        if not exists:
+            cursor.execute(f'CREATE DATABASE "{test_db_name}";')
+            print(f"[Testing conftest] Created test database: {test_db_name}")
+    except Exception as e:
+        print(f"[Testing conftest] Warning: Could not verify/create test database dynamically: {e}")
+    finally:
+        if conn:
+            conn.close()
+
 if "leadhunter_db" in db_url:
+    create_test_db_if_missing(db_url, "leadhunter_test")
     test_db_url = db_url.replace("leadhunter_db", "leadhunter_test")
 else:
+    create_test_db_if_missing(db_url, "leadhunter_test")
     test_db_url = "postgresql://postgres:postgres@localhost:5432/leadhunter_test"
 os.environ["DATABASE_URL"] = test_db_url
 
@@ -50,7 +79,7 @@ def clean_db(app):
     conn = db_instance._get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("TRUNCATE TABLE message_log, search_history, leads, users RESTART IDENTITY CASCADE;")
+        cursor.execute("TRUNCATE TABLE message_log, search_history, leads, users, system_settings RESTART IDENTITY CASCADE;")
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -74,11 +103,12 @@ def auth_client(client):
         'username': 'testuser',
         'email': 'test@example.com',
         'password': 'password123',
-        'confirm_password': 'password123'
+        'confirm_password': 'password123',
+        'phone': '1234567890'
     })
     # Login to set session cookie
     client.post('/login', data={
-        'username': 'testuser',
+        'email': 'test@example.com',
         'password': 'password123'
     })
     return client

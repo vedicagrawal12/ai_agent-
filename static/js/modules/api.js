@@ -2,13 +2,23 @@
  * LeadHunter AI — API Client Module
  */
 
+import { CryptoHelper } from './crypto.js';
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
 export const API = {
     baseUrl: '',
 
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
+        const csrfToken = getCookie('csrf_token');
         const mergedHeaders = {
             'Content-Type': 'application/json',
+            ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
             ...(options.headers || {})
         };
 
@@ -20,7 +30,10 @@ export const API = {
         // Inject SerpApi Key locally if present
         const localKey = localStorage.getItem('serpapi_key');
         if (localKey) {
-            config.headers['X-SerpApi-Key'] = localKey;
+            const decryptedKey = await CryptoHelper.decrypt(localKey, AppState.encryptionKey);
+            if (decryptedKey) {
+                config.headers['X-SerpApi-Key'] = decryptedKey;
+            }
         }
 
         try {
