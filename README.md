@@ -92,6 +92,18 @@ Iska dynamic web dashboard premium modern aesthetics (glassmorphism), high-perfo
     - **Broken Website Hook:** Agar lead ki website broken hai, toh AI pitch generator dynamically pivot ho jata hai aur client ke reviews ko appreciate karte hue unhe point out karta hai ki unki listed website abhi down/error page show kar rahi hai. Ek professional draft home mockup layout offer karke response rate 10x badha deta hai!
     - **0-Reviews Authentic Formatting (BUG-7 Fix):** Agar kisi business ki zero reviews hain, toh outreach text smart tarike se `"0 reviews"` (ya custom local lines) create karta hai instead of writing spammy terms like `"many reviews"`.
 
+19. **Direct SMTP Outreach & Real-Time Click Telemetry:**
+    - Integrated automatic 1x1 tracking pixel and wrapped link redirects for all SMTP dispatched cold emails.
+    - If a lead opens the email or clicks the portfolio project link, the tracking server registers the event, records analytical logs, and automatically transitions the lead's pipeline stage to **INTERESTED** in the dashboard.
+
+20. **Premium Redesigned Legal Terms & Privacy Disclosures:**
+    - Fully rewrote the Terms of Service and Privacy Policy pages with an elegant, legal-themed corporate dashboard view.
+    - Features formal legal language describing local sandboxing storage policies for credentials, GDPR Article 17 cascading erasures, and telemetry collection disclosures.
+
+21. **Interactive Footer & Tabbed User Guide Manual:**
+    - Replaced the simple footer layout with a premium glassmorphic dashboard footer.
+    - Integrates a tabbed Operations Guide Modal detailing Scouting, AI Copywriting, GDPR tools, and Admin features in Hinglish with no DOMContentLoaded loading-order race conditions.
+
 ---
 
 ## 🔌 Tech Stack & Integrations
