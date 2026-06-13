@@ -208,18 +208,33 @@ def create_app(config_class=None):
             return jsonify({"status": "unhealthy", "error": str(e)}), 503
             
     # 8. Start Background IMAP Polling Thread
-    try:
-        from utils.imap_reader import start_background_poller
-        start_background_poller()
-    except Exception as start_err:
-        app.logger.error(f"Could not start background IMAP poller daemon: {start_err}")
+    if not app.config.get('CELERY_ENABLED'):
+        try:
+            from utils.imap_reader import start_background_poller
+            start_background_poller()
+        except Exception as start_err:
+            app.logger.error(f"Could not start background IMAP poller daemon: {start_err}")
+    else:
+        app.logger.info("Celery is enabled. Background IMAP poller thread skipped (handled by Celery Beat).")
 
     # 9. Start Background Drip Follow-ups Polling Thread
-    try:
-        from utils.drip_scheduler import start_drip_poller
-        start_drip_poller()
-    except Exception as start_err:
-        app.logger.error(f"Could not start background Drip poller daemon: {start_err}")
+    if not app.config.get('CELERY_ENABLED'):
+        try:
+            from utils.drip_scheduler import start_drip_poller
+            start_drip_poller()
+        except Exception as start_err:
+            app.logger.error(f"Could not start background Drip poller daemon: {start_err}")
+    else:
+        app.logger.info("Celery is enabled. Background Drip poller thread skipped (handled by Celery Beat).")
+
+    # 10. Teardown scoped SQLAlchemy sessions
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        try:
+            from extensions import db
+            db.remove_session()
+        except Exception as teardown_err:
+            app.logger.error(f"Error during app context session teardown: {teardown_err}")
 
     return app
 

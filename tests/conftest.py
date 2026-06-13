@@ -86,6 +86,10 @@ def clean_db(app):
         print(f"[Testing conftest] Error during database truncation: {e}")
     finally:
         db_instance._release_connection(conn)
+        try:
+            db_instance.remove_session()
+        except Exception:
+            pass
 
 @pytest.fixture
 def client(app):

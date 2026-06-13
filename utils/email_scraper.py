@@ -79,6 +79,27 @@ class EmailScraper:
             return False
 
     @classmethod
+    def _get_safe_response(cls, url: str, headers: dict, timeout: int = 5, max_redirects: int = 5) -> requests.Response:
+        """
+        Fetch response from URL safely by manually resolving redirects
+        and validating each intermediate URL against SSRF checks.
+        """
+        current_url = url
+        for _ in range(max_redirects):
+            if not cls._is_safe_url(current_url):
+                raise Exception(f"Blocked request to unsafe URL: {current_url}")
+                
+            response = requests.get(current_url, headers=headers, timeout=timeout, allow_redirects=False)
+            if response.is_redirect or (300 <= response.status_code < 400):
+                next_url = response.headers.get('Location')
+                if not next_url:
+                    break
+                current_url = urljoin(current_url, next_url)
+            else:
+                return response
+        raise Exception("Too many redirects or redirection loops detected.")
+
+    @classmethod
     def scrape_emails_from_url(cls, url: str) -> list:
         """
         Scrape public emails from a given webpage URL.
@@ -91,10 +112,6 @@ class EmailScraper:
         url = url.strip()
         if not url.startswith(('http://', 'https://')):
             url = 'https://' + url
-        
-        # BUG-M9 fix: SSRF protection
-        if not cls._is_safe_url(url):
-            return []
             
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -104,7 +121,7 @@ class EmailScraper:
         
         try:
             logging.info(f"Fetching website for email scraping: {url}...")
-            response = requests.get(url, headers=headers, timeout=5)
+            response = cls._get_safe_response(url, headers=headers, timeout=5)
             if not response.ok:
                 logging.warning(f"Failed to fetch {url} - Status: {response.status_code}")
                 return []
@@ -151,11 +168,7 @@ class EmailScraper:
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             }
             
-            # SSRF protection on discovery request
-            if not cls._is_safe_url(main_url):
-                return ""
-            
-            res = requests.get(main_url, headers=headers, timeout=5)
+            res = cls._get_safe_response(main_url, headers=headers, timeout=5)
             if res.status_code != 200:
                 return ""
                 

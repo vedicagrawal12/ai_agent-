@@ -114,9 +114,9 @@ def test_portfolio_ssl_error():
     import ssl
     from unittest.mock import patch
 
-    # Mock urllib.request.urlopen to raise ssl.SSLError
-    with patch("urllib.request.urlopen") as mock_urlopen:
-        mock_urlopen.side_effect = ssl.SSLError("self-signed certificate")
+    # Mock urllib.request.OpenerDirector.open to raise ssl.SSLError
+    with patch("urllib.request.OpenerDirector.open") as mock_open:
+        mock_open.side_effect = ssl.SSLError("self-signed certificate")
         
         with pytest.raises(Exception) as exc_info:
             PortfolioParser.fetch_and_parse("https://self-signed.badssl.com/")

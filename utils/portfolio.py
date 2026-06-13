@@ -1,10 +1,18 @@
 import urllib.request
+import urllib.error
 import re
 import ssl
 import socket
 import ipaddress
 import logging
 from urllib.parse import urlparse
+
+class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Perform security validation of the new URL
+        if not PortfolioParser._is_safe_url(newurl):
+            raise urllib.error.HTTPError(req.full_url, code, f"Redirect to unsafe URL blocked: {newurl}", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 class PortfolioParser:
     BLOCKED_HOSTNAMES = {'localhost', '127.0.0.1', '0.0.0.0', '::1', 'metadata.google.internal'}
@@ -55,7 +63,8 @@ class PortfolioParser:
             
             # Try with secure SSL verification (BUG-M8)
             ctx = ssl.create_default_context()
-            with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
+            opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx), SafeRedirectHandler())
+            with opener.open(req, timeout=10) as response:
                 html = response.read().decode('utf-8')
                 
             return PortfolioParser.parse_html(html)

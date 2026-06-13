@@ -35,6 +35,11 @@ class Config:
     # CORS Allowed Origins
     CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "*")
 
+    # Celery Settings
+    CELERY_ENABLED = os.getenv("CELERY_ENABLED", "false").lower() == "true"
+    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+
     # System SMTP settings for OTP / Onboarding emails
     SYSTEM_SMTP_HOST = os.getenv("SYSTEM_SMTP_HOST", "smtp.gmail.com")
     SYSTEM_SMTP_PORT = int(os.getenv("SYSTEM_SMTP_PORT", "465"))

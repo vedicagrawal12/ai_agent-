@@ -30,6 +30,20 @@ class TaskRunner:
         Submit a function to run in the background.
         Returns a task ID string.
         """
+        from flask import current_app, has_app_context
+        celery_enabled = False
+        if has_app_context():
+            celery_enabled = current_app.config.get('CELERY_ENABLED', False)
+
+        if celery_enabled:
+            try:
+                from celery_worker import run_background_search_task
+                # Trigger task asynchronously on Celery workers
+                task = run_background_search_task.delay(*args, **kwargs)
+                return task.id
+            except Exception as celery_err:
+                logger.error(f"[TaskRunner] Failed to route to Celery: {celery_err}. Falling back to thread pool.")
+
         cls._cleanup_expired_tasks()
         task_id = str(uuid.uuid4())[:8]
         
@@ -76,6 +90,35 @@ class TaskRunner:
         Get the current status of the task.
         Also cleans up tasks older than 1 hour.
         """
+        from flask import current_app, has_app_context
+        celery_enabled = False
+        if has_app_context():
+            celery_enabled = current_app.config.get('CELERY_ENABLED', False)
+
+        if celery_enabled:
+            try:
+                # pyrefly: ignore [missing-import]
+                from celery.result import AsyncResult
+                from celery_worker import celery_app
+                res = AsyncResult(task_id, app=celery_app)
+                
+                # Celery state maps
+                if res.state == 'PENDING':
+                    # Check if the result backend actually has the task (Celery returns PENDING for unknown tasks too)
+                    return {"status": "RUNNING"}
+                elif res.state == 'STARTED' or res.state == 'RETRY':
+                    return {"status": "RUNNING"}
+                elif res.state == 'SUCCESS':
+                    return {"status": "DONE", "result": res.result, "error": None}
+                elif res.state == 'FAILURE':
+                    return {"status": "FAILED", "result": None, "error": str(res.result)}
+                elif res.state == 'REVOKED':
+                    return {"status": "FAILED", "result": None, "error": "Task was revoked."}
+                else:
+                    return {"status": res.state}
+            except Exception as celery_err:
+                logger.error(f"[TaskRunner] Failed to fetch status from Celery: {celery_err}. Trying in-memory cache.")
+
         cls._cleanup_expired_tasks()
         with cls._lock:
             return cls._tasks.get(task_id, {"status": "NOT_FOUND"})

@@ -150,6 +150,63 @@ class DataCleaner:
             logging.error(f"Error parsing phone {phone}: {e}")
             return {"is_valid": False, "whatsapp_number": "", "line_type": "UNKNOWN"}
 
+    # Blocked internal/private hostnames and IP ranges (SSRF protection)
+    BLOCKED_HOSTNAMES = {'localhost', '127.0.0.1', '0.0.0.0', '::1', 'metadata.google.internal'}
+
+    @classmethod
+    def _is_safe_url(cls, url: str) -> bool:
+        """
+        SSRF protection — block requests to internal/private IPs.
+        Returns True if URL is safe to fetch, False if it targets an internal resource.
+        """
+        try:
+            from urllib.parse import urlparse
+            import socket
+            import ipaddress
+            parsed = urlparse(url)
+            hostname = parsed.hostname
+            if not hostname:
+                return False
+            
+            # Block known dangerous hostnames
+            if hostname in cls.BLOCKED_HOSTNAMES:
+                return False
+            
+            # Resolve hostname to IP and check if it's private
+            try:
+                resolved_ip = socket.gethostbyname(hostname)
+                ip_obj = ipaddress.ip_address(resolved_ip)
+                if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved:
+                    return False
+            except socket.gaierror:
+                pass
+            
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    def _safe_request(cls, url: str, method: str, headers: dict, timeout: float = 2.0, max_redirects: int = 5) -> requests.Response:
+        from urllib.parse import urljoin
+        current_url = url
+        for _ in range(max_redirects):
+            if not cls._is_safe_url(current_url):
+                raise Exception(f"Blocked request to unsafe URL: {current_url}")
+                
+            if method.upper() == "HEAD":
+                response = requests.head(current_url, headers=headers, timeout=timeout, allow_redirects=False)
+            else:
+                response = requests.get(current_url, headers=headers, timeout=timeout, allow_redirects=False, stream=True)
+                
+            if response.is_redirect or (300 <= response.status_code < 400):
+                next_url = response.headers.get('Location')
+                if not next_url:
+                    break
+                current_url = urljoin(current_url, next_url)
+            else:
+                return response
+        raise Exception("Too many redirects or redirection loops detected.")
+
     @staticmethod
     def check_website_health(url: str) -> bool:
         """
@@ -171,7 +228,7 @@ class DataCleaner:
         
         try:
             # 1. Try fast HEAD request first (2s timeout instead of 3s)
-            response = requests.head(target_url, headers=headers, timeout=2.0, allow_redirects=True)
+            response = DataCleaner._safe_request(target_url, "HEAD", headers=headers, timeout=2.0)
             # Any response under 500 means server is alive (405 = HEAD not supported, still alive!)
             if response.status_code < 500:
                 return True
@@ -188,7 +245,7 @@ class DataCleaner:
             
         try:
             # 2. Fallback GET only if HEAD timed out or returned 5xx
-            response = requests.get(target_url, headers=headers, timeout=2.0, allow_redirects=True, stream=True)
+            response = DataCleaner._safe_request(target_url, "GET", headers=headers, timeout=2.0)
             response.close()  # Close immediately — we only need the status code
             if response.status_code < 500:
                 return True
