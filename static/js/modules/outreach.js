@@ -120,29 +120,51 @@ export const outreachModule = {
         
         const category = (lead.category || '').toLowerCase();
         const name = (lead.name || '').toLowerCase();
+        const searchText = `${category} ${name}`;
         
-        if (category.includes('gym') || category.includes('fitness') || category.includes('workout') || category.includes('health') || 
-            name.includes('gym') || name.includes('fitness') || name.includes('workout')) {
-            const match = projects.find(p => p.title.toLowerCase().includes('gym') || p.desc.toLowerCase().includes('gym'));
-            if (match && match.demo_url) {
-                return `maine haal hi mein ek GYM website banayi hai, aap is link par demo dekh sakte hain: ${match.demo_url}`;
+        // Fuzzy keyword map covering 14+ industry verticals
+        const categoryKeywordMap = [
+            { keywords: ['gym', 'fitness', 'yoga', 'crossfit', 'workout', 'pilates', 'boxing', 'zumba', 'martial'], label: 'Gym/Fitness', projectKeywords: ['gym', 'fitness', 'workout', 'health'] },
+            { keywords: ['dentist', 'dental', 'clinic', 'doctor', 'hospital', 'dermatolog', 'physician', 'ortho', 'eye', 'physio', 'chiro', 'ayurved', 'pharma', 'patholog', 'diagnostic'], label: 'Medical/Healthcare', projectKeywords: ['clinic', 'doctor', 'hospital', 'health', 'medical', 'dental', 'care'] },
+            { keywords: ['salon', 'spa', 'parlour', 'parlor', 'barber', 'beauty', 'nail', 'hair', 'makeup', 'grooming', 'skincare', 'tattoo', 'mehndi', 'bridal'], label: 'Salon/Beauty', projectKeywords: ['salon', 'beauty', 'spa', 'barber', 'grooming', 'style'] },
+            { keywords: ['restaurant', 'cafe', 'hotel', 'bakery', 'bar', 'dhaba', 'food', 'dine', 'dining', 'catering', 'sweet', 'pizza', 'biryani', 'juice', 'tea', 'coffee', 'lounge', 'pub', 'banquet', 'resort', 'prandium'], label: 'Restaurant/Hotel', projectKeywords: ['hotel', 'restaurant', 'cafe', 'food', 'dining', 'prandium', 'bakery', 'catering'] },
+            { keywords: ['school', 'coaching', 'tutor', 'academy', 'institute', 'training', 'education', 'college', 'preschool', 'playschool', 'nursery', 'classes', 'learning'], label: 'Education/Coaching', projectKeywords: ['school', 'education', 'academy', 'learning', 'coaching', 'course', 'training'] },
+            { keywords: ['garage', 'car wash', 'mechanic', 'automobile', 'auto', 'bike', 'vehicle', 'tyre', 'car dealer', 'showroom', 'service center'], label: 'Automotive', projectKeywords: ['auto', 'car', 'vehicle', 'garage', 'mechanic', 'bike'] },
+            { keywords: ['builder', 'property', 'real estate', 'architect', 'interior', 'construction', 'contractor', 'developer', 'flat', 'apartment', 'villa'], label: 'Real Estate', projectKeywords: ['property', 'real estate', 'construction', 'builder', 'architect', 'interior', 'home'] },
+            { keywords: ['lawyer', 'advocate', 'legal', 'chartered', 'accountant', 'tax', 'consultant', 'financial', 'insurance', 'loan', 'investment'], label: 'Legal/Finance', projectKeywords: ['lawyer', 'legal', 'finance', 'accounting', 'consulting', 'tax'] },
+            { keywords: ['pet ', 'pets', 'veterinary', 'vet ', 'animal', 'dog ', 'dogs', 'puppy', 'kitten', 'kennel', 'aquarium'], label: 'Pet Services', projectKeywords: ['pet', 'vet', 'animal', 'dog'] },
+            { keywords: ['shop', 'store', 'boutique', 'electronics', 'furniture', 'jewel', 'clothing', 'garment', 'fashion', 'textile', 'gift', 'handicraft', 'grocery', 'supermarket', 'kirana'], label: 'Retail/Store', projectKeywords: ['shop', 'store', 'ecommerce', 'boutique', 'retail', 'fashion', 'product'] },
+            { keywords: ['photographer', 'photography', 'wedding', 'event', 'planner', 'dj', 'decoration', 'florist', 'caterer', 'videograph', 'studio', 'music', 'band'], label: 'Events/Creative', projectKeywords: ['photo', 'wedding', 'event', 'studio', 'portfolio', 'creative', 'film'] },
+            { keywords: ['plumber', 'electrician', 'painter', 'pest control', 'ac repair', 'cleaning', 'laundry', 'packers', 'movers', 'carpenter', 'locksmith', 'solar', 'cctv', 'security'], label: 'Home Services', projectKeywords: ['service', 'repair', 'cleaning', 'home', 'maintenance'] },
+            { keywords: ['travel', 'tour', 'taxi', 'cab', 'courier', 'logistics', 'transport', 'bus', 'flight', 'visa', 'rental'], label: 'Travel/Transport', projectKeywords: ['travel', 'tour', 'booking', 'trip', 'transport', 'cab'] },
+            { keywords: ['hostel', 'pg', 'paying guest', 'stay', 'accommodation', 'lodge', 'guest house', 'homestay', 'dormitory'], label: 'Hostel/Accommodation', projectKeywords: ['hostel', 'buddy', 'stay', 'accommodation', 'booking', 'room'] },
+        ];
+        
+        // Find the matching category group
+        let matchedGroup = null;
+        for (const group of categoryKeywordMap) {
+            if (group.keywords.some(kw => searchText.includes(kw))) {
+                matchedGroup = group;
+                break;
             }
         }
         
-        if (category.includes('hotel') || category.includes('restaurant') || category.includes('cafe') || category.includes('food') || category.includes('dine') || category.includes('bakery') || category.includes('sweet') ||
-            name.includes('hotel') || name.includes('restaurant') || name.includes('cafe') || name.includes('food') || name.includes('dine') || name.includes('bakery')) {
-            const match = projects.find(p => p.title.toLowerCase().includes('hotel') || p.title.toLowerCase().includes('restaurant') || p.title.toLowerCase().includes('prandium') || p.desc.toLowerCase().includes('hotel') || p.desc.toLowerCase().includes('restaurant'));
-            if (match && match.demo_url) {
-                return `maine haal hi mein ek Hotel/Restaurant website banayi hai, aap is link par demo dekh sakte hain: ${match.demo_url}`;
+        if (matchedGroup) {
+            // Search portfolio projects for a match using the group's project keywords
+            const matchedProject = projects.find(p => {
+                const pText = `${p.title} ${p.desc}`.toLowerCase();
+                return matchedGroup.projectKeywords.some(kw => pText.includes(kw));
+            });
+            
+            if (matchedProject && matchedProject.demo_url) {
+                return `maine haal hi mein ek ${matchedGroup.label} category ka project complete kiya hai, aap is link par live demo dekh sakte hain: ${matchedProject.demo_url}`;
             }
         }
         
-        if (category.includes('hostel') || category.includes('pg') || category.includes('stay') || category.includes('accommodation') ||
-            name.includes('hostel') || name.includes('pg') || name.includes('stay') || name.includes('accommodation')) {
-            const match = projects.find(p => p.title.toLowerCase().includes('hostel') || p.title.toLowerCase().includes('buddy'));
-            if (match && match.demo_url) {
-                return `maine haal hi mein ek Hostel discovery platform banaya hai, aap is link par demo dekh sakte hain: ${match.demo_url}`;
-            }
+        // Fallback: try to find ANY project with a demo URL and describe it generically
+        const anyProjectWithDemo = projects.find(p => p.demo_url);
+        if (anyProjectWithDemo) {
+            return `hamare recent projects mein se ek sample aap yahan dekh sakte hain: ${anyProjectWithDemo.demo_url} — aapke business ke liye bhi similar premium setup bana sakte hain.`;
         }
         
         return `hamare work samples hamare portfolio par dekh sakte hain: ${portfolioUrl}`;
@@ -244,6 +266,7 @@ export const outreachModule = {
                     length: length,
                     service: service,
                     min_words: minWords,
+                    language: UI.el.pitchLanguageSelect?.value || 'hinglish',
                     sender: {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
@@ -329,6 +352,7 @@ export const outreachModule = {
                     length: length,
                     service: service,
                     min_words: minWords,
+                    language: UI.el.pitchLanguageSelect?.value || 'hinglish',
                     sender: {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
@@ -527,6 +551,7 @@ export const outreachModule = {
                     tone: tone,
                     service: service,
                     min_words: minWords,
+                    language: UI.el.emailLanguageSelect?.value || 'hinglish',
                     sender: {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
@@ -1125,6 +1150,7 @@ export const outreachModule = {
                     tone: tone,
                     service: service,
                     min_words: minWords,
+                    language: UI.el.emailLanguageSelect?.value || 'hinglish',
                     sender: {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',

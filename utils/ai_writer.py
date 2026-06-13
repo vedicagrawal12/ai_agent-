@@ -7,19 +7,28 @@ import logging
 
 class AIOutreachWriter:
     _prompts = None
+    _prompts_mtime = 0  # Track file modification time for hot-reload
 
     @staticmethod
     def _load_prompts():
-        """Load and cache prompt templates from outreach_pitches.yaml."""
-        if AIOutreachWriter._prompts is None:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            prompts_path = os.path.join(base_dir, "prompts", "outreach_pitches.yaml")
+        """Load and cache prompt templates from outreach_pitches.yaml with hot-reload."""
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        prompts_path = os.path.join(base_dir, "prompts", "outreach_pitches.yaml")
+        try:
+            current_mtime = os.path.getmtime(prompts_path)
+        except OSError:
+            current_mtime = 0
+
+        if AIOutreachWriter._prompts is None or current_mtime != AIOutreachWriter._prompts_mtime:
             try:
                 with open(prompts_path, "r", encoding="utf-8") as f:
                     AIOutreachWriter._prompts = yaml.safe_load(f)
+                AIOutreachWriter._prompts_mtime = current_mtime
+                logging.debug(f"Prompts YAML loaded/reloaded (mtime={current_mtime})")
             except Exception as e:
                 logging.error(f"Error loading prompts YAML from {prompts_path}: {e}")
-                AIOutreachWriter._prompts = {}
+                if AIOutreachWriter._prompts is None:
+                    AIOutreachWriter._prompts = {}
         return AIOutreachWriter._prompts
 
     @staticmethod
@@ -73,6 +82,9 @@ class AIOutreachWriter:
 
         # Resolve persona and service directives based on target service
         persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)
+
+        # Resolve category-specific pain points and value propositions
+        category_directives = AIOutreachWriter._resolve_category_directives(lead_data.get('category', ''))
 
         # Resolve tone directives
         tone_directives = ""
@@ -250,10 +262,11 @@ class AIOutreachWriter:
                 length_directives=length_directives,
                 hook_type_directive=hook_type_directive,
                 signoff_directive=signoff_directive,
-                language_directives=whatsapp_lang_dir
+                language_directives=whatsapp_lang_dir,
+                category_directives=category_directives
             )
 
-        return AIOutreachWriter._call_gemini_api(prompt, api_key)
+        return AIOutreachWriter._call_gemini_api(prompt, api_key, tone=tone)
 
     @staticmethod
     def generate_email_pitch(
@@ -302,6 +315,9 @@ class AIOutreachWriter:
 
         # Resolve persona and service directives based on target service
         persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)
+
+        # Resolve category-specific pain points and value propositions
+        category_directives = AIOutreachWriter._resolve_category_directives(lead_data.get('category', ''))
 
         # Resolve tone directives
         tone_directives = ""
@@ -433,64 +449,37 @@ class AIOutreachWriter:
             email_length_directives=email_length_directives,
             min_words=min_words,
             signoff_str=signoff_str,
-            language_directives=email_lang_dir
+            language_directives=email_lang_dir,
+            category_directives=category_directives
         )
 
 
-        return AIOutreachWriter._call_gemini_api(prompt, api_key)
+        return AIOutreachWriter._call_gemini_api(prompt, api_key, tone=tone)
 
     @staticmethod
-    def _call_gemini_api(prompt: str, api_key: str) -> str:
+    def _call_gemini_api(prompt: str, api_key: str, tone: str = "elite") -> str:
         """Helper method to handle the stateless requests to the Google Gemini API."""
         if not api_key.startswith("AIza") and not api_key.startswith("AQ."):
             logging.warning("WARNING: Gemini API Key does not start with standard 'AIza' or 'AQ.' prefix. Proceeding anyway.")
 
-        prompt_len = len(prompt)
-        if prompt_len > 4000:
-            max_output_tokens = 2048
-            temperature = 0.85
-            request_timeout = 45
-        elif prompt_len > 2500:
-            max_output_tokens = 1500
-            temperature = 0.8
-            request_timeout = 35
-        else:
-            max_output_tokens = 1024
-            temperature = 0.75
-            request_timeout = 25
+        # Fixed optimal settings — temperature varies by tone, not prompt length
+        max_output_tokens = 4096
+        request_timeout = 50
+        if tone == "friendly":
+            temperature = 0.88
+        elif tone == "direct":
+            temperature = 0.72
+        else:  # elite
+            temperature = 0.82
 
-        discovered_models = []
-        try:
-            list_url = f"https://generativelanguage.googleapis.com/v1/models?key={api_key}"
-            res = requests.get(list_url, timeout=10)
-            if res.status_code == 200:
-                models_data = res.json().get("models", [])
-                for m in models_data:
-                    name = m.get("name", "")
-                    methods = m.get("supportedGenerationMethods", [])
-                    if "generateContent" in methods:
-                        model_id = name.split("/")[-1] if "/" in name else name
-                        discovered_models.append(("v1", model_id))
-        except Exception:
-            pass
-
-        discovered_capped = discovered_models[:3]
-        models_to_try = discovered_capped + [
+        # Smart static model list — no fragile discovery API call
+        final_models = [
+            ("v1beta", "gemini-2.0-flash"),
+            ("v1beta", "gemini-2.0-flash-lite"),
             ("v1", "gemini-1.5-flash"),
-            ("v1beta", "gemini-1.5-flash"),
-            ("v1beta", "gemini-1.5-flash-latest"),
             ("v1", "gemini-1.5-pro"),
             ("v1beta", "gemini-pro")
         ]
-
-        seen = set()
-        final_models = []
-        for ver, mod in models_to_try:
-            if (ver, mod) not in seen:
-                seen.add((ver, mod))
-                final_models.append((ver, mod))
-            if len(final_models) >= 5:
-                break
 
         last_error = ""
         primary_error = ""
@@ -629,3 +618,128 @@ class AIOutreachWriter:
 - SPECIAL DIRECTIVE: You must strictly combine this custom service description with any rules and details from the CUSTOM USER PROFILE & OUTREACH RULES (if provided below) to refine the pitch details and tone.
 """
         return persona_directive, service_directives
+
+    @staticmethod
+    def _resolve_category_directives(category: str) -> str:
+        """Map business category to industry-specific pain points, urgency hooks, and CTA alignment."""
+        cat = (category or "").lower().strip()
+
+        # ── Health & Fitness ──
+        if any(k in cat for k in ['gym', 'fitness', 'yoga', 'crossfit', 'workout', 'pilates', 'martial art', 'boxing', 'zumba']):
+            return """
+- CATEGORY INTELLIGENCE (Health & Fitness):
+  * PAIN POINTS: Membership churn is #1 killer — members sign up via Google but leave if online booking, class schedules, and trainer profiles aren't frictionless. Competitors with slick apps steal walk-in traffic.
+  * URGENCY: Peak season (New Year, summer body) drives 60% of annual sign-ups. If their digital funnel isn't ready, they lose to the gym down the street that has online trials.
+  * CTA ALIGNMENT: Offer a live mockup showing class schedule integration, trainer profiles grid, and online trial-booking flow.
+"""
+        # ── Medical & Healthcare ──
+        if any(k in cat for k in ['dentist', 'dental', 'clinic', 'doctor', 'hospital', 'dermatolog', 'physician', 'ortho', 'eye', 'optic', 'physio', 'chiro', 'ayurved', 'homeopath', 'pharma', 'patholog', 'diagnostic']):
+            return """
+- CATEGORY INTELLIGENCE (Medical & Healthcare):
+  * PAIN POINTS: Patients research heavily before choosing a doctor — 77% check online reviews and website credibility. A missing or outdated website destroys trust instantly. Appointment no-shows spike when there's no online booking.
+  * URGENCY: Local competitors with clean, trustworthy websites and Google My Business profiles are capturing patients who would otherwise walk into their clinic.
+  * CTA ALIGNMENT: Offer a mockup showing doctor profiles, specialization pages, patient testimonials, and an integrated appointment booking system.
+"""
+        # ── Beauty & Wellness ──
+        if any(k in cat for k in ['salon', 'spa', 'parlour', 'parlor', 'barber', 'beauty', 'nail', 'hair', 'makeup', 'grooming', 'skin care', 'skincare', 'tattoo', 'mehndi', 'bridal']):
+            return """
+- CATEGORY INTELLIGENCE (Beauty & Wellness):
+  * PAIN POINTS: Beauty clients are hyper-visual — they choose salons based on Instagram aesthetic and website portfolio. 85% of premium clients book online, not by walk-in. No digital presence = invisible to the most profitable customer segment.
+  * URGENCY: Wedding/festive seasons drive 3x booking volume. Competitors with Instagram feeds and online slot booking are stealing their premium bridal/party clients.
+  * CTA ALIGNMENT: Offer a mockup showcasing a visual service menu, before/after gallery, stylist profiles, and online slot booking with WhatsApp confirmation.
+"""
+        # ── Food & Hospitality ──
+        if any(k in cat for k in ['restaurant', 'cafe', 'hotel', 'bakery', 'bar', 'dhaba', 'food', 'dine', 'dining', 'catering', 'sweet', 'pizza', 'biryani', 'juice', 'tea', 'coffee', 'lounge', 'pub', 'banquet', 'resort']):
+            return """
+- CATEGORY INTELLIGENCE (Food & Hospitality):
+  * PAIN POINTS: 90% of diners check Google reviews and menus online before visiting. No website = they rely entirely on Zomato/Swiggy, paying 25-30% commission on every order. A direct website with online ordering captures these margins.
+  * URGENCY: Weekend/festival rushes and delivery demand spikes mean lost revenue if there's no direct booking/ordering channel. Competitors with branded websites and Google ordering links are stealing margin-rich direct orders.
+  * CTA ALIGNMENT: Offer a mockup showing a visual menu with photos, table reservation system, direct ordering page, and Google Maps integration.
+"""
+        # ── Education & Coaching ──
+        if any(k in cat for k in ['school', 'coaching', 'tutor', 'academy', 'institute', 'training', 'education', 'college', 'university', 'preschool', 'playschool', 'nursery', 'classes', 'learning']):
+            return """
+- CATEGORY INTELLIGENCE (Education & Coaching):
+  * PAIN POINTS: Parents research extensively — a professional website with course details, faculty profiles, and results/testimonials is the #1 trust factor. Coaching centers without digital presence lose to competitors who showcase toppers and success stories online.
+  * URGENCY: Admission season is time-bound. Parents comparing options will skip any institute that looks unprofessional or has no online presence.
+  * CTA ALIGNMENT: Offer a mockup showing course catalog, batch schedules, faculty profiles, results showcase, and online admission inquiry/registration form.
+"""
+        # ── Automotive ──
+        if any(k in cat for k in ['garage', 'car wash', 'mechanic', 'automobile', 'auto', 'bike', 'vehicle', 'tyre', 'tire', 'car dealer', 'showroom', 'service center', 'service centre']):
+            return """
+- CATEGORY INTELLIGENCE (Automotive):
+  * PAIN POINTS: Vehicle owners search "near me" during emergencies (breakdown, flat tire). If the business doesn't appear on Google with clear services, pricing, and click-to-call, they lose to the first competitor who does.
+  * URGENCY: Every day without proper Google visibility = lost emergency and routine service customers going to competitors.
+  * CTA ALIGNMENT: Offer a mockup showing service catalog with transparent pricing, online service booking, emergency contact CTA, and customer reviews showcase.
+"""
+        # ── Real Estate & Construction ──
+        if any(k in cat for k in ['builder', 'property', 'real estate', 'architect', 'interior', 'construction', 'contractor', 'developer', 'flat', 'apartment', 'villa', 'plot']):
+            return """
+- CATEGORY INTELLIGENCE (Real Estate & Construction):
+  * PAIN POINTS: Property buyers expect virtual tours, floor plans, and project galleries. A missing or basic website kills credibility for high-ticket transactions. 70% of property research starts online.
+  * URGENCY: New project launches need immediate digital presence to capture early buyer interest. Competitors with polished project microsites are winning premium leads.
+  * CTA ALIGNMENT: Offer a mockup showing project gallery with floor plans, virtual tour integration, EMI calculator, and lead capture form with callback scheduling.
+"""
+        # ── Legal & Finance ──
+        if any(k in cat for k in ['lawyer', 'advocate', 'legal', 'ca ', 'chartered', 'accountant', 'tax', 'consultant', 'financial', 'insurance', 'loan', 'investment']):
+            return """
+- CATEGORY INTELLIGENCE (Legal & Finance):
+  * PAIN POINTS: Clients seeking legal/financial services prioritize credibility and expertise. A professional website with case studies, practice areas, and client testimonials builds trust that word-of-mouth alone cannot scale.
+  * URGENCY: Competitor firms with polished digital presence are capturing high-value clients who search online for specialized legal/financial services.
+  * CTA ALIGNMENT: Offer a mockup showing practice areas, attorney/CA profiles, client testimonials, and a confidential consultation booking form.
+"""
+        # ── Pet Services ── (must be checked BEFORE Retail since 'pet shop' contains 'shop')
+        if any(k in cat for k in ['pet ', 'pets', 'veterinary', 'vet ', 'animal', 'dog ', 'dogs', 'puppy', 'kitten', 'grooming', 'kennel', 'aquarium']):
+            return """
+- CATEGORY INTELLIGENCE (Pet Services):
+  * PAIN POINTS: Pet parents are emotionally invested and research extensively. They want to see facility photos, vet qualifications, and read reviews before trusting someone with their pet. No online presence = no trust.
+  * URGENCY: Seasonal demand spikes (vacation boarding, monsoon health issues) drive urgent searches. Being invisible online means losing to the vet/groomer who shows up first on Google.
+  * CTA ALIGNMENT: Offer a mockup showing services menu, facility gallery, vet profiles, pet health tips blog, and online appointment booking.
+"""
+        # ── Retail & E-commerce ──
+        if any(k in cat for k in ['shop', 'store', 'boutique', 'showroom', 'electronics', 'furniture', 'jewel', 'clothing', 'garment', 'fashion', 'textile', 'gift', 'handicraft', 'grocery', 'supermarket', 'kirana', 'medical store']):
+            return """
+- CATEGORY INTELLIGENCE (Retail & E-commerce):
+  * PAIN POINTS: Local shops compete with Amazon/Flipkart. Without a digital catalog and WhatsApp ordering, they lose customers who want to browse and buy conveniently. 65% of local shoppers check product availability online before visiting.
+  * URGENCY: Festival/sale seasons drive massive purchase intent. Shops without product catalogs and offers pages online miss the wave entirely.
+  * CTA ALIGNMENT: Offer a mockup showing visual product catalog with categories, WhatsApp order button, store location with directions, and seasonal offers banner.
+"""
+        # ── Events & Creative ──
+        if any(k in cat for k in ['photographer', 'photography', 'wedding', 'event', 'planner', 'dj', 'decoration', 'florist', 'caterer', 'videograph', 'studio', 'music', 'band', 'anchor']):
+            return """
+- CATEGORY INTELLIGENCE (Events & Creative):
+  * PAIN POINTS: Clients hire based on portfolio quality. Without a stunning visual portfolio website, they can only showcase work on Instagram which limits SEO discoverability. Competitors with dedicated portfolio sites rank higher and close more bookings.
+  * URGENCY: Wedding/event seasons are short and intense. Couples research 3-6 months in advance. If the portfolio isn't discoverable online during research phase, the booking window closes.
+  * CTA ALIGNMENT: Offer a mockup showing a cinematic portfolio gallery, service packages with pricing, client testimonials, and an availability/booking inquiry form.
+"""
+        # ── Home Services ──
+        if any(k in cat for k in ['plumber', 'electrician', 'painter', 'pest control', 'ac repair', 'cleaning', 'laundry', 'packers', 'movers', 'carpenter', 'locksmith', 'water purifier', 'solar', 'cctv', 'security']):
+            return """
+- CATEGORY INTELLIGENCE (Home Services):
+  * PAIN POINTS: Home service searches are 90% "near me" and emergency-driven. If the business doesn't show up on Google Maps with clear services, pricing, and one-tap calling, they lose the job to the competitor who does.
+  * URGENCY: Every missed "near me" search is a lost customer going to Urban Company or the first Google result. Speed of response = speed of revenue.
+  * CTA ALIGNMENT: Offer a mockup showing service area coverage map, transparent pricing table, one-tap call/WhatsApp CTA, and customer review showcase.
+"""
+        # ── Travel & Transport ──
+        if any(k in cat for k in ['travel', 'tour', 'taxi', 'cab', 'courier', 'logistics', 'transport', 'bus', 'flight', 'visa', 'passport', 'rental', 'car rental']):
+            return """
+- CATEGORY INTELLIGENCE (Travel & Transport):
+  * PAIN POINTS: Travelers compare packages and prices online. Without a website showing itineraries, pricing, and booking options, they lose to MakeMyTrip/Goibibo and competitors with online presence.
+  * URGENCY: Travel is seasonal and intent-driven. Customers searching during peak seasons book from whoever has the most professional and trustworthy online setup.
+  * CTA ALIGNMENT: Offer a mockup showing travel packages with photos, itinerary builder, instant quote request, and WhatsApp booking integration.
+"""
+        # ── Hostel & Accommodation ──
+        if any(k in cat for k in ['hostel', 'pg', 'paying guest', 'stay', 'accommodation', 'lodge', 'guest house', 'homestay', 'dormitory']):
+            return """
+- CATEGORY INTELLIGENCE (Hostel & Accommodation):
+  * PAIN POINTS: Students and travelers compare hostels online — photos, amenities, pricing, and reviews drive decisions. Without a website, they rely entirely on OYO/Hostelworld commissions (15-25%).
+  * URGENCY: Admission season and tourist seasons drive massive demand. Direct bookings via their own website save commission and build a customer database.
+  * CTA ALIGNMENT: Offer a mockup showing room gallery, amenity highlights, transparent pricing, location map, and direct booking form with WhatsApp confirmation.
+"""
+        # ── General / Unknown Category (Fallback) ──
+        return """
+- CATEGORY INTELLIGENCE (Local Business - General):
+  * PAIN POINTS: Modern customers expect every business to have a professional digital presence. 88% of consumers research online before visiting a local business. No website or poor online visibility = lost trust and lost customers.
+  * URGENCY: Every day without a strong digital presence, potential customers are choosing competitors who appear more professional and accessible online.
+  * CTA ALIGNMENT: Offer a custom mockup/draft tailored to their specific business type showing professional branding, service showcase, and customer inquiry/booking capability.
+"""

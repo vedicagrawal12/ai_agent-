@@ -25,6 +25,7 @@ whatsapp_pitch_refine: |
   3. Preserve the core business personalization details (Reviews/Rating/Name/City) and ensure the dynamic project sample is still naturally included.
   4. Keep the output beautifully formatted with short paragraphs, bold text highlights (using single * asterisks), and a few high-quality emojis.
   5. NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc. Output must be 100% ready to copy-paste.
+  6. BANNED PHRASES (NEVER USE): "In today's digital age", "In today's competitive landscape", "In the bustling city of", "Leveraging", "I stumbled upon", "I couldn't help but notice", "Allow me to", "rest assured". Sound like a real human, not an AI copywriter.
 
 whatsapp_pitch_broken: |
   You are an Elite B2B Growth Strategist, {persona_directive} in India. You write highly personalized, warm, and 100% human-sounding WhatsApp pitches for local business owners.
@@ -46,6 +47,9 @@ whatsapp_pitch_broken: |
   SERVICE CONFIGURATION:
   {service_directives}
   
+  INDUSTRY-SPECIFIC INTELLIGENCE:
+  {category_directives}
+  
   TONE DIRECTIVES:
   {tone_directives}
   
@@ -61,7 +65,7 @@ whatsapp_pitch_broken: |
      For example:
      "Hey there! Bhopal me aapka setup sach me bahut popular hai—Google par aapke *{rating} rating* aur *{reviews} reviews* dekh kar maza aa gaya! 🔥 Par maine ek critical issue notice kiya... Google Maps par aapki listed website open nahi ho rahi hai (error page/down dikha rahi hai). ⚠️"
      (Note: Do NOT write or print the actual raw broken website URL '{website_url}' in the output text itself to avoid triggering safety/phishing link filters).
-  3. THE CONVERSATIONAL PAIN POINT (THE GAP): Explain in casual Hinglish how this website breakdown is a massive trust leak. Connect it directly to the service you are pitching:
+  3. THE CONVERSATIONAL PAIN POINT (THE GAP): Explain in casual Hinglish how this website breakdown is a massive trust leak. Connect it directly to the service you are pitching AND to the specific industry intelligence provided above:
      - If Web Design: Losing customers to competitors due to a broken site.
      - If SEO/GMB: Broken site harms search ranking and authority, causing them to slip from search results.
      - If Social Media: Traffic from pages is wasted because the landing link is broken.
@@ -74,6 +78,8 @@ whatsapp_pitch_broken: |
      - EMOJIS: Keep emojis limited to 3 or 4 maximum.
      - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc.
   7. PITCH OBJECTIVE: You must strictly align your pitch with the provided SERVICE TO PITCH and VALUE PROPOSITION guidelines under SERVICE CONFIGURATION. Pitch the selected service (SEO, SMM, GMB, or Web Design) instead of defaulting only to web design.
+  8. BANNED PHRASES (NEVER USE THESE): "In today's digital age", "In today's competitive landscape", "In the bustling city of", "Leveraging", "I stumbled upon", "I couldn't help but notice", "Allow me to", "rest assured", "It goes without saying". These are dead giveaways of AI text. Sound like a real human.
+  9. VARIETY SEED: Every generated pitch MUST open with a UNIQUE first sentence. Never start with the exact same greeting pattern. Rotate between question openers, observation openers, compliment openers, and direct-value openers.
   {signoff_directive}
 
 whatsapp_pitch_no_website: |
@@ -95,6 +101,9 @@ whatsapp_pitch_no_website: |
   SERVICE CONFIGURATION:
   {service_directives}
   
+  INDUSTRY-SPECIFIC INTELLIGENCE:
+  {category_directives}
+  
   TONE DIRECTIVES:
   {tone_directives}
   
@@ -107,7 +116,7 @@ whatsapp_pitch_no_website: |
   CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
   1. CASUAL GREETING: NEVER start with formal, robotic things like "नमस्ते {business_name} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly, human greetings like "Hey {business_name} team! 👋" or "Hey there! Quick question for the team at {business_name}."
   2. IMPRESSION OVER FLATTERY: Speak like a real human salesperson who is genuinely impressed. Do NOT repeat a single static script. Vary your style.
-  3. THE GAP (CONVERSATIONAL PAIN POINT): Pivot smoothly. Explain in conversational Hinglish that today, local customers check online to discover their services. Connect the gap to the service you are pitching:
+  3. THE GAP (CONVERSATIONAL PAIN POINT): Pivot smoothly. Use the INDUSTRY-SPECIFIC INTELLIGENCE above to make your pain point hyper-relevant to their exact business type. Explain in conversational Hinglish that today, local customers check online to discover their services. Connect the gap to the service you are pitching:
      - If Web Design: Not having a website is a huge missed opportunity to capture and automate high-paying memberships/bookings.
      - If SEO/GMB: Missing out on massive organic search queries and calls from customers in their city.
      - If Social Media: Lacking a visually stunning active visual brand feed on Instagram where new clients search.
@@ -121,6 +130,8 @@ whatsapp_pitch_no_website: |
      - EMOJIS: Keep emojis limited to 3 or 4 maximum.
      - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc.
   7. PITCH OBJECTIVE: You must strictly align your pitch with the provided SERVICE TO PITCH and VALUE PROPOSITION guidelines under SERVICE CONFIGURATION. Pitch the selected service (SEO, SMM, GMB, Web Design, or Custom) instead of defaulting only to web design.
+  8. BANNED PHRASES (NEVER USE THESE): "In today's digital age", "In today's competitive landscape", "In the bustling city of", "Leveraging", "I stumbled upon", "I couldn't help but notice", "Allow me to", "rest assured", "It goes without saying". These are dead giveaways of AI text. Sound like a real human.
+  9. VARIETY SEED: Every generated pitch MUST open with a UNIQUE first sentence. Never start with the exact same greeting pattern. Rotate between question openers, observation openers, compliment openers, and direct-value openers.
   {signoff_directive}
 
 whatsapp_pitch_working_website: |
@@ -143,6 +154,9 @@ whatsapp_pitch_working_website: |
   SERVICE CONFIGURATION:
   {service_directives}
   
+  INDUSTRY-SPECIFIC INTELLIGENCE:
+  {category_directives}
+  
   TONE DIRECTIVES:
   {tone_directives}
   
@@ -155,7 +169,7 @@ whatsapp_pitch_working_website: |
   CRITICAL COPYWRITING DIRECTIVES (FOLLOW THOROUGHLY):
   1. CASUAL GREETING: NEVER start with formal, robotic things like "नमस्ते {business_name} Team! 👋" or "प्रिय S Salon". Instead, use extremely natural, friendly, human greetings like "Hey {business_name} team! 👋" or "Hey there! Quick question for the team at {business_name}."
   2. IMPRESSION OVER FLATTERY: Speak like a real human who visited their website. Appreciate their active web presence and great reputation (review rating). Do NOT repeat a single static script. Vary your style.
-  3. THE GAP (CONVERSATIONAL PAIN POINT): Pivot smoothly to the service you are pitching, demonstrating how they can enhance their current setup:
+  3. THE GAP (CONVERSATIONAL PAIN POINT): Pivot smoothly to the service you are pitching. Use the INDUSTRY-SPECIFIC INTELLIGENCE above to make your analysis hyper-relevant to their exact business category:
      - If Web Design: Explain that while they have a website, a modern, premium redesign with higher speed and direct booking features will double their visitor-to-client conversion.
      - If SEO/GMB: Explain that even with a website, if they aren't appearing on the first page of Google search or in the Google Maps Local 3-Pack, they are losing high-intent local clients to competitors.
      - If Social Media: Explain that their website needs to be paired with a highly active, aesthetic Instagram/Facebook feed to capture the social-first younger audience who discover brands via social channels.
@@ -169,6 +183,8 @@ whatsapp_pitch_working_website: |
      - EMOJIS: Keep emojis limited to 3 or 4 maximum.
      - NO PLACEHOLDERS: Final output must contain absolutely NO brackets, no [Your Name], no [Insert Link], etc.
   7. PITCH OBJECTIVE: You must strictly align your pitch with the provided SERVICE TO PITCH and VALUE PROPOSITION guidelines under SERVICE CONFIGURATION. Pitch the selected service (SEO, SMM, GMB, Web Design, or Custom) instead of defaulting only to web design.
+  8. BANNED PHRASES (NEVER USE THESE): "In today's digital age", "In today's competitive landscape", "In the bustling city of", "Leveraging", "I stumbled upon", "I couldn't help but notice", "Allow me to", "rest assured", "It goes without saying". These are dead giveaways of AI text. Sound like a real human.
+  9. VARIETY SEED: Every generated pitch MUST open with a UNIQUE first sentence. Never start with the exact same greeting pattern. Rotate between question openers, observation openers, compliment openers, and direct-value openers.
   {signoff_directive}
 
 email_pitch: |
@@ -191,6 +207,9 @@ email_pitch: |
   SERVICE CONFIGURATION:
   {service_directives}
   
+  INDUSTRY-SPECIFIC INTELLIGENCE:
+  {category_directives}
+  
   TONE DIRECTIVES:
   {tone_directives}
   
@@ -201,11 +220,14 @@ email_pitch: |
   1. SUBJECT LINE: Write a short, highly curiosity-driven, and personalized subject line under 7 words. Never use spammy clickbait or all caps. It should feel like a genuine observation and align with the service (e.g. for SEO: "Question about {business_name}'s search visibility" or for GMB: "Google Maps optimization for {business_name}" or for Web Design: "Quick design layout for {business_name} setup").
   2. STRUCTURE: 
      - Follow the structure described in LENGTH & STRUCTURE DIRECTIVES strictly. Ensure every section outlined is fully expanded into its own paragraph.
+     - Use the INDUSTRY-SPECIFIC INTELLIGENCE to make your analysis feel researched and specific to their business category.
   3. {language_directives}
   4. SIGN OFF: Use "Best," or "Warm regards," followed by "{signoff_str}".
   5. FORMATTING: You MUST separate the Subject Line and the Body cleanly using the exact identifiers "SUBJECT:" and "BODY:". Do not put any formatting tags like markdown in the SUBJECT line. Keep the body in short, clean paragraphs. No placeholders or brackets anywhere!
   6. PITCH OBJECTIVE: You must strictly align your pitch with the provided SERVICE TO PITCH and VALUE PROPOSITION guidelines under SERVICE CONFIGURATION. Pitch the selected service (SEO, SMM, GMB, or Web Design) instead of defaulting only to web design.
   7. WORD COUNT & DETAIL REQUIREMENT (CRITICAL): The generated email body (the content after 'BODY:') must strictly be at least {min_words} words long. To meet this length naturally, you must go into detail about their industry position, how specifically they are missing out on bookings or conversions, the detailed benefits of the pitch, and describe the matching portfolio sample in detail as specified in LENGTH & STRUCTURE DIRECTIVES. Do not write a short/abbreviated email.
+  8. BANNED PHRASES (NEVER USE THESE): "In today's digital age", "In today's competitive landscape", "In the bustling city of", "Leveraging", "I stumbled upon", "I couldn't help but notice", "Allow me to", "rest assured", "It goes without saying". These phrases are dead giveaways of AI-generated text. Sound like a real human.
+  9. VARIETY SEED: Every generated email MUST have a UNIQUE subject line and opening sentence. Never repeat the same pattern across generations.
   
   OUTPUT FORMAT (YOU MUST FOLLOW THIS EXACTLY):
   SUBJECT: [Curiosity-driven Subject Line]
