@@ -622,7 +622,32 @@ export const UI = {
     showToast(message, type = 'info') {
         const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
         
-        if (message && (message.includes('run out of searches') || message.includes('quota') || message.includes('SerpApi Error') || message.includes('SerpApi key') || message.includes('SerpApi Key'))) {
+        let isGeminiError = false;
+        if (type === 'error' && message) {
+            const msgLower = message.toLowerCase();
+            if (msgLower.includes('gemini') || msgLower.includes('ai generation') || msgLower.includes('generativelanguage')) {
+                isGeminiError = true;
+                // Beautify/clarify Gemini errors for premium feel
+                if (msgLower.includes('key not valid') || msgLower.includes('api key not valid') || msgLower.includes('invalid api key') || msgLower.includes('key is invalid') || msgLower.includes('key is missing') || msgLower.includes('key not configured')) {
+                    message = "❌ Gemini API Key Error: Your Gemini API key is invalid, missing or expired. Please check/update your key in Settings.";
+                } else if (msgLower.includes('quota') || msgLower.includes('rate limit') || msgLower.includes('exhausted') || msgLower.includes('limit exceeded') || msgLower.includes('limit hits')) {
+                    message = "⚠️ Gemini API Limit Reached: Your Gemini API key has hit a rate limit or quota limit. Please wait a moment or check your Google AI Studio billing.";
+                } else if (msgLower.includes('not enabled') || msgLower.includes('disabled') || msgLower.includes('restricted')) {
+                    message = "⚠️ Gemini API Disabled: The Generative Language API is not enabled on this API key. Please enable it in Google Cloud Console or create a new key on Google AI Studio.";
+                } else {
+                    // Keep the original descriptive error, but strip ugly stack wrappers to make it clean
+                    message = message
+                        .replace("AI Generation failed: All Gemini models failed. Last error: Exception: ", "")
+                        .replace("AI Generation failed: All Gemini models failed. Last error: ", "")
+                        .replace("AI Generation failed: Exception: ", "")
+                        .replace("AI Generation failed: ", "");
+                    message = `🤖 Gemini Error: ${message}`;
+                }
+                type = 'error';
+            }
+        }
+
+        if (type === 'error' && !isGeminiError && message && (message.includes('run out of searches') || message.includes('quota') || message.includes('SerpApi Error') || message.includes('SerpApi key') || message.includes('SerpApi Key'))) {
             if (window.IS_ADMIN) {
                 message = "⚠️ Master SerpApi key limit has been crossed or it is invalid. Please update the key in the Admin Console.";
             } else {

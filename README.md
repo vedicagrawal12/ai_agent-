@@ -257,11 +257,12 @@ Sare unit aur integration tests run karne ke liye pytest trigger karein:
 ```bash
 .venv\Scripts\pytest tests/ -v
 ```
-
+serp api key 
 9e72bc92af8e3931f7ff3c62388bd3f18edae9b63d9ed47ecb9c2e1f56673a28
 
 to start server :  .venv\Scripts\python app.py
 
-
+gemenai api key 
+AQ.Ab8RN6IWSCCmsA0eZ4i_i8_dNR_pLnGwbBrmv05GTmSHf95t0w
 ---
 *Developed with love for high-speed local business outreach, visual excellence, and secure B2B conversions.* 🎯

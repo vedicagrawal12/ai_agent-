@@ -474,8 +474,11 @@ class AIOutreachWriter:
 
         # Smart static model list — no fragile discovery API call
         final_models = [
+            ("v1beta", "gemini-2.5-flash"),
+            ("v1beta", "gemini-2.5-pro"),
             ("v1beta", "gemini-2.0-flash"),
             ("v1beta", "gemini-2.0-flash-lite"),
+            ("v1beta", "gemini-3.5-flash"),
             ("v1", "gemini-1.5-flash"),
             ("v1", "gemini-1.5-pro"),
             ("v1beta", "gemini-pro")

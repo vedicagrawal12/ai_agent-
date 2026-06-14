@@ -179,6 +179,9 @@ export const outreachModule = {
         btn.innerHTML = '⏳ Generating...';
         btn.disabled = true;
         
+        // Open a blank tab synchronously to prevent popup blockers
+        const newWindow = window.open('about:blank', '_blank');
+        
         try {
             const previewMessage = document.getElementById('messagePreview')?.textContent || '';
             const data = await API.generateWhatsAppLink(
@@ -189,12 +192,21 @@ export const outreachModule = {
             );
             
             if (data.whatsapp_link) {
-                const a = document.createElement('a');
-                a.href = data.whatsapp_link;
-                a.target = '_blank';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                let finalLink = data.whatsapp_link;
+                
+                // Detect mobile vs desktop
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                if (!isMobile) {
+                    // Bypass the annoying intermediate page on desktop by routing to web.whatsapp.com directly
+                    finalLink = finalLink.replace('api.whatsapp.com/send', 'web.whatsapp.com/send');
+                }
+                
+                if (newWindow) {
+                    newWindow.location.href = finalLink;
+                } else {
+                    // Fallback in case popup blocker still stopped window.open
+                    window.open(finalLink, '_blank');
+                }
                 
                 this.closeDetailPane();
                 UI.showToast(`WhatsApp opened for ${lead.name}`, 'success');
@@ -221,8 +233,12 @@ export const outreachModule = {
                 } catch (contactErr) {
                     console.error('Error marking contacted:', contactErr);
                 }
+            } else {
+                if (newWindow) newWindow.close();
+                UI.showToast('Failed to generate WhatsApp link.', 'error');
             }
         } catch (error) {
+            if (newWindow) newWindow.close();
             UI.showToast(error.message, 'error');
         } finally {
             btn.innerHTML = originalText;
