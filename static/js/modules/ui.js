@@ -378,7 +378,7 @@ export const UI = {
                         ${whatsappBtn}
                         ${emailBtn}
                         <button class="row-btn mockup" data-tooltip="Copy Mockup Link" onclick="App.copyMockupLink(${lead.id})"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H13.5A2.25 2.25 0 0 1 15.75 3.75V20.25A2.25 2.25 0 0 1 13.5 22.5H10.5A2.25 2.25 0 0 1 8.25 20.25V3.75a2.25 2.25 0 0 1 2.25-2.25z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75h.008v.008H12V18.75z" /></svg></button>
-                        <button class="row-btn" data-tooltip="Copy Phone" onclick="App.copyPhone(${index})"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6A2.25 2.25 0 0 0 8.25 12V18" /></svg></button>
+                        <button class="row-btn" data-tooltip="Copy Phone" onclick="App.copyPhone(${index})"><svg class="icon" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg></button>
                     </div>
                 </td>
             </tr>
