@@ -56,4 +56,4 @@ Desktop.ini
 # Agent Scratch Directories
 scratch/
 *.html
-!templates/*.html
+!templates/**/*.html

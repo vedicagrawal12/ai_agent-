@@ -1,0 +1,832 @@
+<!-- ======== Footer System ======== -->
+<footer class="app-footer-bar" style="margin-top: 48px; padding: 40px 24px 24px; border-top: 1px solid var(--border-color); background: rgba(11, 12, 22, 0.6); border-radius: var(--radius-lg) var(--radius-lg) 0 0; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: relative; overflow: hidden;">
+    <!-- Decorative Glow Element -->
+    <div style="position: absolute; bottom: 0; right: 10%; width: 250px; height: 100px; background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, transparent 70%); pointer-events: none; z-index: 1;"></div>
+    <div style="position: absolute; top: 0; left: 10%; width: 200px; height: 80px; background: radial-gradient(circle, rgba(189, 0, 255, 0.05) 0%, transparent 70%); pointer-events: none; z-index: 1;"></div>
+
+    <style>
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1.2fr;
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        .footer-col h4 {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            display: inline-block;
+        }
+        .footer-col h4::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            width: 24px;
+            height: 2px;
+            background: var(--accent-cyan);
+            border-radius: 1px;
+        }
+        .footer-col p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .footer-links-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .footer-links-list a {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .footer-links-list a:hover {
+            color: var(--accent-cyan);
+            text-shadow: var(--shadow-glow-cyan);
+            transform: translateX(6px);
+        }
+        .footer-bottom {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 2;
+        }
+        .footer-copy {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .footer-badge-core {
+            font-size: 0.78rem;
+            color: var(--accent-cyan);
+            background: rgba(0, 240, 255, 0.05);
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            padding: 5px 12px;
+            border-radius: var(--radius-sm);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            transition: all var(--transition-fast);
+        }
+        .footer-badge-core:hover {
+            border-color: rgba(0, 240, 255, 0.4);
+            box-shadow: var(--shadow-glow-cyan);
+        }
+        @media (max-width: 992px) {
+            .footer-grid {
+                grid-template-columns: 1.5fr 1fr 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+        
+        /* Premium Tabbed User Guide Modal Styles */
+        .guide-modal-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-height: 80vh;
+        }
+        .guide-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            scrollbar-width: thin;
+        }
+        .guide-tab-btn {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-family: var(--font-primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .guide-tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        .guide-tab-btn.active {
+            color: var(--accent-cyan);
+            background: rgba(0, 240, 255, 0.05);
+            border-color: rgba(0, 240, 255, 0.2);
+            box-shadow: var(--shadow-glow-cyan);
+        }
+        .guide-tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .guide-tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .guide-section-box {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .guide-section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .guide-section-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .guide-list {
+            margin-top: 12px;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .guide-list li {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .guide-list strong {
+            color: var(--text-primary);
+        }
+        .guide-badge-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .guide-badge-high {
+            background: rgba(255, 0, 85, 0.1);
+            color: var(--accent-red);
+            border: 1px solid rgba(255, 0, 85, 0.2);
+        }
+        .guide-badge-medium {
+            background: rgba(255, 102, 0, 0.1);
+            color: var(--accent-orange);
+            border: 1px solid rgba(255, 102, 0, 0.2);
+        }
+        .guide-badge-low {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+        code.guide-code {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--accent-amber);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+    </style>
+
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4 style="display: flex; align-items: center; gap: 8px;">🎯 LeadHunter AI</h4>
+            <p style="margin-bottom: 20px;">
+                LeadHunter AI ek premium, full-scale B2B cold outreach aur lead scouting engine hai. Google Maps aur organic data check methods se local businesses scan karke missing aur broken websites trace karein aur custom Gemini models se hyper-personalized messages dispatch karein.
+            </p>
+            <div class="footer-badge-core">
+                <span class="pulsing-green-dot" style="width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
+                <span>Search Pipeline: White-Labeled Master Core</span>
+            </div>
+            <style>
+                @keyframes pulse {
+                    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(57, 255, 20, 0.7); }
+                    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(57, 255, 20, 0); }
+                    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(57, 255, 20, 0); }
+                }
+            </style>
+        </div>
+
+        <div class="footer-col">
+            <h4>📋 Platform Tools</h4>
+            <ul class="footer-links-list">
+                <li><a href="javascript:void(0)" id="userGuideLink" onclick="const modal = document.getElementById('userGuideModal'); if (modal) { modal.classList.add('active'); } return false;">📖 User Guide Manual</a></li>
+                <li><a href="/api/config/export-data" target="_blank" data-tooltip="Download complete profile and lead records (GDPR)">📥 Export My Data (GDPR)</a></li>
+                {% if g.user and g.user.is_admin %}
+                <li><a href="/admin">👑 Admin Console</a></li>
+                <li><a href="/verify-db">📊 DB Diagnostics</a></li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h4>⚖️ Legal & Pages</h4>
+            <ul class="footer-links-list">
+                <li><a href="/">🏠 Dashboard Home</a></li>
+                <li><a href="/privacy" target="_blank">🔒 Privacy Policy</a></li>
+                <li><a href="/terms" target="_blank">📝 Terms & Conditions</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h4>💡 Direct Tracking Tip</h4>
+            <p>
+                SMTP email outreach dispatch karte hi **Real-Time Click Tracking** active ho jati hai. Mockup links or read pixel code automatically load status track karke user pipeline stage ko **INTERESTED** mein auto-upgrade kar dete hain. Keep your email copy crisp!
+            </p>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <div class="footer-copy">
+            &copy; 2026 LeadHunter AI. Developed with enterprise-grade security & premium design system.
+        </div>
+        <div class="footer-status" style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+            <span>Server State:</span>
+            <span style="color: var(--accent-green); font-weight: bold; display: inline-flex; align-items: center; gap: 4px;">
+                <span style="width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; display: inline-block;"></span>
+                Online (Stable)
+            </span>
+        </div>
+    </div>
+</footer>
+
+<!-- ======== Detailed User Guide Modal ======== -->
+<div id="userGuideModal" class="modal-overlay">
+    <div class="modal" style="max-width: 900px; width: 95%; background: var(--bg-card); border: 1px solid rgba(0, 240, 255, 0.15); box-shadow: var(--shadow-lg), var(--shadow-glow-cyan);">
+        <div class="modal-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 16px;">
+            <h3 class="modal-title" style="font-size: 1.25rem; font-family: var(--font-display); color: var(--text-primary); display: flex; align-items: center; gap: 10px;">
+                📖 LeadHunter AI User Guide & Operations Manual
+            </h3>
+            <button class="modal-close" onclick="document.getElementById('userGuideModal').classList.remove('active')" style="background: transparent; border: none; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer; transition: color 0.2s;">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 20px 24px;">
+            
+            <div class="guide-modal-container">
+                <!-- Navigation Tabs -->
+                <div class="guide-tabs">
+                    <button class="guide-tab-btn active" data-tab="scout">
+                        <span>🔍</span> Lead Scouting & Filters
+                    </button>
+                    <button class="guide-tab-btn" data-tab="writer">
+                        <span>🤖</span> Gemini AI & Portfolio Scraper
+                    </button>
+                    <button class="guide-tab-btn" data-tab="gdpr">
+                        <span>🛡️</span> Security & GDPR Compliance
+                    </button>
+                    <button class="guide-tab-btn" data-tab="admin">
+                        <span>👑</span> System Settings & Admin
+                    </button>
+                    <button class="guide-tab-btn" data-tab="tracking">
+                        <span>📧</span> Email Automation & Analytics
+                    </button>
+                    <button class="guide-tab-btn" data-tab="pro">
+                        <span>🚀</span> Use Like a Pro
+                    </button>
+                </div>
+                
+                <!-- Tab Viewport Area -->
+                <div style="flex: 1; overflow-y: auto; max-height: 55vh; padding-right: 8px; scrollbar-width: thin;">
+                    
+                    <!-- TAB 1: Lead Scouting & Filters -->
+                    <div id="guide-tab-scout" class="guide-tab-content active">
+                        <div style="background: rgba(0, 240, 255, 0.02); border: 1px solid rgba(0, 240, 255, 0.1); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+                            ⚡ <strong>Maps Integration:</strong> Dashboard maps querying system SerpApi or Google Places ke multi-threaded core setup par active hai. Aap local domains aur cities me micro-level profiling scan run kar sakte hain.
+                        </div>
+                        
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">1. Smart Local Scouting & Deep Search</div>
+                            <div class="guide-section-desc">
+                                Maps Search Box me parameters fill karke leads analyze karein:
+                                <ul class="guide-list">
+                                    <li><strong>Query / Business Type:</strong> Standard business search query fill karein, jaise <code class="guide-code">Cafes</code>, <code class="guide-code">Web agencies</code>, <code class="guide-code">Hotels</code>, ya <code class="guide-code">Dermatologists</code>.</li>
+                                    <li><strong>Location / City:</strong> Target area specify karein, jaise <code class="guide-code">Bhopal</code>, <code class="guide-code">Delhi</code>, ya <code class="guide-code">New York</code>.</li>
+                                    <li><strong>Deep Scan (Multi-Zone):</strong> Jab aap "Deep Scan" enable karte hain, tab sub-localities input fill karne ka tab active hota hai. Comma-separated zones (e.g. <code class="guide-code">MP Nagar, Indrapuri, Gulmohar</code>) fill karein. System duplicate results bypass karke multiple parallel search runs background threads me pull karega!</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">2. Parallel Website Health Validator</div>
+                            <div class="guide-section-desc">
+                                Database list sync hone se pehle parallel health status routines run hote hain:
+                                <ul class="guide-list">
+                                    <li><strong>Automatic Detection:</strong> Google Maps listings me listed websites validation standard HEAD requests check check-up sequence push karti hai (with GET fallbacks).</li>
+                                    <li><strong>Timeout Protection:</strong> Strict <code class="guide-code">3s timeouts</code> lagaya gaya hai taaki offline broken websites validation dashboard UI thread lock na kare aur data flow instant dynamic page tables pe fetch ho.</li>
+                                    <li><strong>Broken Status Flagging:</strong> Agar connection status 4xx, 5xx server errors, DNS errors provide karta hai, system use automatically **🔴 HIGH Priority (⚠️ Broken Website)** mark karke priority matrix update karta hai.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">3. Priority Ranking System & Filtering</div>
+                            <div class="guide-section-desc">
+                                System automatic scoring model checks execute karke leads priority divide karta hai:
+                                <ul class="guide-list">
+                                    <li><span class="guide-badge-pill guide-badge-high">🔴 High Priority</span> - Unserved leads jinki website standard error state me hai or not listed hai AND unka total review count <code class="guide-code">&lt; 50</code> hai (Best development cold leads).</li>
+                                    <li><span class="guide-badge-pill guide-badge-medium">🟡 Medium Priority</span> - Unserved leads lacking standard website configurations, but local authority moderate range me hai (<code class="guide-code">50 - 200 reviews</code>).</li>
+                                    <li><span class="guide-badge-pill guide-badge-low">🟢 Low Priority</span> - Strong local business authority, reviews count is high (<code class="guide-code">&gt; 200 reviews</code>) par website online parameters visible nahi hain.</li>
+                                    <li><strong>Phone Validator Filters:</strong> Dynamic validation engine Google library support checks ke through phone number lines ko <code class="guide-code">MOBILE</code>, <code class="guide-code">LANDLINE</code> or <code class="guide-code">UNKNOWN</code> standardizes form me structure karke invalid lists clean up checks automatically process karti hai.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 2: Gemini AI & Portfolio Scraper -->
+                    <div id="guide-tab-writer" class="guide-tab-content">
+                        <div style="background: rgba(189, 0, 255, 0.02); border: 1px solid rgba(189, 0, 255, 0.1); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+                            🤖 <strong>Gemini AI Integration:</strong> LeadHunter AI latest Google Gemini models (Gemini 2.5/3.5) ka direct use karke hyper-personalized sales copy, category-based intelligence hooks, aur live feedback refinements create karta hai.
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">1. Multi-Model Sequential Fallback & Auto-Retry Engine</div>
+                            <div class="guide-section-desc">
+                                Gemini APIs reliability aur continuous operations maintain karne ke liye advanced model hierarchy use hoti hai:
+                                <ul class="guide-list">
+                                    <li><strong>Model Fallback Cascade:</strong> System sequence loops me models query karta hai: <code class="guide-code">gemini-2.5-flash</code> ➔ <code class="guide-code">gemini-2.5-pro</code> ➔ <code class="guide-code">gemini-2.0-flash</code> ➔ <code class="guide-code">gemini-2.0-flash-lite</code> ➔ <code class="guide-code">gemini-3.5-flash</code> ➔ <code class="guide-code">gemini-1.5-flash</code> ➔ <code class="guide-code">gemini-1.5-pro</code>.</li>
+                                    <li><strong>Rate-Limit & Overload Protection:</strong> Server code rate limits (429), server overloads (503), ya resource limits detect karte hi automatic retry process execute karta hai. System up to <code class="guide-code">2 retries</code> support karta hai dynamic exponential wait delays (e.g. 2s, 4s) ke sath.</li>
+                                    <li><strong>Smart Temperature Control:</strong> Tone settings ke matching temperature level dynamic adjust hote hain (Friendly: <code class="guide-code">0.88</code>, Direct: <code class="guide-code">0.72</code>, Elite: <code class="guide-code">0.82</code>) jo pitch consistency control rakhte hain.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">2. Personalized WhatsApp Pitch Generator (By Website State)</div>
+                            <div class="guide-section-desc">
+                                AI automatically lead business ki website state detect karke template pivot kar deta hai:
+                                <ul class="guide-list">
+                                    <li><strong>🔴 No Website Listed:</strong> Google Search par presence validation gap, trust building, aur competitors se peeche rehne par target message hooks dynamic use karta hai.</li>
+                                    <li><strong>⚠️ Broken Website (Goldmine Leads):</strong> Point-out karta hai ki unki listed website offline hai (e.g. 404 error, SSL issues, connection timeout) aur client trust reclaim karne ke liye homepage mockup layout preview offer karta hai.</li>
+                                    <li><strong>🟢 Working Website Gaps:</strong> Optimization points (page speed conversion, mobile usability issues, proper call-to-actions, missing SEO tags) ke parameters analyse karke pitch pitch setup structure build karta hai.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">3. Category-Specific Micro-Intelligence (14 Industry Verticals)</div>
+                            <div class="guide-section-desc" style="max-height: 400px; overflow-y: auto; padding-right: 6px; scrollbar-width: thin;">
+                                LeadHunter AI har local business category ke standard metrics, unique local problems, aur seasonal urgency hooks analyze karke highly specific sales copy compose karta hai. Niche har category ke detail rules explain kiye gaye hain:
+                                <ul class="guide-list" style="list-style-type: none; padding-left: 0; display: flex; flex-direction: column; gap: 16px;">
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🏋️ Gyms & Fitness</strong>
+                                        <strong>Pain Point:</strong> High membership churn aur friction in booking classes. Competitors with smooth digital booking apps stealing local foot traffic.<br>
+                                        <strong>Urgency:</strong> Peak fitness seasons (New Year Resolutions/Summer Prep) drive 60% of annual signups.<br>
+                                        <strong>CTA Offer:</strong> Live mockup showing class schedule grid, online trial slot booking, and trainer bio grid.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🩺 Medical & Healthcare</strong>
+                                        <strong>Pain Point:</strong> Patients heavy online research (77% check doctor profiles/reviews first). Spiky appointment no-shows and poor online trust.<br>
+                                        <strong>Urgency:</strong> Local competitors ranking inside Google Maps 3-Pack and stealing patient listings.<br>
+                                        <strong>CTA Offer:</strong> Doctor credentials grid, specialization pages, patient reviews showcase, and digital appointment slots.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">💇 Beauty & Wellness (Salons/Spa)</strong>
+                                        <strong>Pain Point:</strong> Hyper-visual audience that demands portfolio validation and visual trust (Instagram aesthetic mismatch/no site).<br>
+                                        <strong>Urgency:</strong> Festive/Wedding seasons drive 3x booking volumes where online booking is preferred by premium clients.<br>
+                                        <strong>CTA Offer:</strong> Visual services catalog, Stylist profiles showcase, Before/After image grid, and WhatsApp confirmation booking slots.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🍔 Food & Hospitality (Restaurants/Cafes)</strong>
+                                        <strong>Pain Point:</strong> Eating away 25-30% of profit margins as commission on Zomato/Swiggy order streams.<br>
+                                        <strong>Urgency:</strong> Weekend order rushes and holiday demands. Branded direct order setups keep 100% of revenue.<br>
+                                        <strong>CTA Offer:</strong> Online digital menu, Table reservation booking system, and Direct ordering checkout preview.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🎓 Education & Coaching Institutes</strong>
+                                        <strong>Pain Point:</strong> Parents comparing multiple local coaching classes or schools. Lack of online topper results/testimonials creates trust gap.<br>
+                                        <strong>Urgency:</strong> Strict admissions calendar and academic deadlines.<br>
+                                        <strong>CTA Offer:</strong> Course catalog, batch timers, faculty profiles showcase, topper results list, and online admission inquiry form.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🚗 Automotive Service Centers/Garages</strong>
+                                        <strong>Pain Point:</strong> Customers searching "near me" during car/bike breakdown emergencies. If not visible with click-to-call, customer is lost instantly.<br>
+                                        <strong>Urgency:</strong> Immediate service needs (e.g. breakdown, battery failure). Speed of finding means speed of conversion.<br>
+                                        <strong>CTA Offer:</strong> Clear services list, transparent flat-rate pricing, emergency direct calling button, and service booking.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🏢 Real Estate & Interior Designers</strong>
+                                        <strong>Pain Point:</strong> High-ticket transactions demand massive visual authority. Buyers expect virtual tours, project portfolios, and floor plans.<br>
+                                        <strong>Urgency:</strong> Brand-new project launches or seasonal home renovation demands.<br>
+                                        <strong>CTA Offer:</strong> Project photo galleries, EMI calculators, virtual tour embeds, and immediate callback scheduler forms.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">⚖️ Legal & Finance (Lawyers, CA, Consultants)</strong>
+                                        <strong>Pain Point:</strong> Lack of established expertise authority. Word-of-mouth fails to scale beyond a limit; premium corporate clients search credentials online.<br>
+                                        <strong>Urgency:</strong> Tax filing seasons (CA) or critical litigation periods.<br>
+                                        <strong>CTA Offer:</strong> Practice areas index, partner profile biography, client success testimonials, and secure consultation request forms.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🐾 Pet Services & Vets</strong>
+                                        <strong>Pain Point:</strong> Emotional investment of pet parents. They demand absolute assurance of clinical safety, cleanliness, and staff empathy before booking.<br>
+                                        <strong>Urgency:</strong> Summer boarding needs or monsoons pet health issues.<br>
+                                        <strong>CTA Offer:</strong> Staff vet qualifications grid, facility cleanliness photos, pets testimonials, and appointment schedulers.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🛍️ Retail & E-commerce (Shops/Showrooms)</strong>
+                                        <strong>Pain Point:</strong> Local stores losing customer base to online marketplaces (Amazon/Flipkart). 65% of shoppers check local product availability online before visiting.<br>
+                                        <strong>Urgency:</strong> Festival/sale seasons shopping rushes.<br>
+                                        <strong>CTA Offer:</strong> Visual product category grids, WhatsApp catalog order buttons, and discount codes section.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">📸 Events & Creative (Photographers/Planners)</strong>
+                                        <strong>Pain Point:</strong> Relying solely on Instagram algorithms which hide content. Clients need a clean, premium visual portfolio website to hire for high-ticket events.<br>
+                                        <strong>Urgency:</strong> Event seasons require pre-bookings 3-6 months in advance.<br>
+                                        <strong>CTA Offer:</strong> Cinematic portfolio grid layouts, wedding packages list, and date availability lookup forms.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🛠️ Home Services (Plumbers, Electricians, AC Repair)</strong>
+                                        <strong>Pain Point:</strong> Emergency searches where speed is key. Competition with platform giants (Urban Company) which charge massive commissions.<br>
+                                        <strong>Urgency:</strong> Extreme weather conditions (AC servicing in summer, plumbing leaks).<br>
+                                        <strong>CTA Offer:</strong> Services list, coverage area pinpoints, and direct click-to-call/WhatsApp CTAs.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">✈️ Travel & Tour Organizers</strong>
+                                        <strong>Pain Point:</strong> Travelers comparing itineraries. Booking aggregators charging heavy commissions.<br>
+                                        <strong>Urgency:</strong> Seasonal vacation planning peaks.<br>
+                                        <strong>CTA Offer:</strong> Detailed itineraries showcase, quote request generator, and booking callback forms.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🏢 Hostels & PGs (Accommodation)</strong>
+                                        <strong>Pain Point:</strong> Relying on high-commission listing websites or third-party aggregators (OYO). Students and professionals need direct room galleries/pricing.<br>
+                                        <strong>Urgency:</strong> Academic year startups and job relocation seasons.<br>
+                                        <strong>CTA Offer:</strong> Room image gallery, lists of amenities, rental prices tables, and direct deposit reservation request forms.
+                                    </li>
+                                    <li style="border-left: 3px solid var(--accent-cyan); padding-left: 12px; margin-bottom: 8px;">
+                                        <strong style="color: var(--accent-cyan); font-size: 0.9rem; display: block; margin-bottom: 4px;">🌐 Fallback (General Local Businesses)</strong>
+                                        <strong>Pain Point:</strong> 88% of users do online research before buying. Failing to look professional online causes direct customer drops to active competitors.<br>
+                                        <strong>Urgency:</strong> General brand visibility decay.<br>
+                                        <strong>CTA Offer:</strong> Premium modern homepage mockup, services grid showcase, and secure inquiry form.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">4. Conversational Feedback Refiner (Real-time Iteration)</div>
+                            <div class="guide-section-desc">
+                                Generated drafts pasand na aane par users real-time refinements feedback box ke through trigger kar sakte hain:
+                                <ul class="guide-list">
+                                    <li><strong>Context Preservation:</strong> Loop engine previous text output content, lead metrics (ratings, reviews, name, city) parameters and feedback context compile karke updated pitch construct karta hai.</li>
+                                    <li><strong>Direct Instructions:</strong> feedback commands inputs like <code class="guide-code">make it short</code>, <code class="guide-code">translate to pure English</code>, <code class="guide-code">add a 10% discount hook</code>, execute perfect contextual transitions.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">5. Data-Driven Cold Email Copywriter (SEO Audits Integration)</div>
+                            <div class="guide-section-desc">
+                                SEO audits dynamic dashboard parameters analyze karke high-converting business emails compose karta hai:
+                                <ul class="guide-list">
+                                    <li><strong>SEO Performance Parameters:</strong> Lead database me stored speed scores, SEO tags issues, mobile compatibility warnings, and SSL configuration status extract karke values directly pitch body logic variables context inject karta hai.</li>
+                                    <li><strong>Analytical Auditor Persona:</strong> Warm founder-to-founder language construct karke specific site analysis details present karta hai (e.g. "Your site speed score is 42/100, which delays page loading by 3+ seconds...").</li>
+                                    <li><strong>Strict Subject/Body Separation:</strong> Outputs compile rules follow karke clean <code class="guide-code">SUBJECT:</code> lines and <code class="guide-code">BODY:</code> structures return hoti hain.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">6. Smart Copywriting Safeguards & Anti-Spam Filters</div>
+                            <div class="guide-section-desc">
+                                Delivery rate increase karne and natural text flow create karne ke default rules:
+                                <ul class="guide-list">
+                                    <li><strong>Anti-AI Spam Banned Phrases:</strong> Gemini strict instructions feed karta hai to ban robotic opening lines (jaise: <i>"Greetings!", "Unlock your brand potential!", "Hope this email finds you well!"</i>).</li>
+                                    <li><strong>Zero Reviews Dynamic Adjustment:</strong> Agar lead review score zero (0) hai, AI false claims (like "massive customer ratings") block karke client trust build karne par and local reviews gain karne ki strategy outline karta hai.</li>
+                                    <li><strong>Variety Generation Seed Headers:</strong> Prompt dispatches me varying context inputs feed kiye jate hain taaki exact duplicate output format sequences repeat na ho.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">7. Scraped Portfolio Case-Study Matching</div>
+                            <div class="guide-section-desc">
+                                User portfolio website projects scrape data sync process features:
+                                <ul class="guide-list">
+                                    <li><strong>Dynamic Placeholders:</strong> Settings menu me dynamic sync key inputs se user projects links pull hote hain.</li>
+                                    <li><strong>Category Alignment:</strong> Lead category select and matching target run parse process complete hotey hi category-specific portfolio project sample link placeholder (<code class="guide-code">{project_sample}</code>) update ho jata hai.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 3: Security & GDPR Compliance -->
+                    <div id="guide-tab-gdpr" class="guide-tab-content">
+                        <div style="background: rgba(57, 255, 20, 0.02); border: 1px solid rgba(57, 255, 20, 0.1); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+                            🛡️ <strong>Compliance Safeguards:</strong> GDPR rights metrics, XSS attribute escape algorithms protection models and secure session checks are fully active.
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">1. Data Portability (GDPR Article 20)</div>
+                            <div class="guide-section-desc">
+                                User owns complete registry data control logs:
+                                <ul class="guide-list">
+                                    <li><strong>Export My Data API:</strong> App footer page menu link <code class="guide-code">Export My Data (GDPR)</code> points to encrypted JSON output route `/api/config/export-data`.</li>
+                                    <li><strong>Download Content:</strong> Ek click me system standard structured formatting templates schemas download sequence active karke aapki details, scanned history, message logs and saved keys download kara deta hai locally.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">2. Right to be Forgotten (GDPR Article 17)</div>
+                            <div class="guide-section-desc">
+                                Profile cancellation process parameters checks:
+                                <ul class="guide-list">
+                                    <li><strong>Cascade Account Erasure:</strong> Settings menu me option "Delete Account" checks setup kiye gaye hain. Confirm click controls trigger dynamic queries to clear user, related history logs, tracked message statistics securely from PostgreSQL server memory.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">3. Security Filters (XSS Escape & Secure Keys)</div>
+                            <div class="guide-section-desc">
+                                Strict database variables processing and secure keys architecture design:
+                                <ul class="guide-list">
+                                    <li><strong>HTML Sanitizer Engine:</strong> Complete client DOM parsing actions are sanitized on-the-fly. Standard tags markup characters are encoded to prevent code injections or attribute breakout in details panel rendering.</li>
+                                    <li><strong>Encryption for Local Assets:</strong> Browser local storage variables and API config keys are encapsulated properly inside thread-safe Flask sessions configurations.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 4: System Settings & Admin -->
+                    <div id="guide-tab-admin" class="guide-tab-content">
+                        <div style="background: rgba(255, 204, 0, 0.02); border: 1px solid rgba(255, 204, 0, 0.1); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+                            👑 <strong>Administrator Roles:</strong> Role-based access keys control, diagnostic interfaces metrics validation and automated DB optimizer schedules options are enabled globally.
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">1. Admin Console & Role Toggles</div>
+                            <div class="guide-section-desc">
+                                Admin users can view system stats and control registration profiles:
+                                <ul class="guide-list">
+                                    <li><strong>Admin Navigation:</strong> If logged-in user role flags `is_admin = true`, admin page icon <code class="guide-code">👑</code> triggers in the top-right header section.</li>
+                                    <li><strong>User Management Panel:</strong> Admins can review user logs lists, toggle active states, or elevate standard operator profiles to admins dynamically. Admin protection mechanisms restrict admin accounts from self-deactivation or self-admin revocation.</li>
+                                    <li><strong>SerpApi Master Keys:</strong> Settings pages SerpApi parameters inputs are hidden for operators. Master SerpApi credits keys configuration is securely managed in the Admin control console panel.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">2. DB Diagnostics Dashboard (/verify-db)</div>
+                            <div class="guide-section-desc">
+                                Verify system backend integrity and table schemas logs:
+                                <ul class="guide-list">
+                                    <li><strong>Diagnostics Interface:</strong> Access diagnostics info via <code class="guide-code">/verify-db</code> from the footer link (Admin credentials required).</li>
+                                    <li><strong>Diagnostics Scope:</strong> Displays database connection state, server version, individual schema counts (users, leads, search history logs, and messages metrics statistics) to monitor active memory utilization dynamically.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">3. Auto Database Optimizer Routine</div>
+                            <div class="guide-section-desc">
+                                Background garbage collector maintains application speed on startup:
+                                <ul class="guide-list">
+                                    <li><strong>Preserved Metrics:</strong> Leads flagged in active pipeline outreach sequences (e.g. Contacted, Interested, Closed) are never deleted automatically.</li>
+                                    <li><strong>Flush Intervals:</strong> Uncontacted leads older than <code class="guide-code">14 days</code> and leads explicitly tagged as IGNORED older than <code class="guide-code">7 days</code> are automatically cleared to keep database sizes optimal.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 5: Tracking, Drips & Analytics -->
+                    <!-- TAB 5: Email Automation & Analytics -->
+                    <div id="guide-tab-tracking" class="guide-tab-content">
+                        <div style="background: rgba(0, 240, 255, 0.02); border: 1px solid rgba(0, 240, 255, 0.1); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+                            📧 <strong>Email Automation Suite:</strong> LeadHunter AI ek dynamic SMTP direct outreach, unread reply tracking, auto-drips, open/click telemetry, aur detailed conversion graphs provide karta hai.
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">1. Custom SMTP Config & Sender Profile</div>
+                            <div class="guide-section-desc">
+                                Email automation dispatch setup ke liye:
+                                <ul class="guide-list">
+                                    <li><strong>SMTP Configuration:</strong> Settings modal me apna custom SMTP Host (e.g., <code class="guide-code">smtp.gmail.com</code>), Port (<code class="guide-code">465 SSL</code> ya <code class="guide-code">587 TLS</code>), Sender Email, aur Application Password save karein.</li>
+                                    <li><strong>Sender Profile:</strong> Settings me name, role, aur company brand detail fill karein. System dynamically aapke emails ke bottom me professional formatting signature append kar dega.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">2. AI-Powered Cold Email Custom Generator</div>
+                            <div class="guide-section-desc">
+                                Hyper-personalized lead-focused cold email template generation:
+                                <ul class="guide-list">
+                                    <li><strong>Dynamic Writing:</strong> Lead list table me se email icon or name tap karke outreach pane active karein. Gemini AI custom instructions (Tone: Elite, Friendly, Direct; Language: Hinglish, English, Hindi; Min Words) aur lead category details analyze karke custom subject line aur clean email body content compile karega.</li>
+                                    <li><strong>Scraped Portfolio Matcher:</strong> AI body copy me aapke portfolio se matching best-fit project demo sample link integrate karega (jaise Cafe category ko Cafe design sample display hoga).</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">3. Real-Time Telemetry: 1x1 Read Pixel & Click Tracking</div>
+                            <div class="guide-section-desc">
+                                SMTP dispatch features fully auto-tracked link redirections ke sath embedded hain:
+                                <ul class="guide-list">
+                                    <li><strong>Read Tracker:</strong> Har email ke bottom par 1x1 size tracking code transparent pixel image inject hoti hai. Jaise hi user email client me mail open karega, open status log system memory me capture ho jayegi.</li>
+                                    <li><strong>Click Redirects:</strong> Email body content me embed project link ko backend dynamically redirect links me update kar deta hai. Client jaise hi link par click karega, click tracker save ho jayega.</li>
+                                    <li><strong>Kanban Status Promotion:</strong> Jaise hi open ya click log save hota hai, client lead pipeline stage status automatically promote hokar **🟢 INTERESTED** active state par push ho jati hai aur live history timeline log update ho jayegi.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">4. Inbound Reply Tracking (IMAP Reader)</div>
+                            <div class="guide-section-desc">
+                                User inbox replies capture mechanism setup:
+                                <ul class="guide-list">
+                                    <li><strong>IMAP Configurations:</strong> Settings me IMAP server configuration details (e.g. host: <code class="guide-code">imap.gmail.com</code>, secure port: <code class="guide-code">993</code>) aur safe access key details save karein.</li>
+                                    <li><strong>Automated Scanning:</strong> Server background routine periodic thread run trigger karta hai jo har 5 mins me inbox replies check-up process call karti hai. Client response body logs read kar ke system lead pipeline stage ko dynamic status **📬 REPLIED** status par shift kar deta hai.</li>
+                                    <li><strong>Manual Synchronization:</strong> Settings panel me **Sync Replies Now** button par single click karke operator direct mailbox synchronization query running instant check kar sakta hai.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">5. Automated Follow-up Drip Campaigns (Smart Sequences)</div>
+                            <div class="guide-section-desc">
+                                Campaign automation smart schedules and sequences details:
+                                <ul class="guide-list">
+                                    <li><strong>Follow-up Drips Rules:</strong> Settings me followups custom drips parameters configure karein (jaise interval: <code class="guide-code">3 Days</code>, max followups count limit: <code class="guide-code">2 mails</code>).</li>
+                                    <li><strong>Automated Dispatcher:</strong> Queue checker check run validation interval call karta hai. Agar lead current pitched (**CONTACTED**) stage me specify days delay span complete kar leta hai aur unka open/click metrics active register nahi hua hai, agent automatically follow-up sequences launch karke next email SMTP body format check kar ke send karega.</li>
+                                    <li><strong>Auto-Stop Safeguard:</strong> Jaise hi client response reply, link clicks, ya open activity trigger criteria hits, sequence automatically pause ho jayega taaki user spam block na ho.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">6. Campaign Center Outbox (Bulk Emailing)</div>
+                            <div class="guide-section-desc">
+                                Bulk outreach campaign process controls:
+                                <ul class="guide-list">
+                                    <li><strong>Bulk Scouting & Scanning:</strong> Campaign panel window launch karke ek click me multiple leads website on-demand scanning run filter trigger karein to collect email logs.</li>
+                                    <li><strong>Bulk AI Draft Builder:</strong> Dashboard bulk queue builder check list check execute karta hai aur parallel threads me fast AI draft templates compose karta hai.</li>
+                                    <li><strong>Campaign Queue Dispatcher:</strong> Single button press karke safe delayed pipeline loops me dynamic bulk SMTP operations run execute trigger kar sakte hain.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">7. Conversion Funnel Analytics & Per-Lead Logs</div>
+                            <div class="guide-section-desc">
+                                Complete metric monitoring and telemetry reporting graphics:
+                                <ul class="guide-list">
+                                    <li><strong>Funnel Chart:</strong> Shows progression from Scouted -> Pitched -> Opened -> Clicked -> Replied -> Converted.</li>
+                                    <li><strong>Telemetry Ratios:</strong> Doughnut charts calculating precise open rates, CTR, and reply rates.</li>
+                                    <li><strong>Outreach History Timeline:</strong> Lead details panel open karte hi niche timeline list par open/clicks count (e.g. `🟢 Opened (2x)`, `🟢 Clicked (1x)`) live view format me list list parameters provide karta hai.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 6: Use Like a Pro -->
+                    <div id="guide-tab-pro" class="guide-tab-content">
+                        <div style="background: rgba(0, 240, 255, 0.02); border: 1px solid rgba(0, 240, 255, 0.1); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+                            🚀 <strong>Pro Operations Guide:</strong> LeadHunter AI ke algorithms aur personalized settings ko full power me customize karke response rates double karne ki hidden strategies.
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">👤 Your Sender Profile (For AI Personalization)</div>
+                            <div class="guide-section-desc">
+                                Sender profile settings direct Gemini ke persona writing style ko control karti hain:
+                                <ul class="guide-list">
+                                    <li><strong>Personalized Branding:</strong> Settings menu me apna <code class="guide-code">Name</code>, <code class="guide-code">Company Brand</code>, aur <code class="guide-code">Designation/Role</code> (e.g. Lead UI/UX Consultant) configure karein.</li>
+                                    <li><strong>Dynamic Signature:</strong> Gemini signature block automatically process karke har email ke end me clean branding (e.g. <i>"Best, Sahil (Lead Designer) at WebCraft"</i>) append kar deta hai bina manual entry ke.</li>
+                                    <li><strong>Expert Persona Injection:</strong> AI dynamically aapke profile details ko pitch directives me weave karta hai taaki mail kisi mass-spammer robot ki jagah real business founder ya consultant ka lage.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">📝 AI Pitch Custom Prompt Settings</div>
+                            <div class="guide-section-desc">
+                                System behavior ko fine-tune karne ke liye custom prompt preferences use karein:
+                                <ul class="guide-list">
+                                    <li><strong>Custom Outreach Rules:</strong> Settings me <code class="guide-code">Custom Rules Input</code> field me direct guidelines feed karein (jaise: <i>"Focus only on clean visual designs, do not offer SEO initially, give 15% discount for local business referrals, keep tone super friendly"</i>).</li>
+                                    <li><strong>Rule Enforcement:</strong> Gemini dynamic generation pipeline in user-specified constraints ko core prompts ke custom system guidelines me inject karta hai.</li>
+                                    <li><strong>Pro Tip for High Conversions:</strong> Custom prompts me local language keywords ya specific regional context (e.g. <i>"Talk like a fellow digital creator in Delhi NCR"</i>) daalne se conversion rates 40% tak boost hotey hain!</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">📧 Direct SMTP Mail Settings (Stateless & Secure)</div>
+                            <div class="guide-section-desc">
+                                Aapke SMTP configuration details state-level database keys me store nahi hote aur fully secure hain:
+                                <ul class="guide-list">
+                                    <li><strong>Encrypted Local Sessions:</strong> SMTP parameters (host, port, email, app password) session-state and browser local storage encryption layers me encrypt hotey hain. Koi bhi backend server database users credentials cache nahi karta.</li>
+                                    <li><strong>Gmail App Password Integration:</strong> Personal Google Account security key use karne ke bajaye Google Accounts -> Security -> 2-Step Verification -> <code class="guide-code">App Passwords</code> option me jaker dedicated 16-character password generate karein (e.g. <i>"abcd efgh ijkl mnop"</i>). Standard email password daalne se Google authentication block karega.</li>
+                                    <li><strong>Stateless Dispatch:</strong> Har cold outreach email trigger transaction dynamic and real-time hoti hai. Backend mail send hote hi immediately variables clear kar deta hai, keeping your accounts fully safe.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="guide-section-box">
+                            <div class="guide-section-title">💎 Pro Hacks: 3 Steps to Master LeadHunter AI</div>
+                            <div class="guide-section-desc">
+                                <ul class="guide-list">
+                                    <li><strong>1. Always Scan Websites First:</strong> AI generation click karne se pehle lead website scan/health update run karein. Website online speed aur errors context inject hone se email credibility 10x authentic ho jati hai.</li>
+                                    <li><strong>2. Match Portfolios:</strong> Apne best live web designs links settings match projects portfolio me save rakhein. AI dynamically niche match karke portfolio links replace karega.</li>
+                                    <li><strong>3. Feed Conversational Inputs:</strong> Agar direct output perfect na lage, click on the feedback area, enter comments (like <i>"shorten it & add a direct appointment hook"</i>) to refine the pitch on the fly!</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 24px; text-align: right; background: rgba(0, 0, 0, 0.1); border-radius: 0 0 var(--radius-lg) var(--radius-lg);">
+            <button class="btn btn-secondary" onclick="document.getElementById('userGuideModal').classList.remove('active')">Got it, close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const initUserGuide = () => {
+            const guideLink = document.getElementById('userGuideLink');
+            const guideModal = document.getElementById('userGuideModal');
+            
+            guideLink?.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                guideModal?.classList.add('active');
+            });
+            
+            guideModal?.addEventListener('click', (e) => {
+                if (e.target === guideModal) {
+                    guideModal.classList.remove('active');
+                }
+            });
+
+            // Tab Switching in User Guide
+            const guideTabs = document.querySelectorAll('.guide-tab-btn');
+            const guideContents = document.querySelectorAll('.guide-tab-content');
+            guideTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const target = tab.dataset.tab;
+                    guideTabs.forEach(t => t.classList.remove('active'));
+                    guideContents.forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`guide-tab-${target}`)?.classList.add('active');
+                });
+            });
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initUserGuide);
+        } else {
+            initUserGuide();
+        }
+    })();
+</script>

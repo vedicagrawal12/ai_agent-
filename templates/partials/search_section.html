@@ -1,0 +1,73 @@
+<!-- ======== Search Section ======== -->
+<section class="search-section">
+    <h2 class="search-title">🔍 Search Local Businesses</h2>
+    <p class="search-subtitle">Enter a business type and city to analyze their online presence (websites, reviews, maps profiles) and scout your next agency clients.</p>
+    
+    <form id="searchForm" class="search-form">
+        <div class="form-group">
+            <label class="form-label" for="queryInput">Business Type</label>
+            <input type="text" id="queryInput" class="form-input" placeholder="e.g. gym, salon, restaurant, cafe..." autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="cityInput">City</label>
+            <input type="text" id="cityInput" class="form-input" placeholder="e.g. Bhopal, Delhi, Mumbai..." autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="maxResults">Results</label>
+            <select id="maxResults" class="form-select">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="40">40</option>
+                <option value="60">60</option>
+                <option value="80">80</option>
+                <option value="100">100 (Max)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">&nbsp;</label>
+            <button type="submit" id="searchBtn" class="btn btn-primary btn-lg">
+                🚀 Search
+            </button>
+        </div>
+    </form>
+
+    <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 24px;">
+        <label class="toggle-container">
+            <div class="toggle">
+                <input type="checkbox" id="includeWebsite">
+                <span class="toggle-slider"></span>
+            </div>
+            <span class="toggle-label">Show all businesses (websites, ratings, and social listings)</span>
+        </label>
+
+        <label class="toggle-container">
+            <div class="toggle">
+                <input type="checkbox" id="hideSavedLeads">
+                <span class="toggle-slider"></span>
+            </div>
+            <span class="toggle-label">Hide already saved/contacted leads (Fresh Leads Only)</span>
+        </label>
+
+        <label class="toggle-container">
+            <div class="toggle">
+                <input type="checkbox" id="deepScan">
+                <span class="toggle-slider"></span>
+            </div>
+            <span class="toggle-label">Deep Scan (Multi-Zone Search)</span>
+        </label>
+    </div>
+
+    <!-- Deep Scan Fields (Initially Hidden) -->
+    <div id="deepScanContainer" style="display: none; margin-top: 16px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+        <div class="form-group" style="margin-bottom: 0; width: 100%;">
+            <label class="form-label" for="deepScanZones" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span>📍 Sub-localities to scan (comma separated)</span>
+                <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: normal;">Uses 1 search credit per zone</span>
+            </label>
+            <input type="text" id="deepScanZones" class="form-input" placeholder="e.g. MP Nagar, Kolar Road, Arera Colony, Indrapuri" autocomplete="off" style="width: 100%;">
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px; line-height: 1.4;">
+                💡 <strong>Hinglish Tip:</strong> Jis area mein outreach karna chahte hain unke naam comma lagakar likhein. Humein in areas ke alag aur unique businesses milenge.
+            </p>
+        </div>
+    </div>
+</section>
