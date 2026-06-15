@@ -55,6 +55,9 @@ class Database:
         if "YOUR_POSTGRES_PASSWORD" in db_url:
             logging.warning("[Database] DATABASE_URL contains placeholder password. Falling back to default 'postgres' password.")
             db_url = db_url.replace("YOUR_POSTGRES_PASSWORD", "postgres")
+        # Handle postgres:// vs postgresql:// scheme for psycopg2 compatibility on Render
+        if db_url and db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
         self.db_url = db_url
 
         # Initialize engine and scoped session pool once
