@@ -59,6 +59,13 @@ class Database:
         if db_url and db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql://", 1)
         self.db_url = db_url
+        # Log the connection URL (mask password for security)
+        try:
+            from urllib.parse import urlparse
+            _parsed = urlparse(self.db_url)
+            logging.info(f"[Database] Final db_url: scheme={_parsed.scheme} host={_parsed.hostname} port={_parsed.port} db={_parsed.path} user={_parsed.username}")
+        except Exception:
+            logging.info(f"[Database] Final db_url (raw, first 30 chars): {self.db_url[:30]}...")
 
         # Initialize engine and scoped session pool once
         with Database._pool_lock:
@@ -77,28 +84,30 @@ class Database:
                 # Custom creator to ensure raw psycopg2 connections default to DictCursor for compatibility
                 def get_psycopg2_connection():
                     from urllib.parse import urlparse, unquote
-                    try:
-                        url = urlparse(self.db_url)
-                        conn_kwargs = {
-                            "cursor_factory": psycopg2.extras.DictCursor
-                        }
-                        if url.username:
-                            conn_kwargs["user"] = unquote(url.username)
-                        if url.password:
-                            conn_kwargs["password"] = unquote(url.password)
-                        if url.hostname:
-                            conn_kwargs["host"] = url.hostname
-                        if url.port:
-                            conn_kwargs["port"] = url.port
-                        if url.path:
-                            # Strip leading slash from path to get dbname
-                            db_name = url.path[1:] if url.path.startswith('/') else url.path
-                            if db_name:
-                                conn_kwargs["database"] = db_name
-                        return psycopg2.connect(**conn_kwargs)
-                    except Exception as parse_err:
-                        logging.error(f"[Database] Failed to parse db_url as URI, falling back to raw connection: {parse_err}")
-                        return psycopg2.connect(self.db_url, cursor_factory=psycopg2.extras.DictCursor)
+                    url = urlparse(self.db_url)
+                    conn_kwargs = {
+                        "cursor_factory": psycopg2.extras.DictCursor
+                    }
+                    if url.username:
+                        conn_kwargs["user"] = unquote(url.username)
+                    if url.password:
+                        conn_kwargs["password"] = unquote(url.password)
+                    if url.hostname:
+                        conn_kwargs["host"] = url.hostname
+                    if url.port:
+                        conn_kwargs["port"] = url.port
+                    else:
+                        # Default PostgreSQL port when not specified (common on Render)
+                        conn_kwargs["port"] = 5432
+                    if url.path and len(url.path) > 1:
+                        # Strip leading slash from path to get dbname
+                        db_name = url.path.lstrip('/')
+                        if db_name:
+                            conn_kwargs["database"] = db_name
+                    # Log exactly what we're connecting with (mask password)
+                    safe_kwargs = {k: ('***' if k == 'password' else v) for k, v in conn_kwargs.items() if k != 'cursor_factory'}
+                    logging.info(f"[Database] psycopg2.connect kwargs: {safe_kwargs}")
+                    return psycopg2.connect(**conn_kwargs)
 
                 Database._engine = create_engine(
                     "postgresql://",
