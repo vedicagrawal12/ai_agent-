@@ -76,7 +76,29 @@ class Database:
                 
                 # Custom creator to ensure raw psycopg2 connections default to DictCursor for compatibility
                 def get_psycopg2_connection():
-                    return psycopg2.connect(self.db_url, cursor_factory=psycopg2.extras.DictCursor)
+                    from urllib.parse import urlparse, unquote
+                    try:
+                        url = urlparse(self.db_url)
+                        conn_kwargs = {
+                            "cursor_factory": psycopg2.extras.DictCursor
+                        }
+                        if url.username:
+                            conn_kwargs["user"] = unquote(url.username)
+                        if url.password:
+                            conn_kwargs["password"] = unquote(url.password)
+                        if url.hostname:
+                            conn_kwargs["host"] = url.hostname
+                        if url.port:
+                            conn_kwargs["port"] = url.port
+                        if url.path:
+                            # Strip leading slash from path to get dbname
+                            db_name = url.path[1:] if url.path.startswith('/') else url.path
+                            if db_name:
+                                conn_kwargs["database"] = db_name
+                        return psycopg2.connect(**conn_kwargs)
+                    except Exception as parse_err:
+                        logging.error(f"[Database] Failed to parse db_url as URI, falling back to raw connection: {parse_err}")
+                        return psycopg2.connect(self.db_url, cursor_factory=psycopg2.extras.DictCursor)
 
                 Database._engine = create_engine(
                     "postgresql://",
