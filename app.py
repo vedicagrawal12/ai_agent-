@@ -198,14 +198,17 @@ def create_app(config_class=None):
     @app.route("/health")
     def health_check():
         """Health check for monitoring and load balancers."""
+        conn = None
         try:
             conn = db._get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT 1")
-            db._release_connection(conn)
             return jsonify({"status": "healthy", "database": "connected"}), 200
         except Exception as e:
             return jsonify({"status": "unhealthy", "error": str(e)}), 503
+        finally:
+            if conn:
+                db._release_connection(conn)
             
     # 8. Start Background IMAP Polling Thread
     if not app.config.get('CELERY_ENABLED'):

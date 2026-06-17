@@ -72,7 +72,7 @@ def process_drip_outreach_for_user(user_id: int):
               AND pipeline_stage = 'PITCHED'
               AND drip_sequence_active = TRUE
               AND followup_count < %s
-              AND COALESCE(last_followup_date, contact_date) <= CURRENT_TIMESTAMP - INTERVAL '%s days';
+              AND COALESCE(last_followup_date, contact_date) <= CURRENT_TIMESTAMP - (INTERVAL '1 day' * %s);
         """, (user_id, max_followups, delay_days))
         leads = cursor.fetchall()
     except Exception as e:

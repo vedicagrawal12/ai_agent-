@@ -184,7 +184,7 @@ def test_drip_scheduler_targeting_query(db):
           AND pipeline_stage = 'PITCHED'
           AND drip_sequence_active = TRUE
           AND followup_count < %s
-          AND COALESCE(last_followup_date, contact_date) <= CURRENT_TIMESTAMP - INTERVAL '%s days';
+          AND COALESCE(last_followup_date, contact_date) <= CURRENT_TIMESTAMP - (INTERVAL '1 day' * %s);
     """, (user_id, 2, 3))
     targets = cursor.fetchall()
     db._release_connection(conn)
