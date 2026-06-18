@@ -79,13 +79,25 @@ def export_excel():
 @config_bp.route("/encryption-key", methods=["GET"])
 def get_encryption_key():
     """
-    Get a secure, session-bound random key for the frontend to encrypt/decrypt values in localStorage.
-    Only authenticated users can fetch this.
+    Get a stable, user-bound encryption key for the frontend to encrypt/decrypt values in localStorage.
+    The key is derived from the user's ID and a persistent server secret stored in the DB,
+    ensuring it survives server restarts (unlike the old session-based approach).
     """
-    if 'local_storage_key' not in session:
+    import hashlib
+    
+    # Get or create a persistent server-side secret (stored in DB, survives restarts)
+    persistent_secret = db.get_system_setting("local_storage_secret")
+    if not persistent_secret:
         import secrets
-        session['local_storage_key'] = secrets.token_hex(32)
-    return jsonify({"key": session['local_storage_key']})
+        persistent_secret = secrets.token_hex(32)
+        db.save_system_setting("local_storage_secret", persistent_secret)
+    
+    # Derive a user-specific key from the persistent secret + user ID
+    user_id = str(g.user['id']) if (g.get('user') and 'id' in g.user) else 'default'
+    raw = f"{persistent_secret}:{user_id}"
+    stable_key = hashlib.sha256(raw.encode()).hexdigest()
+    
+    return jsonify({"key": stable_key})
 
 @config_bp.route("/config", methods=["GET"])
 def get_config():

@@ -3,6 +3,7 @@
  */
 
 import { CryptoHelper } from './crypto.js';
+import { AppState } from './state.js';
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;

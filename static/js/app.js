@@ -280,9 +280,24 @@ const App = {
             this.openEmailCampaign();
         });
 
+        // Campaign Custom Service selection toggles
+        UI.el.campaignServiceSelect?.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                if (UI.el.campaignCustomServiceContainer) UI.el.campaignCustomServiceContainer.style.display = 'block';
+                if (UI.el.campaignCustomServiceInput) UI.el.campaignCustomServiceInput.focus();
+            } else {
+                if (UI.el.campaignCustomServiceContainer) UI.el.campaignCustomServiceContainer.style.display = 'none';
+            }
+        });
+
         // Bulk Scan Campaign Emails
         UI.el.campaignBulkScanBtn?.addEventListener('click', () => {
             this.bulkScanCampaignEmails();
+        });
+        
+        // One-Click Autopilot Campaign
+        UI.el.campaignAutopilotBtn?.addEventListener('click', () => {
+            this.runAutopilotCampaign();
         });
 
         // Bulk Draft Campaign AI Emails

@@ -8,6 +8,17 @@ import { AppState } from './state.js';
 import { CryptoHelper } from './crypto.js';
 
 export const outreachModule = {
+    getDefaultSubject() {
+        const service = UI.el.campaignServiceSelect?.value || UI.el.emailServiceSelect?.value || 'web_design';
+        const subjectMap = {
+            'web_design': 'Digital Storefront Design Proposal',
+            'seo': 'SEO & Google Ranking Growth Proposal',
+            'social_media': 'Social Media Branding Proposal',
+            'gmb': 'Google Business Profile Optimization Proposal'
+        };
+        return subjectMap[service] || 'Business Growth & Digital Services Proposal';
+    },
+
     openWhatsApp(indexOrLead) {
         const lead = typeof indexOrLead === 'object' ? indexOrLead : AppState.leads[indexOrLead];
         if (!lead || !lead.whatsapp_number) {
@@ -930,16 +941,34 @@ export const outreachModule = {
             return;
         }
 
-        AppState.campaignLeads = campaignLeads.map(lead => ({
-            ...lead,
-            campaign_email_status: lead.email ? 'scraped' : 'missing',
-            campaign_draft_status: lead.custom_pitch ? 'ready' : 'not-drafted',
-            campaign_send_status: 'pending',
-            campaign_subject: lead.email ? 'Digital Storefront Design Proposal' : '',
-            campaign_body: lead.custom_pitch || ''
-        }));
+        // Preserve existing campaign state if leads haven't changed
+        const existingIds = new Set((AppState.campaignLeads || []).map(l => l.id));
+        const currentIds = new Set(campaignLeads.map(l => l.id));
+        const leadsChanged = campaignLeads.length !== existingIds.size || campaignLeads.some(l => !existingIds.has(l.id));
 
-        AppState.selectedCampaignLeadId = null;
+        if (leadsChanged || !AppState.campaignLeads || AppState.campaignLeads.length === 0) {
+            // Build new campaign state, but merge with any existing drafts
+            const existingMap = {};
+            (AppState.campaignLeads || []).forEach(l => { existingMap[l.id] = l; });
+
+            AppState.campaignLeads = campaignLeads.map(lead => {
+                const existing = existingMap[lead.id];
+                if (existing && (existing.campaign_draft_status === 'ready' || existing.campaign_send_status === 'sent')) {
+                    // Preserve drafted/sent state
+                    return { ...lead, ...existing, name: lead.name, email: lead.email || existing.email };
+                }
+                return {
+                    ...lead,
+                    campaign_email_status: lead.email ? 'scraped' : 'missing',
+                    campaign_draft_status: lead.custom_pitch ? 'ready' : 'not-drafted',
+                    campaign_send_status: 'pending',
+                    campaign_subject: lead.email ? this.getDefaultSubject() : '',
+                    campaign_body: lead.custom_pitch || ''
+                };
+            });
+        }
+
+        AppState.selectedCampaignLeadId = AppState.selectedCampaignLeadId || null;
 
         this.renderCampaignList();
         this.updateCampaignStats();
@@ -974,8 +1003,8 @@ export const outreachModule = {
             const activeClass = lead.id === AppState.selectedCampaignLeadId ? 'active' : '';
             const safeName = UI.escapeHtml(lead.name);
             const safeWebsite = lead.website ? UI.escapeHtml(lead.website) : '';
-            const priorityClass = `priority-${lead.priority.toLowerCase()}`;
-            const priorityEmoji = { HIGH: '🔴', MEDIUM: '🟡', LOW: '🟢', IGNORE: '⚪' }[lead.priority] || '';
+            const priorityClass = `priority-${(lead.priority || 'MEDIUM').toLowerCase()}`;
+            const priorityEmoji = { HIGH: '🔴', MEDIUM: '🟡', LOW: '🟢', IGNORE: '⚪' }[lead.priority || 'MEDIUM'] || '';
 
             let websiteLinkHtml = '';
             if (lead.website) {
@@ -1115,7 +1144,7 @@ export const outreachModule = {
             if (data.success && data.email) {
                 lead.email = data.email;
                 lead.campaign_email_status = 'scraped';
-                lead.campaign_subject = 'Digital Storefront Design Proposal';
+                lead.campaign_subject = this.getDefaultSubject();
                 
                 if (AppState.selectedCampaignLeadId === leadId) {
                     this.selectCampaignLead(leadId);
@@ -1150,11 +1179,11 @@ export const outreachModule = {
         try {
             UI.showLoading(`Gemini writing email for ${lead.name}...`);
             const projectSample = this.getBestPortfolioProjectSample(lead);
-            const tone = UI.el.emailToneSelect?.value || 'elite';
-            const minWords = parseInt(UI.el.emailMinWordsSelect?.value) || 150;
-            let service = UI.el.emailServiceSelect?.value || 'web_design';
+            const tone = UI.el.campaignToneSelect?.value || UI.el.emailToneSelect?.value || 'elite';
+            const minWords = parseInt(UI.el.campaignMinWordsSelect?.value || UI.el.emailMinWordsSelect?.value) || 150;
+            let service = UI.el.campaignServiceSelect?.value || UI.el.emailServiceSelect?.value || 'web_design';
             if (service === 'custom') {
-                service = UI.el.emailCustomServiceInput?.value.trim() || 'Custom Service';
+                service = UI.el.campaignCustomServiceInput?.value.trim() || UI.el.emailCustomServiceInput?.value.trim() || 'Custom Service';
             }
 
             const data = await API.request('/api/outreach/generate-email-ai', {
@@ -1166,7 +1195,7 @@ export const outreachModule = {
                     tone: tone,
                     service: service,
                     min_words: minWords,
-                    language: UI.el.emailLanguageSelect?.value || 'hinglish',
+                    language: UI.el.campaignLanguageSelect?.value || UI.el.emailLanguageSelect?.value || 'hinglish',
                     sender: {
                         name: localStorage.getItem('sender_name') || '',
                         brand: localStorage.getItem('sender_brand') || '',
@@ -1177,7 +1206,7 @@ export const outreachModule = {
             });
 
             if (data.success) {
-                lead.campaign_subject = data.subject || 'Digital Storefront Design Proposal';
+                lead.campaign_subject = data.subject || this.getDefaultSubject();
                 lead.campaign_body = data.body || '';
                 lead.campaign_draft_status = 'ready';
                 
@@ -1311,7 +1340,7 @@ export const outreachModule = {
 
     async bulkScanCampaignEmails() {
         const leads = AppState.campaignLeads || [];
-        const missingLeads = leads.filter(l => !l.email && l.campaign_email_status !== 'scraped');
+        const missingLeads = leads.filter(l => !l.email && l.campaign_email_status !== 'scraped' && l.campaign_email_status !== 'scanning');
         
         if (missingLeads.length === 0) {
             UI.showToast('Scraping process complete! Directory me aisi koi lead nahi hai jise email scan ki zaroorat ho.', 'info');
@@ -1350,7 +1379,7 @@ export const outreachModule = {
                 if (data.success && data.email) {
                     lead.email = data.email;
                     lead.campaign_email_status = 'scraped';
-                    lead.campaign_subject = 'Digital Storefront Design Proposal';
+                    lead.campaign_subject = this.getDefaultSubject();
                     
                     if (AppState.selectedCampaignLeadId === lead.id) {
                         this.selectCampaignLead(lead.id);
@@ -1415,18 +1444,21 @@ export const outreachModule = {
 
         this.toggleCampaignBulkButtons(true);
 
+        const tone = UI.el.campaignToneSelect?.value || UI.el.emailToneSelect?.value || 'elite';
+        const minWords = parseInt(UI.el.campaignMinWordsSelect?.value || UI.el.emailMinWordsSelect?.value) || 150;
+        const language = UI.el.campaignLanguageSelect?.value || UI.el.emailLanguageSelect?.value || 'hinglish';
+        let service = UI.el.campaignServiceSelect?.value || UI.el.emailServiceSelect?.value || 'web_design';
+        if (service === 'custom') {
+            service = UI.el.campaignCustomServiceInput?.value.trim() || UI.el.emailCustomServiceInput?.value.trim() || 'Custom Service';
+        }
+
         let processed = 0;
+        let consecutiveFailures = 0;
         const total = eligibleLeads.length;
 
         for (const lead of eligibleLeads) {
             try {
                 const projectSample = this.getBestPortfolioProjectSample(lead);
-                const tone = UI.el.emailToneSelect?.value || 'elite';
-                const minWords = parseInt(UI.el.emailMinWordsSelect?.value) || 150;
-                let service = UI.el.emailServiceSelect?.value || 'web_design';
-                if (service === 'custom') {
-                    service = UI.el.emailCustomServiceInput?.value.trim() || 'Custom Service';
-                }
 
                 const data = await API.request('/api/outreach/generate-email-ai', {
                     method: 'POST',
@@ -1437,6 +1469,7 @@ export const outreachModule = {
                         tone: tone,
                         service: service,
                         min_words: minWords,
+                        language: language,
                         sender: {
                             name: localStorage.getItem('sender_name') || '',
                             brand: localStorage.getItem('sender_brand') || '',
@@ -1447,16 +1480,28 @@ export const outreachModule = {
                 });
 
                 if (data.success) {
-                    lead.campaign_subject = data.subject || 'Digital Storefront Design Proposal';
+                    lead.campaign_subject = data.subject || this.getDefaultSubject();
                     lead.campaign_body = data.body || '';
                     lead.campaign_draft_status = 'ready';
+                    consecutiveFailures = 0;
                     
                     if (AppState.selectedCampaignLeadId === lead.id) {
                         this.selectCampaignLead(lead.id);
                     }
+                } else {
+                    lead.campaign_draft_status = 'failed';
+                    consecutiveFailures++;
                 }
             } catch (err) {
+                lead.campaign_draft_status = 'failed';
+                consecutiveFailures++;
                 console.error(`AI generating failed for lead ${lead.name}:`, err);
+                
+                // Abort early if 3 consecutive failures (likely a critical issue like invalid API key)
+                if (consecutiveFailures >= 3) {
+                    UI.showToast(`AI Drafting aborted: ${err.message}. Please re-save your Gemini API Key in Settings.`, 'error');
+                    break;
+                }
             }
 
             processed++;
@@ -1471,8 +1516,10 @@ export const outreachModule = {
             await new Promise(resolve => setTimeout(resolve, 200));
         }
 
+        const successCount = (AppState.campaignLeads || []).filter(l => l.campaign_draft_status === 'ready').length;
+        const failCount = total - successCount;
         this.toggleCampaignBulkButtons(false);
-        UI.showToast(`✨ Auto-Drafting complete! Ready to send: ${processed} campaign emails.`, 'success');
+        UI.showToast(`✨ Auto-Drafting complete! Drafted: ${successCount}${failCount > 0 ? `, Failed: ${failCount}` : ''}.`, failCount > 0 ? 'warning' : 'success');
         
         setTimeout(() => {
             if (container) container.style.display = 'none';
@@ -1573,23 +1620,256 @@ export const outreachModule = {
             await new Promise(resolve => setTimeout(resolve, 1500));
         }
 
+        const successCount = leads.filter(l => l.campaign_send_status === 'sent').length;
+        const failCount = total - successCount;
         this.toggleCampaignBulkButtons(false);
         UI.renderLeads(AppState.leads);
-        UI.showToast(`Campaign finished! Delivered successfully: ${processed} outreach cold emails.`, 'success');
+        UI.showToast(`Campaign finished! Delivered: ${successCount}${failCount > 0 ? `, Failed: ${failCount}` : ''}.`, failCount > 0 ? 'warning' : 'success');
         
         setTimeout(() => {
             if (container) container.style.display = 'none';
         }, 3000);
     },
 
+    async runAutopilotCampaign() {
+        const leads = AppState.campaignLeads || [];
+        if (leads.length === 0) {
+            UI.showToast('Search results me aisi koi lead nahi hai! Pehle search run karein.', 'warning');
+            return;
+        }
+
+        const geminiKeyRaw = localStorage.getItem('gemini_api_key');
+        const geminiKey = geminiKeyRaw ? await CryptoHelper.decrypt(geminiKeyRaw, AppState.encryptionKey) : '';
+        if (!geminiKey) {
+            UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        const host = localStorage.getItem('smtp_host');
+        const port = localStorage.getItem('smtp_port');
+        const email = localStorage.getItem('smtp_email');
+        const passwordRaw = localStorage.getItem('smtp_password');
+        const password = passwordRaw ? await CryptoHelper.decrypt(passwordRaw, AppState.encryptionKey) : '';
+        const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
+
+        if (!host || !port || !email || !password) {
+            UI.showToast('Please configure your SMTP settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        if (!confirm(`🤖 Autopilot Mode (Scan -> Draft -> Send)\n\nKya aap sabhi ${leads.length} leads ke liye automatic campaign run karna chahte hain?\n\nIs process mein system auto-scan, auto-draft (Gemini), aur auto-send (SMTP) sequential loops mein run execute karega.`)) {
+            return;
+        }
+
+        const container = UI.el.campaignProgressContainer;
+        const label = UI.el.campaignProgressLabel;
+        const bar = UI.el.campaignProgressBar;
+        const percentage = UI.el.campaignProgressPercentage;
+
+        if (container) container.style.display = 'block';
+        this.toggleCampaignBulkButtons(true);
+
+        try {
+            // ==================== PHASE 1: SCAN MISSING EMAILS ====================
+            const missingLeads = leads.filter(l => !l.email && l.campaign_email_status !== 'scraped');
+            if (missingLeads.length > 0) {
+                let processedScan = 0;
+                for (const lead of missingLeads) {
+                    const idx = AppState.campaignLeads.findIndex(l => l.id === lead.id);
+                    if (idx === -1) continue;
+
+                    lead.campaign_email_status = 'scanning';
+                    this.renderCampaignList();
+
+                    if (label) label.textContent = `🤖 Autopilot Phase 1/3: Scanning website for "${lead.name}" (${processedScan + 1}/${missingLeads.length})...`;
+
+                    try {
+                        const data = await API.request(`/api/leads/${lead.id}/scan-email`, {
+                            method: 'POST'
+                        });
+
+                        if (data.success && data.email) {
+                            lead.email = data.email;
+                            lead.campaign_email_status = 'scraped';
+                            lead.campaign_subject = this.getDefaultSubject();
+                            
+                            if (AppState.selectedCampaignLeadId === lead.id) {
+                                this.selectCampaignLead(lead.id);
+                            }
+                        } else {
+                            lead.campaign_email_status = 'failed';
+                        }
+                    } catch (err) {
+                        lead.campaign_email_status = 'failed';
+                    }
+
+                    processedScan++;
+                    const pct = Math.round((processedScan / missingLeads.length) * 100);
+                    if (percentage) percentage.textContent = `${pct}%`;
+                    if (bar) bar.style.width = `${pct}%`;
+                    
+                    this.renderCampaignList();
+                    this.updateCampaignStats();
+                    
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+            }
+
+            // ==================== PHASE 2: AUTO-DRAFT AI EMAILS ====================
+            const eligibleLeads = leads.filter(l => l.email && l.campaign_draft_status !== 'ready');
+            if (eligibleLeads.length > 0) {
+                const tone = UI.el.campaignToneSelect?.value || UI.el.emailToneSelect?.value || 'elite';
+                const minWords = parseInt(UI.el.campaignMinWordsSelect?.value || UI.el.emailMinWordsSelect?.value) || 150;
+                const language = UI.el.campaignLanguageSelect?.value || UI.el.emailLanguageSelect?.value || 'hinglish';
+                let service = UI.el.campaignServiceSelect?.value || UI.el.emailServiceSelect?.value || 'web_design';
+                if (service === 'custom') {
+                    service = UI.el.campaignCustomServiceInput?.value.trim() || UI.el.emailCustomServiceInput?.value.trim() || 'Custom Service';
+                }
+
+                let processedDraft = 0;
+                if (bar) bar.style.width = '0%';
+                if (percentage) percentage.textContent = '0%';
+
+                for (const lead of eligibleLeads) {
+                    const idx = AppState.campaignLeads.findIndex(l => l.id === lead.id);
+                    if (idx === -1) continue;
+
+                    if (label) label.textContent = `🤖 Autopilot Phase 2/3: Drafting AI pitch for "${lead.name}" (${processedDraft + 1}/${eligibleLeads.length})...`;
+
+                    try {
+                        const projectSample = this.getBestPortfolioProjectSample(lead);
+
+                        const data = await API.request('/api/outreach/generate-email-ai', {
+                            method: 'POST',
+                            headers: { 'X-Gemini-API-Key': geminiKey },
+                            body: JSON.stringify({
+                                lead: lead,
+                                project_sample: projectSample,
+                                tone: tone,
+                                service: service,
+                                min_words: minWords,
+                                language: language,
+                                sender: {
+                                    name: localStorage.getItem('sender_name') || '',
+                                    brand: localStorage.getItem('sender_brand') || '',
+                                    role: localStorage.getItem('sender_role') || ''
+                                },
+                                custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
+                            })
+                        });
+
+                        if (data.success) {
+                            lead.campaign_subject = data.subject || this.getDefaultSubject();
+                            lead.campaign_body = data.body || '';
+                            lead.campaign_draft_status = 'ready';
+                            
+                            if (AppState.selectedCampaignLeadId === lead.id) {
+                                this.selectCampaignLead(lead.id);
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`AI generation failed for lead ${lead.name}:`, err);
+                    }
+
+                    processedDraft++;
+                    const pct = Math.round((processedDraft / eligibleLeads.length) * 100);
+                    if (percentage) percentage.textContent = `${pct}%`;
+                    if (bar) bar.style.width = `${pct}%`;
+                    
+                    this.renderCampaignList();
+                    this.updateCampaignStats();
+                    
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+            }
+
+            // ==================== PHASE 3: BULK SMTP DISPATCH ====================
+            const sendableLeads = leads.filter(l => l.campaign_draft_status === 'ready' && l.campaign_send_status !== 'sent');
+            let successfullySent = 0;
+            if (sendableLeads.length > 0) {
+                let processedSend = 0;
+                if (bar) bar.style.width = '0%';
+                if (percentage) percentage.textContent = '0%';
+
+                for (const lead of sendableLeads) {
+                    const idx = AppState.campaignLeads.findIndex(l => l.id === lead.id);
+                    if (idx === -1) continue;
+
+                    lead.campaign_send_status = 'sending';
+                    this.renderCampaignList();
+
+                    if (label) label.textContent = `🤖 Autopilot Phase 3/3: Dispatching email to "${lead.email}" (${processedSend + 1}/${sendableLeads.length})...`;
+
+                    try {
+                        const data = await API.request('/api/outreach/send-smtp-email', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                to_email: lead.email,
+                                subject: lead.campaign_subject,
+                                body: lead.campaign_body,
+                                lead_id: lead.id,
+                                smtp_config: {
+                                    host: host,
+                                    port: parseInt(port),
+                                    email: email,
+                                    password: password,
+                                    use_ssl: useSSL
+                                }
+                            })
+                        });
+
+                        if (data.success) {
+                            lead.campaign_send_status = 'sent';
+                            successfullySent++;
+                            
+                            const mainIdx = AppState.leads.findIndex(l => l.id === lead.id);
+                            if (mainIdx !== -1) {
+                                AppState.leads[mainIdx].contacted = 1;
+                                AppState.leads[mainIdx].contact_date = new Date().toISOString();
+                                AppState.leads[mainIdx].pipeline_stage = 'PITCHED';
+                            }
+                        } else {
+                            lead.campaign_send_status = 'failed';
+                        }
+                    } catch (err) {
+                        lead.campaign_send_status = 'failed';
+                    }
+
+                    processedSend++;
+                    const pct = Math.round((processedSend / sendableLeads.length) * 100);
+                    if (percentage) percentage.textContent = `${pct}%`;
+                    if (bar) bar.style.width = `${pct}%`;
+                    
+                    this.renderCampaignList();
+                    this.updateCampaignStats();
+
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            }
+
+            UI.renderLeads(AppState.leads);
+            UI.showToast(`🤖 Autopilot Campaign finished! Successfully sent: ${successfullySent} cold emails.`, 'success');
+        } catch (globalErr) {
+            UI.showToast(`Autopilot failed: ${globalErr.message}`, 'error');
+        } finally {
+            this.toggleCampaignBulkButtons(false);
+            setTimeout(() => {
+                if (container) container.style.display = 'none';
+            }, 3000);
+        }
+    },
+
     toggleCampaignBulkButtons(disabled) {
         if (UI.el.campaignBulkScanBtn) UI.el.campaignBulkScanBtn.disabled = disabled;
         if (UI.el.campaignBulkDraftBtn) UI.el.campaignBulkDraftBtn.disabled = disabled;
         if (UI.el.campaignBulkSendBtn) UI.el.campaignBulkSendBtn.disabled = disabled;
+        if (UI.el.campaignAutopilotBtn) UI.el.campaignAutopilotBtn.disabled = disabled;
         if (UI.el.campaignSelectedSendBtn) UI.el.campaignSelectedSendBtn.disabled = disabled;
         if (UI.el.campaignSelectedAIGenBtn) UI.el.campaignSelectedAIGenBtn.disabled = disabled;
         
-        const btns = [UI.el.campaignBulkScanBtn, UI.el.campaignBulkDraftBtn, UI.el.campaignBulkSendBtn];
+        const btns = [UI.el.campaignBulkScanBtn, UI.el.campaignBulkDraftBtn, UI.el.campaignBulkSendBtn, UI.el.campaignAutopilotBtn];
         btns.forEach(btn => {
             if (btn) btn.style.opacity = disabled ? '0.5' : '1';
         });

@@ -147,7 +147,7 @@ def generate_ai_pitch():
         return jsonify({"error": f"AI Generation failed: {str(e)}"}), 500
 
 @outreach_bp.route("/outreach/generate-email-ai", methods=["POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("30 per minute")
 def generate_email_ai_pitch():
     """Statelessly compile an AI cold email using Gemini."""
     gemini_key = request.headers.get("X-Gemini-API-Key")
@@ -208,7 +208,13 @@ def generate_email_ai_pitch():
             audit_data=audit_data
         )
         
-        subject = "Digital Storefront Design Proposal"
+        subject_map = {
+            'web_design': 'Digital Storefront Design Proposal',
+            'seo': 'SEO & Google Ranking Growth Proposal',
+            'social_media': 'Social Media Branding Proposal',
+            'gmb': 'Google Business Profile Optimization Proposal'
+        }
+        subject = subject_map.get(service, 'Business Growth & Digital Services Proposal')
         body = raw_pitch
         
         if "BODY:" in raw_pitch:
@@ -232,7 +238,7 @@ def generate_email_ai_pitch():
         return jsonify({"error": f"AI Generation failed: {str(e)}"}), 500
 
 @outreach_bp.route("/outreach/send-smtp-email", methods=["POST"])
-@limiter.limit("10 per hour")
+@limiter.limit("120 per hour")
 def send_smtp_email():
     """Send cold email statelessly using user SMTP details, wrapping links for tracking."""
     data = request.get_json()
@@ -374,8 +380,19 @@ def track_click(log_id):
     except Exception as e:
         logger.error(f"Error tracking click for log {log_id}: {e}")
     
+    # Validate destination URL to prevent open redirect attacks
     if not dest:
         dest = "/"
+    else:
+        parsed = urllib.parse.urlparse(dest)
+        # Only allow http/https schemes, block javascript:, data:, etc.
+        if parsed.scheme and parsed.scheme.lower() not in ('http', 'https'):
+            logger.warning(f"Blocked suspicious redirect scheme: {parsed.scheme} for dest={dest}")
+            dest = "/"
+        # Block URLs with embedded credentials (user:pass@evil.com)
+        if '@' in (parsed.netloc or ''):
+            logger.warning(f"Blocked redirect with embedded credentials: dest={dest}")
+            dest = "/"
         
     return redirect(dest)
 

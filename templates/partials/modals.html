@@ -287,9 +287,57 @@
                 
                 <!-- Right: Bulk Actions -->
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="campaignAutopilotBtn" class="btn btn-primary btn-sm" style="background: var(--gradient-primary); border: none; box-shadow: var(--shadow-glow-cyan); cursor: pointer; font-weight: 700;">🤖 One-Click Autopilot</button>
                     <button id="campaignBulkScanBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; cursor: pointer;">🔍 Scan All Emails</button>
                     <button id="campaignBulkDraftBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-violet); color: var(--accent-violet); background: transparent; cursor: pointer;">✨ Auto-Draft All (Gemini)</button>
                     <button id="campaignBulkSendBtn" class="btn btn-primary btn-sm" style="background: var(--accent-blue); border: none; box-shadow: var(--shadow-glow-blue); cursor: pointer; font-weight: 600;">🚀 Send All Drafts (SMTP)</button>
+                </div>
+            </div>
+            
+            <!-- Bulk Pitch Personalization Settings -->
+            <div class="campaign-config-bar" style="display: flex; gap: 16px; flex-wrap: wrap; padding: 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0; align-items: flex-end;">
+                <div style="flex: 1.2; min-width: 180px;">
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="campaignServiceSelect">Service to Pitch</label>
+                    <select id="campaignServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                        <option value="web_design" selected>Website Design & Development</option>
+                        <option value="seo">Search Engine Optimization (SEO)</option>
+                        <option value="social_media">Social Media Management (SMM)</option>
+                        <option value="gmb">Google Business Profile (GMB) Optimization</option>
+                        <option value="custom">Custom Niche Service</option>
+                    </select>
+                </div>
+                
+                <div id="campaignCustomServiceContainer" style="display: none; flex: 1.5; min-width: 200px;">
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="campaignCustomServiceInput">Specify Niche Service</label>
+                    <input type="text" id="campaignCustomServiceInput" class="form-input" placeholder="e.g. Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                </div>
+
+                <div style="flex: 0.8; min-width: 120px;">
+                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="campaignToneSelect">Tone</label>
+                    <select id="campaignToneSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                        <option value="elite" selected>Elite Growth Consultant</option>
+                        <option value="friendly">Friendly Local Freelancer</option>
+                        <option value="direct">Direct Growth Partner</option>
+                    </select>
+                </div>
+
+                <div style="flex: 0.8; min-width: 120px;">
+                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="campaignMinWordsSelect">Min Words</label>
+                    <select id="campaignMinWordsSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                        <option value="150" selected>150 words</option>
+                        <option value="250">250 words</option>
+                        <option value="350">350 words</option>
+                        <option value="450">450 words</option>
+                    </select>
+                </div>
+
+                <div style="flex: 0.8; min-width: 120px;">
+                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="campaignLanguageSelect">Language</label>
+                    <select id="campaignLanguageSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                        <option value="hinglish" selected>🇮🇳 Hinglish</option>
+                        <option value="english">🇬🇧 English</option>
+                        <option value="hindi">🇮🇳 Hindi</option>
+                    </select>
                 </div>
             </div>
 
