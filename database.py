@@ -202,6 +202,24 @@ class Database:
             logging.error(f"[Database] Error checking admin privileges for user_id {user_id}: {e}", exc_info=True)
             return False
 
+    def is_user_active(self, user_id: int) -> bool:
+        """Check if a user account is active."""
+        if not user_id:
+            return False
+        try:
+            user_id = int(user_id)
+        except (ValueError, TypeError) as type_err:
+            logging.error(f"[Database] Invalid user_id format passed to is_user_active: {user_id}. Error: {type_err}")
+            return False
+
+        session = self.session
+        try:
+            user = session.query(UserModel).filter_by(id=user_id).first()
+            return bool(user and user.is_active)
+        except Exception as e:
+            logging.error(f"[Database] Error checking active status for user_id {user_id}: {e}", exc_info=True)
+            return False
+
     def save_leads(self, leads: List[Lead], user_id: int) -> int:
         """
         Save leads to the database, updating existing ones for the specific user.
@@ -288,12 +306,12 @@ class Database:
 
     def get_all_leads(self, priority_filter: str = None, city_filter: str = None, user_id: int = None) -> List[Dict]:
         """Get all leads from the database with optional filters for a specific user."""
+        if user_id is None:
+            return []
         session = self.session
         try:
             query = session.query(LeadModel).filter(LeadModel.priority != 'IGNORE')
-            
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             if priority_filter:
                 query = query.filter_by(priority=priority_filter)
             if city_filter:
@@ -313,12 +331,18 @@ class Database:
 
     def get_all_leads_paginated(self, priority_filter: str = None, city_filter: str = None, user_id: int = None, page: int = 1, per_page: int = 50) -> Dict:
         """Get paginated leads from the database with optional filters for a specific user."""
+        if user_id is None:
+            return {
+                "leads": [],
+                "total": 0,
+                "page": page,
+                "per_page": per_page,
+                "pages": 1
+            }
         session = self.session
         try:
             query = session.query(LeadModel).filter(LeadModel.priority != 'IGNORE')
-            
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             if priority_filter:
                 query = query.filter_by(priority=priority_filter)
             if city_filter:
@@ -355,11 +379,12 @@ class Database:
 
     def get_search_history(self, limit: int = 20, user_id: int = None) -> List[Dict]:
         """Get recent search history for a specific user."""
+        if user_id is None:
+            return []
         session = self.session
         try:
             query = session.query(SearchHistoryModel)
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             rows = query.order_by(SearchHistoryModel.searched_at.desc()).limit(limit).all()
             return [to_dict(r) for r in rows]
         except Exception as e:
@@ -368,15 +393,16 @@ class Database:
 
     def mark_contacted(self, lead_id: int, notes: str = "", user_id: int = None):
         """Mark a lead as contacted for a specific user."""
+        if user_id is None:
+            return
         session = self.session
         try:
             query = session.query(LeadModel).filter_by(id=lead_id)
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             lead = query.first()
             if lead:
                 lead.contacted = True
-                lead.contact_date = datetime.now()
+                lead.contact_date = utcnow()
                 lead.notes = notes
                 if lead.pipeline_stage == 'NEW':
                     lead.pipeline_stage = 'PITCHED'
@@ -406,11 +432,15 @@ class Database:
 
     def get_stats(self, user_id: int = None) -> Dict:
         """Get dashboard statistics for a specific user."""
+        if user_id is None:
+            return {
+                "total_leads": 0, "high_priority": 0, "medium_priority": 0, "low_priority": 0,
+                "contacted": 0, "total_searches": 0, "cities_covered": 0, "broken_websites": 0
+            }
         session = self.session
         try:
             query = session.query(LeadModel).filter(LeadModel.priority != 'IGNORE')
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
 
             total_leads = query.count()
             high_priority = query.filter_by(priority='HIGH').count()
@@ -424,8 +454,7 @@ class Database:
 
             # Total searches
             sh_query = session.query(SearchHistoryModel)
-            if user_id is not None:
-                sh_query = sh_query.filter_by(user_id=user_id)
+            sh_query = sh_query.filter_by(user_id=user_id)
             total_searches = sh_query.count()
 
             return {
@@ -444,11 +473,12 @@ class Database:
 
     def delete_lead(self, lead_id: int, user_id: int = None):
         """Delete a lead by ID for a specific user."""
+        if user_id is None:
+            return
         session = self.session
         try:
             query = session.query(LeadModel).filter_by(id=lead_id)
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             lead = query.first()
             if lead:
                 session.delete(lead)
@@ -456,6 +486,32 @@ class Database:
         except Exception as e:
             logging.error(f"Error deleting lead: {e}", exc_info=True)
             session.rollback()
+
+    def get_recent_delivered_emails(self, user_id: int, hours: int = 12) -> List[Dict]:
+        """Fetch email messages sent within the specified hour limit for a user."""
+        session = self.session
+        try:
+            from datetime import timedelta
+            cutoff = utcnow() - timedelta(hours=hours)
+            
+            rows = (session.query(MessageLogModel)
+                    .join(LeadModel, MessageLogModel.lead_id == LeadModel.id)
+                    .filter(MessageLogModel.user_id == user_id)
+                    .filter(MessageLogModel.sent_at >= cutoff)
+                    .filter(MessageLogModel.template_used.like('cold_email%') | MessageLogModel.template_used.like('drip_followup_%'))
+                    .order_by(MessageLogModel.sent_at.desc())
+                    .all())
+            
+            res = []
+            for r in rows:
+                d = to_dict(r)
+                d["lead_name"] = r.lead.name if r.lead else "Unknown"
+                d["lead_email"] = r.lead.email if r.lead else ""
+                res.append(d)
+            return res
+        except Exception as e:
+            logging.error(f"[Database] Error fetching recent delivered emails: {e}", exc_info=True)
+            return []
 
     def cleanup_old_data(self, user_id: int = None):
         """Automatically cleans up old data based on retention constants."""
@@ -465,6 +521,7 @@ class Database:
             cutoff_uncontacted = utcnow() - timedelta(days=CLEANUP_UNCONTACTED_DAYS)
             cutoff_ignored = utcnow() - timedelta(days=CLEANUP_IGNORED_DAYS)
             cutoff_history = utcnow() - timedelta(days=CLEANUP_HISTORY_DAYS)
+            cutoff_logs = utcnow() - timedelta(days=30)
 
             query1 = session.query(LeadModel).filter(
                 LeadModel.contacted == False,
@@ -483,37 +540,48 @@ class Database:
                 SearchHistoryModel.searched_at < cutoff_history
             )
 
+            query4 = session.query(MessageLogModel).filter(
+                MessageLogModel.sent_at < cutoff_logs
+            )
+
             if user_id is not None:
                 query1 = query1.filter_by(user_id=user_id)
                 query2 = query2.filter_by(user_id=user_id)
                 query3 = query3.filter_by(user_id=user_id)
+                query4 = query4.filter_by(user_id=user_id)
             else:
                 logger.warning("[Smart Cleanup] Running system-wide cleanup (no user_id scope).")
 
             uncontacted_deleted = query1.delete(synchronize_session=False)
             ignored_deleted = query2.delete(synchronize_session=False)
             history_deleted = query3.delete(synchronize_session=False)
+            logs_deleted = query4.delete(synchronize_session=False)
 
             session.commit()
-            if uncontacted_deleted or ignored_deleted or history_deleted:
+            if uncontacted_deleted or ignored_deleted or history_deleted or logs_deleted:
                 logging.info(f"[Smart Cleanup] Auto-cleaned old database entries:")
                 logging.info(f"  - Deleted {uncontacted_deleted} uncontacted leads")
                 logging.info(f"  - Deleted {ignored_deleted} ignored website leads")
                 logging.info(f"  - Deleted {history_deleted} old search history entries")
+                logging.info(f"  - Deleted {logs_deleted} old message logs (older than 30 days)")
         except Exception as e:
             logging.error(f"[Smart Cleanup] Error cleaning up old data: {e}", exc_info=True)
             session.rollback()
 
     def clear_uncontacted_data(self, user_id: int = None) -> dict:
         """Manually clears all uncontacted leads, ignored leads, and search history."""
+        if user_id is None:
+            return {
+                "success": False,
+                "error": "User ID is required"
+            }
         session = self.session
         try:
             leads_query = session.query(LeadModel).filter(LeadModel.contacted == False)
             history_query = session.query(SearchHistoryModel)
 
-            if user_id is not None:
-                leads_query = leads_query.filter_by(user_id=user_id)
-                history_query = history_query.filter_by(user_id=user_id)
+            leads_query = leads_query.filter_by(user_id=user_id)
+            history_query = history_query.filter_by(user_id=user_id)
 
             uncontacted_count = leads_query.count()
             history_count = history_query.count()
@@ -536,11 +604,12 @@ class Database:
 
     def update_lead_socials(self, lead_id: int, instagram: str, facebook: str, user_id: int = None) -> bool:
         """Update Instagram and Facebook links for a lead."""
+        if user_id is None:
+            return False
         session = self.session
         try:
             query = session.query(LeadModel).filter_by(id=lead_id)
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             lead = query.first()
             if lead:
                 lead.instagram = instagram
@@ -569,11 +638,12 @@ class Database:
 
     def update_lead_pitch(self, lead_id: int, custom_pitch: str, user_id: int = None) -> bool:
         """Update the custom AI generated pitch for a lead."""
+        if user_id is None:
+            return False
         session = self.session
         try:
             query = session.query(LeadModel).filter_by(id=lead_id)
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             lead = query.first()
             if lead:
                 lead.custom_pitch = custom_pitch
@@ -599,7 +669,7 @@ class Database:
                 if stage == "PITCHED":
                     lead.contacted = True
                     if lead.contact_date is None:
-                        lead.contact_date = datetime.now()
+                        lead.contact_date = utcnow()
                 lead.updated_at = utcnow()
                 session.commit()
                 return True
@@ -611,11 +681,12 @@ class Database:
 
     def update_lead_email(self, lead_id: int, email: str, user_id: int = None) -> bool:
         """Update the scraped email address for a lead."""
+        if user_id is None:
+            return False
         session = self.session
         try:
             query = session.query(LeadModel).filter_by(id=lead_id)
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             lead = query.first()
             if lead:
                 lead.email = email
@@ -630,11 +701,12 @@ class Database:
 
     def schedule_reminder(self, lead_id: int, remind_date: str, user_id: int = None) -> bool:
         """Schedule a follow-up reminder date for a lead."""
+        if user_id is None:
+            return False
         session = self.session
         try:
             query = session.query(LeadModel).filter_by(id=lead_id)
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             lead = query.first()
             if lead:
                 if isinstance(remind_date, str):
@@ -658,14 +730,15 @@ class Database:
 
     def get_pending_reminders(self, user_id: int = None) -> List[Dict]:
         """Fetch all leads that have a pending follow-up reminder."""
+        if user_id is None:
+            return []
         session = self.session
         try:
             query = session.query(LeadModel).filter(
                 LeadModel.remind_date != None,
                 LeadModel.remind_status == 'PENDING'
             )
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             rows = query.order_by(LeadModel.remind_date.asc()).all()
             return [to_dict(r) for r in rows]
         except Exception as e:
@@ -674,11 +747,12 @@ class Database:
 
     def dismiss_reminder(self, lead_id: int, user_id: int = None) -> bool:
         """Dismiss/complete a follow-up reminder for a lead."""
+        if user_id is None:
+            return False
         session = self.session
         try:
             query = session.query(LeadModel).filter_by(id=lead_id)
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             lead = query.first()
             if lead:
                 lead.remind_status = 'DISMISSED'
@@ -868,11 +942,12 @@ class Database:
 
     def update_lead_audit_data(self, lead_id: int, audit_data_str: str, user_id: int = None) -> bool:
         """Update the audit_data JSON string for a specific lead."""
+        if user_id is None:
+            return False
         session = self.session
         try:
             query = session.query(LeadModel).filter_by(id=lead_id)
-            if user_id is not None:
-                query = query.filter_by(user_id=user_id)
+            query = query.filter_by(user_id=user_id)
             lead = query.first()
             if lead:
                 lead.audit_data = audit_data_str
@@ -905,7 +980,7 @@ class Database:
             log = session.query(MessageLogModel).filter_by(id=log_id).first()
             if log:
                 log.opened = True
-                log.opened_at = datetime.now()
+                log.opened_at = utcnow()
                 log.open_count = (log.open_count or 0) + 1
                 session.commit()
                 return True
@@ -922,7 +997,7 @@ class Database:
             log = session.query(MessageLogModel).filter_by(id=log_id).first()
             if log:
                 log.clicked = True
-                log.clicked_at = datetime.now()
+                log.clicked_at = utcnow()
                 log.click_count = (log.click_count or 0) + 1
                 if not log.clicked_links:
                     log.clicked_links = dest_url
@@ -937,6 +1012,21 @@ class Database:
             session.rollback()
             return 0
 
+    def update_message_content(self, log_id: int, message: str) -> bool:
+        """Update the stored message body/HTML content for a given log ID."""
+        session = self.session
+        try:
+            log = session.query(MessageLogModel).filter_by(id=log_id).first()
+            if log:
+                log.message_sent = message
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            logging.error(f"[Database] Error updating message content for log {log_id}: {e}", exc_info=True)
+            session.rollback()
+            return False
+
     # ---- Encryption Helpers ----
     def _encrypt_password(self, password: str) -> str:
         if not password:
@@ -945,9 +1035,16 @@ class Database:
             from cryptography.fernet import Fernet
             import base64
             import hashlib
-            from config import Config
+            import os
 
-            key_source = Config.SECRET_KEY or "fallback_secret_key_1234567890_!"
+            key_source = os.getenv("FLASK_SECRET_KEY")
+            if not key_source:
+                key_source = self.get_system_setting("credential_encryption_secret")
+                if not key_source:
+                    import secrets
+                    key_source = secrets.token_hex(32)
+                    self.save_system_setting("credential_encryption_secret", key_source)
+
             key = hashlib.sha256(key_source.encode('utf-8')).digest()
             fernet_key = base64.urlsafe_b64encode(key)
             f = Fernet(fernet_key)
@@ -964,9 +1061,16 @@ class Database:
             from cryptography.fernet import Fernet
             import base64
             import hashlib
-            from config import Config
+            import os
             
-            key_source = Config.SECRET_KEY or "fallback_secret_key_1234567890_!"
+            key_source = os.getenv("FLASK_SECRET_KEY")
+            if not key_source:
+                key_source = self.get_system_setting("credential_encryption_secret")
+                if not key_source:
+                    import secrets
+                    key_source = secrets.token_hex(32)
+                    self.save_system_setting("credential_encryption_secret", key_source)
+
             key = hashlib.sha256(key_source.encode('utf-8')).digest()
             fernet_key = base64.urlsafe_b64encode(key)
             f = Fernet(fernet_key)
@@ -1004,7 +1108,7 @@ class Database:
             if lead:
                 lead.pipeline_stage = 'REPLIED'
                 lead.contacted = True
-                lead.contact_date = datetime.now()
+                lead.contact_date = utcnow()
                 lead.drip_sequence_active = False
                 lead.updated_at = utcnow()
             

@@ -30,11 +30,15 @@ export const outreachModule = {
         this.switchDetailTab('whatsapp');
 
         if (UI.el.pitchServiceSelect) {
-            if (UI.el.pitchServiceSelect.value === 'custom') {
-                if (UI.el.pitchCustomServiceContainer) UI.el.pitchCustomServiceContainer.style.display = 'block';
+            const hasNoSite = !lead.website || !lead.website.trim();
+            const isBroken = !!lead.is_broken_website;
+            if (hasNoSite || isBroken) {
+                UI.el.pitchServiceSelect.value = 'web_design';
             } else {
-                if (UI.el.pitchCustomServiceContainer) UI.el.pitchCustomServiceContainer.style.display = 'none';
+                UI.el.pitchServiceSelect.value = 'seo';
             }
+            // Always hide custom service container since we force web_design/seo
+            if (UI.el.pitchCustomServiceContainer) UI.el.pitchCustomServiceContainer.style.display = 'none';
         }
         
         const customMessageInput = document.getElementById('customMessageInput');
@@ -427,11 +431,15 @@ export const outreachModule = {
         if (UI.el.emailBodyInput) UI.el.emailBodyInput.value = '';
 
         if (UI.el.emailServiceSelect) {
-            if (UI.el.emailServiceSelect.value === 'custom') {
-                if (UI.el.emailCustomServiceContainer) UI.el.emailCustomServiceContainer.style.display = 'block';
+            const hasNoSite = !lead.website || !lead.website.trim();
+            const isBroken = !!lead.is_broken_website;
+            if (hasNoSite || isBroken) {
+                UI.el.emailServiceSelect.value = 'web_design';
             } else {
-                if (UI.el.emailCustomServiceContainer) UI.el.emailCustomServiceContainer.style.display = 'none';
+                UI.el.emailServiceSelect.value = 'seo';
             }
+            // Always hide custom service container since we force web_design/seo
+            if (UI.el.emailCustomServiceContainer) UI.el.emailCustomServiceContainer.style.display = 'none';
         }
     },
 
@@ -1009,27 +1017,41 @@ export const outreachModule = {
             let websiteLinkHtml = '';
             if (lead.website) {
                 const sanitizedWebsite = UI.sanitizeUrl(lead.website);
-                websiteLinkHtml = `<a href="${sanitizedWebsite}" target="_blank" style="font-size: 0.72rem; color: var(--accent-cyan); text-decoration: none;">🌐 Website</a>`;
+                websiteLinkHtml = `<a href="${sanitizedWebsite}" target="_blank" class="campaign-card-link">🌐 Website</a>`;
             } else {
-                websiteLinkHtml = `<span style="font-size: 0.72rem; color: var(--text-muted);">❌ No Website</span>`;
+                websiteLinkHtml = `<span class="campaign-card-no-link">❌ No Website</span>`;
             }
 
             let emailHtml = '';
             if (lead.email) {
-                emailHtml = `<span style="font-weight: 600; color: var(--accent-cyan); font-family: monospace;">${UI.escapeHtml(lead.email)}</span>`;
+                emailHtml = `
+                    <div class="campaign-card-email-box">
+                        <span style="font-size: 0.72rem;">✉️</span>
+                        <span class="campaign-card-email-text" title="${UI.escapeHtml(lead.email)}">${UI.escapeHtml(lead.email)}</span>
+                    </div>
+                `;
             } else if (lead.campaign_email_status === 'scanning') {
-                emailHtml = `<span style="color: var(--accent-cyan); font-style: italic;">⏳ Scanning...</span>`;
+                emailHtml = `
+                    <div class="campaign-card-email-box scanning">
+                        <span class="pulse-dot"></span>
+                        <span style="color: var(--accent-cyan); font-style: italic; font-size: 0.75rem;">Scanning...</span>
+                    </div>
+                `;
             } else if (lead.campaign_email_status === 'failed') {
                 emailHtml = `
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="color: var(--accent-red); font-size: 0.8rem;">Scan failed</span>
+                    <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
+                        <div class="campaign-card-email-box failed">
+                            <span style="color: var(--accent-red); font-size: 0.72rem;">Scan failed</span>
+                        </div>
                         <button class="campaign-table-btn scan" onclick="event.stopPropagation(); App.scanCampaignLeadEmailOnDemand(${lead.id}, ${index})" title="Retry Email Scan">🔄 Retry</button>
                     </div>
                 `;
             } else {
                 emailHtml = `
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <span style="color: var(--accent-red); font-size: 0.8rem;">No email</span>
+                    <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
+                        <div class="campaign-card-email-box missing">
+                            <span style="color: var(--text-muted); font-size: 0.72rem;">No email</span>
+                        </div>
                         <button class="campaign-table-btn scan" onclick="event.stopPropagation(); App.scanCampaignLeadEmailOnDemand(${lead.id}, ${index})">🔍 Scan</button>
                     </div>
                 `;
@@ -1050,7 +1072,7 @@ export const outreachModule = {
 
             let actionBtn = '';
             if (lead.campaign_send_status === 'sent') {
-                actionBtn = `<span style="color: var(--accent-green); font-weight: bold; font-size: 0.8rem;">✓ Sent</span>`;
+                actionBtn = `<span class="campaign-sent-check">✓ Sent</span>`;
             } else if (lead.campaign_draft_status === 'ready') {
                 actionBtn = `<button class="btn btn-whatsapp btn-sm" onclick="event.stopPropagation(); App.selectCampaignLead(${lead.id}); App.sendCampaignLeadSMTPImmediate(${lead.id}, ${index})" style="font-size: 0.7rem; padding: 4px 8px; background: var(--gradient-primary); color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: 600;">🚀 Send</button>`;
             } else if (lead.email) {
@@ -1060,18 +1082,24 @@ export const outreachModule = {
             }
 
             return `
-                <tr id="campaign-row-${lead.id}" class="${activeClass}" onclick="App.selectCampaignLead(${lead.id})">
-                    <td style="padding: 10px 12px;">
-                        <div style="font-weight: 700; color: var(--text-primary); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${safeName}">${safeName}</div>
-                        <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                            ${websiteLinkHtml}
-                            <span class="priority-badge ${priorityClass}" style="font-size: 0.65rem; padding: 1px 4px; border-radius: 3px;">${priorityEmoji} ${lead.priority}</span>
-                        </div>
-                    </td>
-                    <td style="padding: 10px 12px;">${emailHtml}</td>
-                    <td style="padding: 10px 12px; text-align: center;">${draftBadge}</td>
-                    <td style="padding: 10px 12px; text-align: right;">${actionBtn}</td>
-                </tr>
+                <div id="campaign-row-${lead.id}" class="campaign-lead-card ${activeClass}" onclick="App.selectCampaignLead(${lead.id})">
+                    <div class="campaign-card-row">
+                        <div class="campaign-card-title" title="${safeName}">${safeName}</div>
+                        <span class="priority-badge ${priorityClass}" style="font-size: 0.65rem; padding: 2px 6px; border-radius: 4px;">
+                            ${priorityEmoji} ${lead.priority}
+                        </span>
+                    </div>
+                    
+                    <div class="campaign-card-row" style="margin-top: 2px;">
+                        ${websiteLinkHtml}
+                        ${emailHtml}
+                    </div>
+
+                    <div class="campaign-card-actions">
+                        ${draftBadge}
+                        ${actionBtn}
+                    </div>
+                </div>
             `;
         }).join('');
     },
@@ -1079,7 +1107,7 @@ export const outreachModule = {
     selectCampaignLead(leadId) {
         AppState.selectedCampaignLeadId = leadId;
         
-        document.querySelectorAll('#campaignTableBody tr').forEach(tr => tr.classList.remove('active'));
+        document.querySelectorAll('#campaignTableBody .campaign-lead-card').forEach(card => card.classList.remove('active'));
         const activeRow = document.getElementById(`campaign-row-${leadId}`);
         if (activeRow) activeRow.classList.add('active');
 
@@ -1186,6 +1214,7 @@ export const outreachModule = {
                 service = UI.el.campaignCustomServiceInput?.value.trim() || UI.el.emailCustomServiceInput?.value.trim() || 'Custom Service';
             }
 
+            const isAutopilot = document.getElementById('campaignAutopilotTargeting')?.checked || false;
             const data = await API.request('/api/outreach/generate-email-ai', {
                 method: 'POST',
                 headers: { 'X-Gemini-API-Key': geminiKey },
@@ -1201,7 +1230,8 @@ export const outreachModule = {
                         brand: localStorage.getItem('sender_brand') || '',
                         role: localStorage.getItem('sender_role') || ''
                     },
-                    custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
+                    custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || '',
+                    autopilot: isAutopilot
                 })
             });
 
@@ -1460,6 +1490,7 @@ export const outreachModule = {
             try {
                 const projectSample = this.getBestPortfolioProjectSample(lead);
 
+                const isAutopilot = document.getElementById('campaignAutopilotTargeting')?.checked || false;
                 const data = await API.request('/api/outreach/generate-email-ai', {
                     method: 'POST',
                     headers: { 'X-Gemini-API-Key': geminiKey },
@@ -1475,7 +1506,8 @@ export const outreachModule = {
                             brand: localStorage.getItem('sender_brand') || '',
                             role: localStorage.getItem('sender_role') || ''
                         },
-                        custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
+                        custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || '',
+                        autopilot: isAutopilot
                     })
                 });
 
@@ -1516,8 +1548,8 @@ export const outreachModule = {
             await new Promise(resolve => setTimeout(resolve, 200));
         }
 
-        const successCount = (AppState.campaignLeads || []).filter(l => l.campaign_draft_status === 'ready').length;
-        const failCount = total - successCount;
+        const successCount = eligibleLeads.filter(l => l.campaign_draft_status === 'ready').length;
+        const failCount = eligibleLeads.filter(l => l.campaign_draft_status === 'failed').length;
         this.toggleCampaignBulkButtons(false);
         UI.showToast(`✨ Auto-Drafting complete! Drafted: ${successCount}${failCount > 0 ? `, Failed: ${failCount}` : ''}.`, failCount > 0 ? 'warning' : 'success');
         
@@ -1620,8 +1652,8 @@ export const outreachModule = {
             await new Promise(resolve => setTimeout(resolve, 1500));
         }
 
-        const successCount = leads.filter(l => l.campaign_send_status === 'sent').length;
-        const failCount = total - successCount;
+        const successCount = sendableLeads.filter(l => l.campaign_send_status === 'sent').length;
+        const failCount = sendableLeads.filter(l => l.campaign_send_status === 'failed').length;
         this.toggleCampaignBulkButtons(false);
         UI.renderLeads(AppState.leads);
         UI.showToast(`Campaign finished! Delivered: ${successCount}${failCount > 0 ? `, Failed: ${failCount}` : ''}.`, failCount > 0 ? 'warning' : 'success');
@@ -1741,6 +1773,7 @@ export const outreachModule = {
                     try {
                         const projectSample = this.getBestPortfolioProjectSample(lead);
 
+                        const isAutopilot = document.getElementById('campaignAutopilotTargeting')?.checked || false;
                         const data = await API.request('/api/outreach/generate-email-ai', {
                             method: 'POST',
                             headers: { 'X-Gemini-API-Key': geminiKey },
@@ -1756,7 +1789,8 @@ export const outreachModule = {
                                     brand: localStorage.getItem('sender_brand') || '',
                                     role: localStorage.getItem('sender_role') || ''
                                 },
-                                custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
+                                custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || '',
+                                autopilot: isAutopilot
                             })
                         });
 
@@ -1893,9 +1927,9 @@ export const outreachModule = {
             .filter(([key]) => key !== 'custom')
             .map(([key, template], i) => `
                 <label class="template-option ${i === 0 ? 'selected' : ''}">
-                    <input type="radio" name="template" value="${key}" ${i === 0 ? 'checked' : ''}>
+                    <input type="radio" name="template" value="${UI.escapeHtml(key)}" ${i === 0 ? 'checked' : ''}>
                     <div>
-                        <div class="template-name">${template.name}</div>
+                        <div class="template-name">${UI.escapeHtml(template.name)}</div>
                     </div>
                 </label>
             `).join('') + `
@@ -1906,5 +1940,119 @@ export const outreachModule = {
                     </div>
                 </label>
             `;
+    },
+
+    async fetchRecentDelivered() {
+        const listContainer = document.getElementById('deliveredMailsList');
+        if (!listContainer) return;
+        
+        try {
+            const data = await API.request('/api/outreach/recent-delivered');
+            if (data.success && data.logs) {
+                const logs = data.logs;
+                AppState.recentDeliveredLogs = logs;
+                
+                if (logs.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="empty-state" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+                            No emails sent in the last 12 hours.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                listContainer.innerHTML = logs.map(log => {
+                    let pillsHtml = '';
+                    if (log.clicked) {
+                        pillsHtml += `<span class="campaign-status-badge delivered" style="background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); border: 1px solid rgba(0, 240, 255, 0.2); margin-right: 4px;">Clicked 🎯</span>`;
+                    }
+                    if (log.opened) {
+                        pillsHtml += `<span class="campaign-status-badge draft-ready" style="margin-right: 4px;">Opened 👀</span>`;
+                    }
+                    pillsHtml += `<span class="campaign-status-badge delivered">Delivered ✅</span>`;
+                    
+                    const timeStr = new Date(log.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const safeName = UI.escapeHtml(log.lead_name);
+                    const safeEmail = UI.escapeHtml(log.lead_email || '');
+                    const templateName = log.template_used ? UI.escapeHtml(log.template_used) : 'N/A';
+                    
+                    return `
+                        <div class="delivered-mail-item" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; transition: all var(--transition-fast);">
+                            <div>
+                                <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">${safeName}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; font-family: monospace;">
+                                    ${safeEmail}
+                                </div>
+                                <div style="margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    ${pillsHtml}
+                                    <span style="font-size: 0.7rem; color: var(--text-muted); font-family: monospace;">Template: ${templateName}</span>
+                                    <span style="font-size: 0.7rem; color: var(--text-muted);">(${timeStr})</span>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-secondary btn-sm" onclick="App.viewSentEmail(${log.id})" style="font-size: 0.75rem; padding: 6px 12px; border-color: var(--accent-cyan); color: var(--accent-cyan); background: rgba(0, 240, 255, 0.05); cursor: pointer;">👁️ View Message</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                listContainer.innerHTML = `
+                    <div style="padding: 24px; text-align: center; color: var(--accent-red);">
+                        Failed to load recent logs: ${data.error || 'Unknown error'}
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error in fetchRecentDelivered:', error);
+            listContainer.innerHTML = `
+                <div style="padding: 24px; text-align: center; color: var(--accent-red);">
+                    Error: ${error.message}
+                </div>
+            `;
+        }
+    },
+
+    viewSentEmail(logId) {
+        const log = (AppState.recentDeliveredLogs || []).find(l => l.id === logId);
+        if (!log) {
+            UI.showToast('Email content log not found', 'error');
+            return;
+        }
+        
+        const nameText = document.getElementById('sentEmailLeadNameText');
+        const toText = document.getElementById('sentEmailToText');
+        const templateText = document.getElementById('sentEmailTemplateText');
+        const timeText = document.getElementById('sentEmailTimeText');
+        const subjectText = document.getElementById('sentEmailSubjectText');
+        const iframe = document.getElementById('sentEmailIFrame');
+        
+        if (nameText) nameText.textContent = log.lead_name || 'Unknown';
+        if (toText) toText.textContent = log.lead_email || 'N/A';
+        if (templateText) templateText.textContent = log.template_used || 'default';
+        if (timeText) timeText.textContent = new Date(log.sent_at).toLocaleString();
+        
+        let rawContent = log.message_sent || '';
+        let subject = '';
+        let htmlBody = '';
+        
+        if (rawContent.startsWith('SUBJECT:')) {
+            const lines = rawContent.split('\n');
+            const subLine = lines[0];
+            subject = subLine.substring(8).trim();
+            htmlBody = lines.slice(1).join('\n');
+            if (htmlBody.startsWith('BODY:')) {
+                htmlBody = htmlBody.substring(5).trim();
+            }
+        } else {
+            subject = log.template_used || 'Outreach Email';
+            htmlBody = rawContent;
+        }
+        
+        if (subjectText) subjectText.textContent = subject;
+        if (iframe) {
+            iframe.srcdoc = htmlBody;
+        }
+        
+        UI.openModal('sentEmailContentModal');
     }
 };

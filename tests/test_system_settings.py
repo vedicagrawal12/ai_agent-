@@ -104,3 +104,80 @@ def test_update_admin_serpapi_key_success(client, db):
         
         # Verify db key was updated
         assert db.get_system_setting("serpapi_key") == "valid-serpapi-key-123456"
+
+def test_masked_password_preservation(client, db):
+    """Verify SMTP and IMAP config updates do not overwrite correct passwords with masked values."""
+    # Register and login a test user
+    client.post('/signup', data={
+        'username': 'testconfiguser',
+        'email': 'config@example.com',
+        'password': 'password123',
+        'confirm_password': 'password123',
+        'phone': '1234567890'
+    })
+    client.post('/login', data={'email': 'config@example.com', 'password': 'password123'})
+    
+    # 1. Save original SMTP and IMAP settings
+    resp = client.post('/api/config/smtp', json={
+        "host": "smtp.example.com",
+        "port": 465,
+        "email": "config@example.com",
+        "password": "original_smtp_pass_123",
+        "use_ssl": True
+    })
+    assert resp.status_code == 200
+    
+    resp = client.post('/api/config/imap', json={
+        "host": "imap.example.com",
+        "port": 993,
+        "email": "config@example.com",
+        "password": "original_imap_pass_456",
+        "use_ssl": True
+    })
+    assert resp.status_code == 200
+
+    # 2. Verify GET returns masked passwords
+    resp = client.get('/api/config/smtp')
+    assert resp.status_code == 200
+    masked_smtp = resp.json["password"]
+    assert masked_smtp != "original_smtp_pass_123"
+    assert "*" in masked_smtp
+
+    resp = client.get('/api/config/imap')
+    assert resp.status_code == 200
+    masked_imap = resp.json["password"]
+    assert masked_imap != "original_imap_pass_456"
+    assert "*" in masked_imap
+
+    # 3. Save again using the masked passwords (simulating clicking "Save" without changing the password)
+    resp = client.post('/api/config/smtp', json={
+        "host": "smtp.newhost.com",
+        "port": 587,
+        "email": "config@example.com",
+        "password": masked_smtp,
+        "use_ssl": False
+    })
+    assert resp.status_code == 200
+
+    resp = client.post('/api/config/imap', json={
+        "host": "imap.newhost.com",
+        "port": 143,
+        "email": "config@example.com",
+        "password": masked_imap,
+        "use_ssl": False
+    })
+    assert resp.status_code == 200
+
+    # 4. Fetch settings directly from the DB helper to confirm the original unmasked passwords were preserved
+    user = db.get_user_by_email("config@example.com")
+    assert user is not None
+    
+    smtp_db = db.get_smtp_settings(user["id"])
+    assert smtp_db["password"] == "original_smtp_pass_123" # Preserved!
+    assert smtp_db["host"] == "smtp.newhost.com" # Updated!
+    assert smtp_db["port"] == 587 # Updated!
+
+    imap_db = db.get_imap_settings(user["id"])
+    assert imap_db["password"] == "original_imap_pass_456" # Preserved!
+    assert imap_db["host"] == "imap.newhost.com" # Updated!
+    assert imap_db["port"] == 143 # Updated!

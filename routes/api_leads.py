@@ -723,5 +723,8 @@ def get_analytics_stats():
 @leads_bp.route("/leads/<int:lead_id>/outreach-logs", methods=["GET"])
 def get_lead_outreach_logs(lead_id):
     """Fetch outreach logs for a specific lead."""
+    lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
+    if not lead:
+        return jsonify({"error": "Lead not found"}), 404
     logs = db.get_lead_outreach_logs(lead_id, g.user['id'])
     return jsonify(logs)

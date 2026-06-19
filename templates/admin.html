@@ -7,183 +7,6 @@
     <title>Admin Dashboard — LeadHunter AI</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
-    <style>
-        .admin-wrapper {
-            max-width: 1100px;
-            margin: 40px auto;
-            padding: var(--space-xl) var(--space-lg);
-        }
-        .admin-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: var(--space-xl);
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: var(--space-md);
-            flex-wrap: wrap;
-            gap: var(--space-md);
-        }
-        .admin-title {
-            font-family: var(--font-display);
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: var(--text-primary);
-        }
-        .admin-title span {
-            color: var(--accent-cyan);
-            text-shadow: var(--shadow-glow-cyan);
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: var(--space-md);
-            margin-bottom: var(--space-xl);
-        }
-        @media (min-width: 768px) {
-            .stats-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-        .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: var(--space-md) var(--space-lg);
-            box-shadow: var(--shadow-sm);
-            text-align: center;
-            transition: all var(--transition-base);
-        }
-        .stat-card:hover {
-            border-color: var(--border-hover);
-            box-shadow: var(--shadow-glow-cyan);
-            transform: translateY(-2px);
-        }
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 4px;
-        }
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--accent-cyan);
-            text-shadow: var(--shadow-glow-cyan);
-        }
-        .panel-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: var(--space-xl) var(--space-lg);
-            box-shadow: var(--shadow-lg);
-        }
-        .panel-title {
-            font-size: 1.35rem;
-            color: var(--text-primary);
-            margin-bottom: var(--space-md);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .user-table-container {
-            overflow-x: auto;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: 12px;
-            margin-bottom: var(--space-md);
-        }
-        .user-table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.9rem;
-        }
-        .user-table th {
-            padding: 12px;
-            font-weight: 700;
-            color: var(--text-secondary);
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border-bottom: 2px solid var(--border-color);
-        }
-        .user-table td {
-            padding: 12px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-primary);
-            vertical-align: middle;
-        }
-        .user-badge {
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: var(--radius-sm);
-            text-transform: uppercase;
-        }
-        .user-badge.admin {
-            background: rgba(139, 92, 246, 0.1);
-            color: var(--accent-violet);
-            border: 1px solid rgba(139, 92, 246, 0.2);
-        }
-        .user-badge.active {
-            background: rgba(57, 255, 20, 0.08);
-            color: var(--accent-green);
-            border: 1px solid rgba(57, 255, 20, 0.15);
-        }
-        .user-badge.inactive {
-            background: rgba(255, 0, 85, 0.08);
-            color: var(--accent-red);
-            border: 1px solid rgba(255, 0, 85, 0.15);
-        }
-        .action-btn {
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 5px 10px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .action-btn:hover {
-            border-color: var(--accent-cyan);
-            color: var(--accent-cyan);
-            background: rgba(0, 240, 255, 0.03);
-        }
-        .action-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .action-btn svg {
-            width: 14px;
-            height: 14px;
-            stroke: currentColor;
-            stroke-width: 2;
-            fill: none;
-            transition: transform var(--transition-fast);
-        }
-        .action-btn:hover svg {
-            transform: scale(1.08);
-        }
-        .btn-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .footer-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: var(--space-xl);
-        }
-    </style>
 </head>
 <body>
     <div class="admin-wrapper">
@@ -194,21 +17,21 @@
         
         <!-- Summary Stats Grid -->
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="stat-card cyan">
                 <div class="stat-label">Total users</div>
                 <div class="stat-value">{{ status.stats.total_users }}</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card green">
                 <div class="stat-label">Active Users</div>
-                <div class="stat-value" style="color: var(--accent-green);">{{ status.stats.active_users }}</div>
+                <div class="stat-value">{{ status.stats.active_users }}</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card violet">
                 <div class="stat-label">Scouted Leads</div>
-                <div class="stat-value" style="color: var(--accent-violet);">{{ status.stats.total_leads }}</div>
+                <div class="stat-value">{{ status.stats.total_leads }}</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card orange">
                 <div class="stat-label">Searches Executed</div>
-                <div class="stat-value" style="color: var(--accent-orange);">{{ status.stats.total_searches }}</div>
+                <div class="stat-value">{{ status.stats.total_searches }}</div>
             </div>
         </div>
 

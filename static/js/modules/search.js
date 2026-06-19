@@ -222,6 +222,9 @@ export const searchModule = {
             if (kanbanBtn) kanbanBtn.classList.add('active');
         } else if (view === 'analytics') {
             if (analyticsBtn) analyticsBtn.classList.add('active');
+            if (typeof this.fetchRecentDelivered === 'function') {
+                this.fetchRecentDelivered();
+            }
         } else {
             if (listBtn) listBtn.classList.add('active');
         }

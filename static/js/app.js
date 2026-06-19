@@ -45,19 +45,35 @@ const App = {
 
     closeDetailPane() {
         const detailPane = document.getElementById('detailPane');
+        const backdrop = document.getElementById('detailPaneBackdrop');
         if (detailPane) {
             if (window.gsap) {
                 if (window.innerWidth < 1024) {
-                    window.gsap.to(detailPane, { y: '100%', duration: 0.4, ease: 'power2.in', overwrite: 'auto', onComplete: () => {
+                    window.gsap.to(detailPane, { yPercent: 100, duration: 0.4, ease: 'power2.in', overwrite: 'auto', onComplete: () => {
                         detailPane.classList.remove('active');
+                        if (backdrop) backdrop.classList.remove('active');
                     }});
                 } else {
-                    window.gsap.to(detailPane, { x: '100%', duration: 0.4, ease: 'power2.in', overwrite: 'auto', onComplete: () => {
-                        detailPane.classList.remove('active');
-                    }});
+                    window.gsap.to(detailPane, { 
+                        xPercent: -50,
+                        yPercent: -50,
+                        scale: 0.9, 
+                        opacity: 0, 
+                        duration: 0.35, 
+                        ease: 'power2.in', 
+                        overwrite: 'auto', 
+                        onComplete: () => {
+                            detailPane.classList.remove('active');
+                            if (backdrop) backdrop.classList.remove('active');
+                        }
+                    });
+                }
+                if (backdrop) {
+                    window.gsap.to(backdrop, { opacity: 0, duration: 0.3, overwrite: 'auto' });
                 }
             } else {
                 detailPane.classList.remove('active');
+                if (backdrop) backdrop.classList.remove('active');
             }
         }
     },
@@ -84,11 +100,11 @@ const App = {
         });
 
         // Settings modal
-        document.getElementById('settingsBtn').addEventListener('click', () => {
+        document.getElementById('settingsBtn')?.addEventListener('click', () => {
             UI.openModal('settingsModal');
         });
 
-        document.getElementById('historyBtn').addEventListener('click', async () => {
+        document.getElementById('historyBtn')?.addEventListener('click', async () => {
             await this.loadHistory();
             UI.openModal('historyModal');
         });
@@ -109,6 +125,11 @@ const App = {
 
         // Detail Pane Close
         document.getElementById('closeDetailPaneBtn')?.addEventListener('click', () => {
+            this.closeDetailPane();
+        });
+
+        // Close detail pane when clicking backdrop
+        document.getElementById('detailPaneBackdrop')?.addEventListener('click', () => {
             this.closeDetailPane();
         });
 
@@ -290,6 +311,22 @@ const App = {
             }
         });
 
+        // Campaign Autopilot Targeting toggle change
+        document.getElementById('campaignAutopilotTargeting')?.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            const selectEl = document.getElementById('campaignServiceSelect');
+            const customContainer = document.getElementById('campaignCustomServiceContainer');
+            if (selectEl) {
+                selectEl.disabled = isChecked;
+                selectEl.style.opacity = isChecked ? '0.5' : '1';
+            }
+            if (customContainer) {
+                customContainer.style.opacity = isChecked ? '0.5' : '1';
+                const inputEl = document.getElementById('campaignCustomServiceInput');
+                if (inputEl) inputEl.disabled = isChecked;
+            }
+        });
+
         // Bulk Scan Campaign Emails
         UI.el.campaignBulkScanBtn?.addEventListener('click', () => {
             this.bulkScanCampaignEmails();
@@ -340,7 +377,7 @@ const App = {
         });
 
         // Export Excel
-        document.getElementById('exportExcelBtn').addEventListener('click', () => {
+        document.getElementById('exportExcelBtn')?.addEventListener('click', () => {
             this.exportExcel();
         });
 
@@ -439,6 +476,9 @@ const App = {
         await this.checkDripsConfig();
         this.loadReminders();
         await this.loadTemplates();
+        if (AppState.currentView === 'analytics' && typeof this.fetchRecentDelivered === 'function') {
+            this.fetchRecentDelivered();
+        }
         
         // Initialize GSAP 3D card tilt hover effects
         UI.initTiltEffects();

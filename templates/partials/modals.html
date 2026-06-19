@@ -295,8 +295,16 @@
             </div>
             
             <!-- Bulk Pitch Personalization Settings -->
-            <div class="campaign-config-bar" style="display: flex; gap: 16px; flex-wrap: wrap; padding: 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0; align-items: flex-end;">
-                <div style="flex: 1.2; min-width: 180px;">
+            <div class="campaign-config-bar" style="display: flex; gap: 16px; flex-wrap: wrap; padding: 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0; align-items: flex-end; width: 100%;">
+                <!-- Autopilot Dynamic Targeting Checkbox -->
+                <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 8px; min-width: 210px;">
+                    <input type="checkbox" id="campaignAutopilotTargeting" style="cursor: pointer; width: 16px; height: 16px; margin: 0;">
+                    <label for="campaignAutopilotTargeting" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-cyan); cursor: pointer; user-select: none; margin: 0;">
+                        ⚡ Autopilot Targeting (Auto-detect)
+                    </label>
+                </div>
+
+                <div id="campaignServiceSelectContainer" style="flex: 1.2; min-width: 180px;">
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="campaignServiceSelect">Service to Pitch</label>
                     <select id="campaignServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
                         <option value="web_design" selected>Website Design & Development</option>
@@ -310,9 +318,7 @@
                 <div id="campaignCustomServiceContainer" style="display: none; flex: 1.5; min-width: 200px;">
                     <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="campaignCustomServiceInput">Specify Niche Service</label>
                     <input type="text" id="campaignCustomServiceInput" class="form-input" placeholder="e.g. Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                </div>
-
-                <div style="flex: 0.8; min-width: 120px;">
+                </div>                <div style="flex: 0.8; min-width: 120px;">
                     <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="campaignToneSelect">Tone</label>
                     <select id="campaignToneSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
                         <option value="elite" selected>Elite Growth Consultant</option>
@@ -357,24 +363,12 @@
                 
                 <!-- Left Pane: Eligible Leads Table Directory -->
                 <div class="campaign-left-pane">
-                    <div class="campaign-pane-header" style="padding: 10px 12px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 0.85rem; color: var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;">
+                    <div class="campaign-pane-header" style="padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 0.85rem; color: var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;">
                         <span>📇 Campaign Directory</span>
                         <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-secondary);">Leads with Websites</span>
                     </div>
-                    <div style="flex: 1; overflow-y: auto; position: relative;">
-                        <table class="campaign-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
-                            <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 10; border-bottom: 1px solid var(--border-color);">
-                                <tr>
-                                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Lead Details</th>
-                                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Email Address</th>
-                                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: center;">AI Status</th>
-                                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="campaignTableBody">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
+                    <div id="campaignTableBody" class="campaign-leads-list">
+                        <!-- Populated dynamically with lead cards -->
                     </div>
                 </div>
 
@@ -535,48 +529,27 @@
     </div>
 </div>
 
-<style>
-    .modal-overlay-custom {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(5, 6, 12, 0.9);
-        backdrop-filter: blur(8px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 15000;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-    }
-    .modal-overlay-custom.active {
-        opacity: 1;
-        pointer-events: auto;
-    }
-    .modal-box-custom {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-lg);
-        width: 90%;
-        max-width: 440px;
-        padding: var(--space-xl) var(--space-lg);
-        box-shadow: var(--shadow-lg);
-        transform: translateY(20px);
-        transition: transform 0.3s ease, border-color var(--transition-base), box-shadow var(--transition-base);
-        text-align: center;
-    }
-    .modal-overlay-custom.active .modal-box-custom {
-        transform: translateY(0);
-    }
-    .modal-box-custom:hover {
-        border-color: var(--border-hover);
-        box-shadow: var(--shadow-glow-cyan);
-    }
-    @keyframes pulse-glow-cyan {
-        0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(0, 240, 255, 0.2)); }
-        50% { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.6)); }
-    }
-</style>
+<!-- ======== Sent Email Viewer Modal ======== -->
+<div id="sentEmailContentModal" class="modal-overlay" style="z-index: 16000;">
+    <div class="modal" style="max-width: 800px; width: 90%;">
+        <div class="modal-header">
+            <h3 class="modal-title">✉️ Sent Email Content Viewer</h3>
+            <button class="modal-close" id="closeSentEmailModalBtn">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 16px; text-align: left;">
+            <div style="margin-bottom: 12px; font-size: 0.85rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 4px;">
+                <div><strong>Lead Name:</strong> <span id="sentEmailLeadNameText" style="color: var(--text-primary); font-weight: 600;"></span></div>
+                <div><strong>Recipient Email:</strong> <span id="sentEmailToText" style="color: var(--accent-cyan); font-weight: 600;"></span></div>
+                <div><strong>Template Variant:</strong> <span id="sentEmailTemplateText" style="color: var(--accent-violet); font-weight: 600;"></span></div>
+                <div><strong>Timestamp Sent:</strong> <span id="sentEmailTimeText"></span></div>
+            </div>
+            <div style="margin-bottom: 12px; font-weight: 600; font-size: 0.95rem; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                Subject: <span id="sentEmailSubjectText" style="color: var(--accent-cyan);"></span>
+            </div>
+            <div style="background: white; border-radius: var(--radius-sm); border: 1px solid var(--border-color); height: 400px; overflow: hidden; position: relative;">
+                <iframe id="sentEmailIFrame" sandbox="" style="width: 100%; height: 100%; border: none; background: white;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+

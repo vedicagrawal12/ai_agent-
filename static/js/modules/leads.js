@@ -173,13 +173,30 @@ export const leadsModule = {
         }
 
         const detailPane = document.getElementById('detailPane');
+        const backdrop = document.getElementById('detailPaneBackdrop');
         if (detailPane) {
             detailPane.classList.add('active');
+            if (backdrop) backdrop.classList.add('active');
+            
             if (window.gsap) {
                 if (window.innerWidth < 1024) {
-                    window.gsap.to(detailPane, { y: 0, x: 0, duration: 0.45, ease: 'power2.out', overwrite: 'auto' });
+                    window.gsap.set(detailPane, { xPercent: 0, yPercent: 100, x: 0, y: 0, scale: 1, opacity: 1 });
+                    window.gsap.to(detailPane, { yPercent: 0, duration: 0.45, ease: 'power2.out', overwrite: 'auto' });
                 } else {
-                    window.gsap.to(detailPane, { x: 0, y: 0, duration: 0.45, ease: 'power2.out', overwrite: 'auto' });
+                    window.gsap.set(detailPane, { xPercent: -50, yPercent: -50, x: 0, y: 0, scale: 0.9, opacity: 0 });
+                    window.gsap.to(detailPane, { 
+                        xPercent: -50,
+                        yPercent: -50,
+                        scale: 1, 
+                        opacity: 1, 
+                        duration: 0.4, 
+                        ease: 'back.out(1.5)', 
+                        overwrite: 'auto' 
+                    });
+                }
+                if (backdrop) {
+                    window.gsap.set(backdrop, { opacity: 0 });
+                    window.gsap.to(backdrop, { opacity: 1, duration: 0.3, overwrite: 'auto' });
                 }
             }
         }

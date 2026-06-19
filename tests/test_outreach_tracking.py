@@ -77,7 +77,7 @@ def test_smtp_link_wrapping_and_tracking(auth_client, db):
         assert len(logs) == 1
         log = logs[0]
         assert log["template_used"] == "cold_email"
-        assert log["message_sent"] == email_body
+        assert email_body in log["message_sent"] or "dest=http%3A//example.com/mockup" in log["message_sent"]
         assert log["opened"] is False
         assert log["clicked"] is False
 

@@ -63,13 +63,19 @@ def create_app(config_class=None):
         # Load user context dynamically
         user_id = session.get('user_id')
         if user_id:
-            is_admin = db.is_user_admin(user_id)
-            g.user = {
-                "id": user_id, 
-                "username": session.get('username'),
-                "email": session.get('email'),
-                "is_admin": is_admin
-            }
+            # Check if user account is active
+            is_active = db.is_user_active(user_id)
+            if not is_active:
+                session.clear()
+                g.user = None
+            else:
+                is_admin = db.is_user_admin(user_id)
+                g.user = {
+                    "id": user_id, 
+                    "username": session.get('username'),
+                    "email": session.get('email'),
+                    "is_admin": is_admin
+                }
         else:
             g.user = None
         

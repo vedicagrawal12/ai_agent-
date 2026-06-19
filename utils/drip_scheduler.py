@@ -110,7 +110,9 @@ def process_drip_outreach_for_user(user_id: int):
             logger.error(f"[Drips] Error logging drip followup for lead {lead_id}: {log_err}")
             
         # 2. Format HTML and inject tracking pixel + link redirect wrapper
-        html_body = html.escape(body)
+        # IMPORTANT: Extract and wrap URLs from plain text FIRST, then escape
+        # non-URL text. This prevents html.escape() from mangling & -> &amp;
+        # inside URL query parameters, which would break tracked redirect links.
         url_pattern = re.compile(r'(https?://[^\s<>"]+)')
         
         # Resolve a fallback base host. In background thread, request context is absent.
@@ -127,10 +129,22 @@ def process_drip_outreach_for_user(user_id: int):
             if log_id:
                 encoded_url = urllib.parse.quote(clean_url)
                 tracking_url = f"{base_host}/api/track/click/{log_id}?dest={encoded_url}"
-                return f'<a href="{tracking_url}" target="_blank">{clean_url}</a>{trailing}'
-            return f'<a href="{clean_url}" target="_blank">{clean_url}</a>{trailing}'
-            
-        html_body = url_pattern.sub(replace_url, html_body)
+                return f'\x00LINK_START\x00<a href="{tracking_url}" target="_blank">{html.escape(clean_url)}</a>{html.escape(trailing)}\x00LINK_END\x00'
+            return f'\x00LINK_START\x00<a href="{clean_url}" target="_blank">{html.escape(clean_url)}</a>{html.escape(trailing)}\x00LINK_END\x00'
+        
+        # Replace URLs with sentinel-wrapped HTML links
+        marked_body = url_pattern.sub(replace_url, body)
+        
+        # Split by sentinels, escape text segments only, reassemble
+        parts = re.split(r'\x00LINK_START\x00|\x00LINK_END\x00', marked_body)
+        html_segments = []
+        for i, part in enumerate(parts):
+            if i % 2 == 0:
+                html_segments.append(html.escape(part))
+            else:
+                html_segments.append(part)
+        html_body = ''.join(html_segments)
+        
         html_body = html_body.replace("\n", "<br>\n")
         
         if log_id:
@@ -138,6 +152,7 @@ def process_drip_outreach_for_user(user_id: int):
             html_body += f'\n<img src="{pixel_url}" width="1" height="1" style="display:none;" alt="" />'
 
         # 3. Dispatch SMTP email
+        server = None
         try:
             msg = MIMEMultipart('alternative')
             msg['From'] = sender_email
@@ -162,7 +177,6 @@ def process_drip_outreach_for_user(user_id: int):
                     
             server.login(sender_email, smtp_password)
             server.sendmail(sender_email, [to_email], msg.as_string())
-            server.quit()
             
             # 4. Update lead tracking state
             new_count = lead["followup_count"] + 1
@@ -186,6 +200,12 @@ def process_drip_outreach_for_user(user_id: int):
             logger.info(f"[Drips] Successfully dispatched follow-up #{new_count} to {to_email} for lead {lead['name']}")
         except Exception as smtp_err:
             logger.error(f"[Drips] SMTP dispatch failed for lead {lead_id} to {to_email}: {smtp_err}")
+        finally:
+            if server:
+                try:
+                    server.quit()
+                except Exception:
+                    pass
 
 def drip_background_poll_loop():
     """Background check loop polling once every hour."""

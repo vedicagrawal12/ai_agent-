@@ -132,7 +132,7 @@ def test_public_audit_report_page(client, db):
     db.save_leads([lead], user["id"])
     saved_lead = db.get_all_leads(user_id=user["id"])[0]
     
-    db.update_lead_audit_data(saved_lead["id"], json.dumps(audit_payload))
+    db.update_lead_audit_data(saved_lead["id"], json.dumps(audit_payload), user_id=user["id"])
     
     # Verify public unauthenticated access
     resp = client.get(f"/audit/{saved_lead['id']}")
@@ -163,7 +163,7 @@ def test_outreach_ai_generation_with_audit(auth_client, db):
     db.save_leads([lead], user["id"])
     saved_lead = db.get_all_leads(user_id=user["id"])[0]
     
-    db.update_lead_audit_data(saved_lead["id"], json.dumps(audit_payload))
+    db.update_lead_audit_data(saved_lead["id"], json.dumps(audit_payload), user_id=user["id"])
     
     # Call Generate AI Pitch endpoint
     with patch("utils.ai_writer.AIOutreachWriter._call_gemini_api") as mock_gemini:

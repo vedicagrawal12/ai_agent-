@@ -188,6 +188,18 @@
                         <canvas id="outreachTimelineChart"></canvas>
                     </div>
                 </div>
+
+                <!-- Delivered Emails Tracker Log -->
+                <div id="recentDeliveredContainer" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; margin-bottom: 24px; position: relative;">
+                    <h3 style="font-size: 1rem; color: var(--text-primary); margin-bottom: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                        ✉️ Recent Delivered Mails (Last 12 Hours)
+                    </h3>
+                    <div id="deliveredMailsList" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 6px;">
+                        <div class="empty-state" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+                            No emails sent in the last 12 hours.
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>

@@ -2,7 +2,7 @@ import logging
 import re
 from flask import Blueprint, request, jsonify, render_template, session, redirect, url_for, flash, g
 from werkzeug.security import generate_password_hash, check_password_hash
-from extensions import db, limiter
+from extensions import db, limiter, cache
 from utils.security import login_tracker
 
 logger = logging.getLogger(__name__)
@@ -142,6 +142,7 @@ def forgot_password():
         
         success = db.save_password_reset_otp(email, otp, expires_at)
         if success:
+            cache.delete(f"otp_failures_{email}")
             from utils.email_sender import send_otp_email
             send_otp_email(email, otp)
             session["reset_email"] = email
@@ -172,10 +173,21 @@ def verify_otp():
         is_valid = db.verify_password_reset_otp(email, otp)
         if is_valid:
             session["otp_verified"] = True
+            cache.delete(f"otp_failures_{email}")
             flash("OTP verified successfully. Please choose a new password.", "success")
             return redirect(url_for('auth.reset_password'))
         else:
-            flash("Invalid or expired OTP. Please try again.", "error")
+            failures = cache.get(f"otp_failures_{email}") or 0
+            failures += 1
+            if failures >= 5:
+                db.delete_password_reset_otp(email)
+                cache.delete(f"otp_failures_{email}")
+                session.pop("reset_email", None)
+                flash("Too many failed attempts. Please request a new OTP.", "error")
+                return redirect(url_for('auth.forgot_password'))
+            else:
+                cache.set(f"otp_failures_{email}", failures, timeout=600)
+                flash("Invalid or expired OTP. Please try again.", "error")
             
     return render_template("verify_otp.html")
 

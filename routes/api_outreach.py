@@ -54,6 +54,11 @@ def generate_whatsapp_link():
     
     lead_id = lead_data.get("id")
     if lead_id:
+        # Enforce that the lead belongs to the logged-in user
+        user_lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
+        if not user_lead:
+            return jsonify({"error": "Lead not found"}), 404
+            
         try:
             db.log_message(lead_id, template_key, message, user_id=g.user['id'])
         except Exception as log_err:
@@ -146,6 +151,7 @@ def generate_ai_pitch():
     except Exception as e:
         return jsonify({"error": f"AI Generation failed: {str(e)}"}), 500
 
+
 @outreach_bp.route("/outreach/generate-email-ai", methods=["POST"])
 @limiter.limit("30 per minute")
 def generate_email_ai_pitch():
@@ -193,6 +199,16 @@ def generate_email_ai_pitch():
                     except Exception as e:
                         logger.error(f"Error parsing audit data: {e}")
             
+        # If autopilot is active, dynamically determine the best service
+        autopilot = data.get("autopilot", False)
+        if autopilot:
+            has_no_site = not lead_data.get("website", "").strip()
+            is_broken = bool(lead_data.get("is_broken_website", False))
+            if has_no_site or is_broken:
+                service = "web_design"
+            else:
+                service = "seo"
+
         raw_pitch = AIOutreachWriter.generate_email_pitch(
             lead_data=lead_data,
             project_sample=project_sample,
@@ -232,7 +248,8 @@ def generate_email_ai_pitch():
         return jsonify({
             "success": True,
             "subject": subject,
-            "body": body
+            "body": body,
+            "resolved_service": service
         })
     except Exception as e:
         return jsonify({"error": f"AI Generation failed: {str(e)}"}), 500
@@ -254,6 +271,16 @@ def send_smtp_email():
     if not to_email or not subject or not body:
         return jsonify({"error": "Missing recipient, subject, or body details."}), 400
         
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    if lead_id:
+        # Enforce that the lead belongs to the logged-in user
+        lead = db.get_lead_by_id(lead_id, user_id=user_id)
+        if not lead:
+            return jsonify({"error": "Lead not found"}), 404
+            
     smtp_host = smtp_config.get("host", "").strip()
     smtp_port = smtp_config.get("port")
     sender_email = smtp_config.get("email", "").strip()
@@ -266,24 +293,18 @@ def send_smtp_email():
     # 1. Log the message to get a log_id
     log_id = 0
     if lead_id:
-        user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
-        if not user_id:
-            lead = db.get_lead_by_id(lead_id)
-            if lead:
-                user_id = lead.get('user_id')
-        if not user_id:
-            user_id = 1
-        
         try:
             log_id = db.log_message(lead_id, template="cold_email", message=body, user_id=user_id)
         except Exception as db_err:
             logger.error(f"Error logging outreach message: {db_err}")
+        
+        if not log_id:
+            logger.warning(f"Email tracking degraded: log_id=0 for lead {lead_id}. Open/click tracking and View Message will be unavailable.")
 
     # 2. HTML body conversion and link wrapping
-    # Escape HTML to prevent injection
-    html_body = html.escape(body)
-    
-    # Find all HTTP/HTTPS links
+    # IMPORTANT: Extract and wrap URLs from plain text FIRST, then escape
+    # non-URL text. This prevents html.escape() from mangling & -> &amp;
+    # inside URL query parameters, which would break tracked redirect links.
     url_pattern = re.compile(r'(https?://[^\s<>"]+)')
     base_host = request.host_url.rstrip('/')
     
@@ -299,11 +320,25 @@ def send_smtp_email():
         if log_id:
             encoded_url = urllib.parse.quote(clean_url)
             tracking_url = f"{base_host}/api/track/click/{log_id}?dest={encoded_url}"
-            return f'<a href="{tracking_url}" target="_blank">{clean_url}</a>{trailing}'
+            return f'\x00LINK_START\x00<a href="{tracking_url}" target="_blank">{html.escape(clean_url)}</a>{html.escape(trailing)}\x00LINK_END\x00'
         else:
-            return f'<a href="{clean_url}" target="_blank">{clean_url}</a>{trailing}'
-            
-    html_body = url_pattern.sub(replace_url, html_body)
+            return f'\x00LINK_START\x00<a href="{clean_url}" target="_blank">{html.escape(clean_url)}</a>{html.escape(trailing)}\x00LINK_END\x00'
+    
+    # Replace URLs with sentinel-wrapped HTML links
+    marked_body = url_pattern.sub(replace_url, body)
+    
+    # Split by sentinels, escape text segments only, reassemble
+    parts = re.split(r'\x00LINK_START\x00|\x00LINK_END\x00', marked_body)
+    html_segments = []
+    for i, part in enumerate(parts):
+        if i % 2 == 0:
+            # Text segment — escape HTML
+            html_segments.append(html.escape(part))
+        else:
+            # Link segment — already HTML, keep as-is
+            html_segments.append(part)
+    html_body = ''.join(html_segments)
+    
     # Convert newlines to breaks
     html_body = html_body.replace("\n", "<br>\n")
     
@@ -311,7 +346,14 @@ def send_smtp_email():
     if log_id:
         pixel_url = f"{base_host}/api/track/open/{log_id}"
         html_body += f'\n<img src="{pixel_url}" width="1" height="1" style="display:none;" alt="" />'
+        try:
+            # Store subject alongside HTML so telemetry "View Message" can display it
+            stored_content = f"SUBJECT:{subject}\n{html_body}"
+            db.update_message_content(log_id, stored_content)
+        except Exception as update_err:
+            logger.error(f"Error updating message log content with HTML: {update_err}")
     
+    server = None
     try:
         msg = MIMEMultipart('alternative')
         msg['From'] = sender_email
@@ -337,11 +379,9 @@ def send_smtp_email():
                 
         server.login(sender_email, smtp_password)
         server.sendmail(sender_email, [to_email], msg.as_string())
-        server.quit()
         
         if lead_id:
             # Enforce owner scope for stage update if user context is available
-            user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
             db.update_lead_pipeline_stage(lead_id, "PITCHED", user_id=user_id)
             
         return jsonify({
@@ -351,6 +391,12 @@ def send_smtp_email():
     except Exception as e:
         logger.error(f"SMTP Delivery failed: {e}")
         return jsonify({"error": f"SMTP Delivery failed: {str(e)}"}), 500
+    finally:
+        if server:
+            try:
+                server.quit()
+            except Exception:
+                pass
 
 @outreach_bp.route("/track/open/<int:log_id>", methods=["GET"])
 @limiter.limit("30 per minute")
@@ -419,6 +465,13 @@ def manage_imap_config():
         except ValueError:
             return jsonify({"error": "Invalid port number"}), 400
             
+        # Preserve existing password if the submitted one is masked
+        is_masked = password == "****" or (len(password) > 2 and password[2:] == "*" * (len(password) - 2))
+        if is_masked:
+            existing = db.get_imap_settings(user_id)
+            if existing and existing.get("password"):
+                password = existing["password"]
+            
         success = db.save_imap_settings(user_id, host, port, email_addr, password, use_ssl)
         if success:
             return jsonify({"success": True, "message": "IMAP credentials saved successfully."})
@@ -460,6 +513,13 @@ def manage_smtp_config():
         except ValueError:
             return jsonify({"error": "Invalid port number"}), 400
             
+        # Preserve existing password if the submitted one is masked
+        is_masked = password == "****" or (len(password) > 2 and password[2:] == "*" * (len(password) - 2))
+        if is_masked:
+            existing = db.get_smtp_settings(user_id)
+            if existing and existing.get("password"):
+                password = existing["password"]
+            
         success = db.save_smtp_settings(user_id, host, port, email_addr, password, use_ssl)
         if success:
             return jsonify({"success": True, "message": "SMTP credentials saved successfully."})
@@ -489,3 +549,16 @@ def sync_replies():
     if res.get("success"):
         return jsonify(res)
     return jsonify({"error": res.get("error", "Unknown sync error")}), 500
+
+@outreach_bp.route("/outreach/recent-delivered", methods=["GET"])
+def get_recent_delivered_emails():
+    """Retrieve all emails sent in the last 12 hours."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        logs = db.get_recent_delivered_emails(user_id, hours=12)
+        return jsonify({"success": True, "logs": logs})
+    except Exception as e:
+        logger.error(f"Error fetching recent logs: {e}")
+        return jsonify({"error": str(e)}), 500
