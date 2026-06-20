@@ -663,7 +663,7 @@ export const outreachModule = {
         const email = localStorage.getItem('smtp_email') || '';
         const passwordRaw = localStorage.getItem('smtp_password') || '';
         const password = passwordRaw ? await CryptoHelper.decrypt(passwordRaw, AppState.encryptionKey) : '';
-        const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
+        const useSSL = localStorage.getItem('smtp_use_ssl') !== 'false';
 
         if (!host || !port || !email || !password) {
             UI.showToast('Direct dispatch is disabled. Configure your SMTP Settings first!', 'error');
@@ -700,7 +700,11 @@ export const outreachModule = {
                 UI.showToast(data.error || 'Direct dispatch failed.', 'error');
             }
         } catch (error) {
-            UI.showToast('SMTP Direct Send failed: ' + error.message, 'error');
+            if (error.message && (error.message.includes('BadCredentials') || error.message.includes('Username and Password not accepted'))) {
+                UI.showToast('❌ SMTP Authentication Failed! Google requires an App Password (16-char code from Google Account Security), not your regular Gmail password.', 'error');
+            } else {
+                UI.showToast('SMTP Direct Send failed: ' + error.message, 'error');
+            }
         } finally {
             UI.hideLoading();
         }
@@ -999,6 +1003,9 @@ export const outreachModule = {
         if (UI.el.campaignStatEmails) UI.el.campaignStatEmails.textContent = emails;
         if (UI.el.campaignStatDrafts) UI.el.campaignStatDrafts.textContent = drafts;
         if (UI.el.campaignStatSent) UI.el.campaignStatSent.textContent = sent;
+
+        const countBadge = document.getElementById('campaignDirectoryCount');
+        if (countBadge) countBadge.textContent = `${total} lead${total !== 1 ? 's' : ''}`;
     },
 
     renderCampaignList() {
@@ -1301,7 +1308,7 @@ export const outreachModule = {
         const email = localStorage.getItem('smtp_email');
         const passwordRaw = localStorage.getItem('smtp_password');
         const password = passwordRaw ? await CryptoHelper.decrypt(passwordRaw, AppState.encryptionKey) : '';
-        const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
+        const useSSL = localStorage.getItem('smtp_use_ssl') !== 'false';
 
         if (!host || !port || !email || !password) {
             UI.showToast('Direct dispatch SMTP settings NOT configured! Open settings and set them first.', 'error');
@@ -1350,7 +1357,11 @@ export const outreachModule = {
             }
         } catch (error) {
             lead.campaign_send_status = 'failed';
-            UI.showToast('Outreach failed: ' + error.message, 'error');
+            if (error.message && (error.message.includes('BadCredentials') || error.message.includes('Username and Password not accepted'))) {
+                UI.showToast('❌ SMTP Auth Failed! Google requires an App Password, not your regular password. Go to Settings → SMTP.', 'error');
+            } else {
+                UI.showToast('Outreach failed: ' + error.message, 'error');
+            }
         } finally {
             UI.hideLoading();
             this.renderCampaignList();
@@ -1377,7 +1388,12 @@ export const outreachModule = {
             return;
         }
 
-        if (!confirm(`Kya aap sabhi ${missingLeads.length} leads ke websites se email automatic deep extract karna chahte hain?\n\nIs process mein website crawling ke sath fallback web searches run honge, jisse aapke SerpApi search credits consume ho sakte hain.`)) {
+        const confirmed = await UI.showConfirm(
+            "Bulk Email Scan",
+            `Kya aap sabhi ${missingLeads.length} leads ke websites se email automatic deep extract karna chahte hain?\n\nIs process mein website crawling ke sath fallback web searches run honge, jisse aapke SerpApi search credits consume ho sakte hain.`,
+            "🔍"
+        );
+        if (!confirmed) {
             return;
         }
 
@@ -1458,7 +1474,12 @@ export const outreachModule = {
             return;
         }
 
-        if (!confirm(`Kya aap Gemini AI ke through sabhi ${eligibleLeads.length} leads ke liye automatically 100% unique personalized pitches write karna chahte hain?`)) {
+        const confirmed = await UI.showConfirm(
+            "Bulk AI Drafting",
+            `Kya aap Gemini AI ke through sabhi ${eligibleLeads.length} leads ke liye automatically 100% unique personalized pitches write karna chahte hain?`,
+            "✨"
+        );
+        if (!confirmed) {
             return;
         }
 
@@ -1564,7 +1585,7 @@ export const outreachModule = {
         const email = localStorage.getItem('smtp_email');
         const passwordRaw = localStorage.getItem('smtp_password');
         const password = passwordRaw ? await CryptoHelper.decrypt(passwordRaw, AppState.encryptionKey) : '';
-        const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
+        const useSSL = localStorage.getItem('smtp_use_ssl') !== 'false';
 
         if (!host || !port || !email || !password) {
             UI.showToast('Please configure your Direct SMTP Settings first!', 'error');
@@ -1580,7 +1601,12 @@ export const outreachModule = {
             return;
         }
 
-        if (!confirm(`🚀 WARNING (Mass Dispatching Campaign!)\n\nKya aap sabhi ${sendableLeads.length} leads ke liye instant SMTP direct cold emails launch karna chahte hain?`)) {
+        const confirmed = await UI.showConfirm(
+            "Mass Dispatch Campaign",
+            `🚀 WARNING (Mass Dispatching Campaign!)\n\nKya aap sabhi ${sendableLeads.length} leads ke liye instant SMTP direct cold emails launch karna chahte hain?`,
+            "🚀"
+        );
+        if (!confirmed) {
             return;
         }
 
@@ -1638,6 +1664,14 @@ export const outreachModule = {
                 }
             } catch (err) {
                 lead.campaign_send_status = 'failed';
+                // If it's a credentials error, break early instead of retrying all
+                if (err.message && (err.message.includes('BadCredentials') || err.message.includes('Username and Password not accepted'))) {
+                    UI.showToast('❌ SMTP Auth Failed! Google requires an App Password. Fix in Settings → SMTP, then retry.', 'error');
+                    for (const remaining of sendableLeads.slice(processed + 1)) {
+                        remaining.campaign_send_status = 'failed';
+                    }
+                    break;
+                }
             }
 
             processed++;
@@ -1683,7 +1717,7 @@ export const outreachModule = {
         const email = localStorage.getItem('smtp_email');
         const passwordRaw = localStorage.getItem('smtp_password');
         const password = passwordRaw ? await CryptoHelper.decrypt(passwordRaw, AppState.encryptionKey) : '';
-        const useSSL = localStorage.getItem('smtp_use_ssl') === 'true';
+        const useSSL = localStorage.getItem('smtp_use_ssl') !== 'false';
 
         if (!host || !port || !email || !password) {
             UI.showToast('Please configure your SMTP settings first!', 'error');
@@ -1691,7 +1725,12 @@ export const outreachModule = {
             return;
         }
 
-        if (!confirm(`🤖 Autopilot Mode (Scan -> Draft -> Send)\n\nKya aap sabhi ${leads.length} leads ke liye automatic campaign run karna chahte hain?\n\nIs process mein system auto-scan, auto-draft (Gemini), aur auto-send (SMTP) sequential loops mein run execute karega.`)) {
+        const confirmed = await UI.showConfirm(
+            "Autopilot Campaign",
+            `🤖 Autopilot Mode (Scan -> Draft -> Send)\n\nKya aap sabhi ${leads.length} leads ke liye automatic campaign run karna chahte hain?\n\nIs process mein system auto-scan, auto-draft (Gemini), aur auto-send (SMTP) sequential loops mein run execute karega.`,
+            "🤖"
+        );
+        if (!confirmed) {
             return;
         }
 
@@ -1822,6 +1861,7 @@ export const outreachModule = {
             // ==================== PHASE 3: BULK SMTP DISPATCH ====================
             const sendableLeads = leads.filter(l => l.campaign_draft_status === 'ready' && l.campaign_send_status !== 'sent');
             let successfullySent = 0;
+            let lastSendError = '';
             if (sendableLeads.length > 0) {
                 let processedSend = 0;
                 if (bar) bar.style.width = '0%';
@@ -1866,9 +1906,20 @@ export const outreachModule = {
                             }
                         } else {
                             lead.campaign_send_status = 'failed';
+                            lastSendError = data.error || 'Unknown send error';
                         }
                     } catch (err) {
                         lead.campaign_send_status = 'failed';
+                        lastSendError = err.message || 'Send failed';
+                        // If it's a credentials error, show immediately and stop wasting time
+                        if (err.message && (err.message.includes('BadCredentials') || err.message.includes('Username and Password not accepted'))) {
+                            UI.showToast('❌ SMTP Authentication Failed! Google requires an App Password, not your regular password. Go to Settings → SMTP to fix.', 'error');
+                            // Mark all remaining as failed
+                            for (const remaining of sendableLeads.slice(processedSend + 1)) {
+                                remaining.campaign_send_status = 'failed';
+                            }
+                            break;
+                        }
                     }
 
                     processedSend++;
@@ -1884,7 +1935,16 @@ export const outreachModule = {
             }
 
             UI.renderLeads(AppState.leads);
-            UI.showToast(`🤖 Autopilot Campaign finished! Successfully sent: ${successfullySent} cold emails.`, 'success');
+            const failedSend = sendableLeads.filter(l => l.campaign_send_status === 'failed').length;
+            if (successfullySent > 0) {
+                UI.showToast(`🤖 Autopilot Campaign finished! Successfully sent: ${successfullySent} cold emails.${failedSend > 0 ? ` (${failedSend} failed)` : ''}`, failedSend > 0 ? 'warning' : 'success');
+            } else if (sendableLeads.length > 0) {
+                UI.showToast(`❌ Autopilot Campaign: All ${sendableLeads.length} sends failed! ${lastSendError.includes('BadCredentials') ? 'Use a Google App Password instead of your regular password.' : lastSendError}`, 'error');
+            } else if (leads.filter(l => l.email).length === 0) {
+                UI.showToast('🤖 Autopilot: No emails found for any leads. Email scanning did not return results.', 'warning');
+            } else {
+                UI.showToast(`🤖 Autopilot Campaign finished! No emails to send (drafts may not be ready).`, 'warning');
+            }
         } catch (globalErr) {
             UI.showToast(`Autopilot failed: ${globalErr.message}`, 'error');
         } finally {

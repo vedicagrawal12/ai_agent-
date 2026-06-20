@@ -2209,9 +2209,10 @@ code {
 
 /* Campaign Center Modal Responsiveness */
 .campaign-modal {
-    max-width: 95vw;
-    width: 1200px;
-    height: 85vh;
+    max-width: 96vw;
+    width: 1520px;
+    height: 92vh;
+    max-height: 92vh;
     display: flex;
     flex-direction: column;
     padding: 0 !important;
@@ -2219,9 +2220,20 @@ code {
 }
 
 .campaign-modal .modal-header {
-    padding: 16px 24px;
+    padding: 14px 24px;
     margin-bottom: 0;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.campaign-modal .modal-body.campaign-modal-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
 }
 
 .campaign-split-pane {
@@ -2233,7 +2245,7 @@ code {
 }
 
 .campaign-left-pane {
-    flex: 1.2;
+    flex: 1.8;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--border-color);
@@ -2241,10 +2253,11 @@ code {
     background: rgba(0, 0, 0, 0.1);
     overflow: hidden;
     height: 100%;
+    min-width: 420px;
 }
 
 .campaign-right-pane {
-    flex: 1;
+    flex: 1.5;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--border-color);
@@ -2252,6 +2265,7 @@ code {
     background: rgba(0, 0, 0, 0.15);
     overflow: hidden;
     height: 100%;
+    min-width: 380px;
 }
 
 .campaign-outbox-workspace {
@@ -2279,9 +2293,9 @@ code {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 14px;
     color: var(--text-secondary);
-    padding: 32px;
+    padding: 48px 40px;
     text-align: center;
 }
 

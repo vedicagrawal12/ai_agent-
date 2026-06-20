@@ -224,7 +224,12 @@ export const settingsModule = {
     },
 
     async clearDatabase() {
-        if (!confirm("Kya aap sach mein database clean karna chahte hain?\n\n(Isse sirf uncontacted leads aur search history clear hogi, aapka contacted leads record safe rahega.)")) {
+        const confirmed = await UI.showConfirm(
+            "Clean Database",
+            "Kya aap sach mein database clean karna chahte hain?\n\n(Isse sirf uncontacted leads aur search history clear hogi, aapka contacted leads record safe rahega.)",
+            "🧹"
+        );
+        if (!confirmed) {
             return;
         }
 

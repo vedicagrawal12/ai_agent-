@@ -441,7 +441,12 @@ export const leadsModule = {
             return;
         }
 
-        if (!confirm(`Kya aap sabhi ${leadsToScan.length} leads ke socials scan karna chahte hain?\n\nIs bulk operation se aapke  search credits consume honge (har lead ke liye 1 search credit).`)) {
+        const confirmed = await UI.showConfirm(
+            "Bulk Social Scan",
+            `Kya aap sabhi ${leadsToScan.length} leads ke socials scan karna chahte hain?\n\nIs bulk operation se aapke search credits consume honge (har lead ke liye 1 search credit).`,
+            "🔍"
+        );
+        if (!confirmed) {
             UI.el.bulkScanSocialsBtn.disabled = false;
             UI.el.bulkProgressBanner.style.display = 'none';
             return;

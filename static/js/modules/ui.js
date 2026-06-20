@@ -685,6 +685,51 @@ export const UI = {
         }, 6000);
     },
 
+    showConfirm(title, message, icon = '❓') {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('customConfirmModal');
+            const titleEl = document.getElementById('confirmModalTitle');
+            const msgEl = document.getElementById('confirmModalMessage');
+            const iconEl = document.getElementById('confirmModalIcon');
+            const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+            const cancelBtn = document.getElementById('confirmModalCancelBtn');
+
+            if (!modal) {
+                resolve(confirm(message));
+                return;
+            }
+
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+            iconEl.textContent = icon;
+
+            modal.classList.add('active');
+
+            const cleanup = (value) => {
+                modal.classList.remove('active');
+                confirmBtn.removeEventListener('click', onConfirm);
+                cancelBtn.removeEventListener('click', onCancel);
+                modal.removeEventListener('click', onOverlayClick);
+                document.removeEventListener('keydown', onEscKey);
+                resolve(value);
+            };
+
+            const onConfirm = () => cleanup(true);
+            const onCancel = () => cleanup(false);
+            const onOverlayClick = (e) => {
+                if (e.target === modal) cleanup(false);
+            };
+            const onEscKey = (e) => {
+                if (e.key === 'Escape') cleanup(false);
+            };
+
+            confirmBtn.addEventListener('click', onConfirm);
+            cancelBtn.addEventListener('click', onCancel);
+            modal.addEventListener('click', onOverlayClick);
+            document.addEventListener('keydown', onEscKey);
+        });
+    },
+
     openModal(modalId) {
         document.getElementById(modalId).classList.add('active');
     },

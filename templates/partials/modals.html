@@ -110,18 +110,26 @@
 
                 <div class="settings-group">
                     <div class="settings-group-title">📧 Direct SMTP Mail Settings (Stateless & Secure)</div>
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">
                         Configure SMTP to dispatch high-converting cold emails directly from this dashboard. Stored securely on your browser only.
                     </p>
+                    <div style="background: rgba(255, 170, 0, 0.08); border: 1px solid rgba(255, 170, 0, 0.25); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.78rem; line-height: 1.55;">
+                        <span style="font-weight: 700; color: #ffaa00;">⚠️ Gmail Users — Important:</span>
+                        <span style="color: var(--text-secondary);">
+                            Regular passwords <strong>will NOT work</strong>. You must use a <strong>Google App Password</strong> (16-character code).
+                            <br>→ Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" style="color: var(--accent-cyan); text-decoration: underline; font-weight: 600;">myaccount.google.com/apppasswords</a>, generate one for "Mail", and paste it below.
+                            <br>→ <span style="color: var(--text-muted);">Requires 2-Step Verification to be enabled on your Google account.</span>
+                        </span>
+                    </div>
                     <div class="settings-flex-col">
                         <div class="settings-input-group">
                             <div style="flex: 2;">
                                 <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="smtpHostInput">SMTP Host</label>
-                                <input type="text" id="smtpHostInput" class="form-input" placeholder="e.g. smtp.gmail.com" style="width: 100%;">
+                                <input type="text" id="smtpHostInput" class="form-input" placeholder="e.g. smtp.gmail.com" value="smtp.gmail.com" style="width: 100%;">
                             </div>
                             <div style="flex: 1;">
                                 <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="smtpPortInput">Port</label>
-                                <input type="number" id="smtpPortInput" class="form-input" placeholder="e.g. 465" style="width: 100%;">
+                                <input type="number" id="smtpPortInput" class="form-input" placeholder="e.g. 465" value="465" style="width: 100%;">
                             </div>
                         </div>
                         <div class="settings-input-group">
@@ -181,11 +189,11 @@
                         <div class="settings-input-group">
                             <div style="flex: 2;">
                                 <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="imapHostInput">IMAP Host</label>
-                                <input type="text" id="imapHostInput" class="form-input" placeholder="e.g. imap.gmail.com" style="width: 100%;">
+                                <input type="text" id="imapHostInput" class="form-input" placeholder="e.g. imap.gmail.com" value="imap.gmail.com" style="width: 100%;">
                             </div>
                             <div style="flex: 1;">
                                 <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="imapPortInput">Port</label>
-                                <input type="number" id="imapPortInput" class="form-input" placeholder="e.g. 993" style="width: 100%;">
+                                <input type="number" id="imapPortInput" class="form-input" placeholder="e.g. 993" value="993" style="width: 100%;">
                             </div>
                         </div>
                         <div class="settings-input-group">
@@ -273,10 +281,10 @@
         </div>
         
         <!-- Modal Body (Flex Column) -->
-        <div class="modal-body campaign-modal-body" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 16px; padding: 16px;">
+        <div class="modal-body campaign-modal-body" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 14px;">
             
             <!-- Campaign Stats Bar & Bulk Action Buttons -->
-            <div class="campaign-top-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0;">
+            <div class="campaign-top-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0;">
                 <!-- Left: Stats -->
                 <div style="display: flex; gap: 16px; flex-wrap: wrap;">
                     <div class="campaign-stat"><span style="color: var(--text-secondary); font-size: 0.8rem;">Campaign Leads:</span> <strong id="campaignStatLeads" style="color: var(--accent-cyan);">0</strong></div>
@@ -295,7 +303,7 @@
             </div>
             
             <!-- Bulk Pitch Personalization Settings -->
-            <div class="campaign-config-bar" style="display: flex; gap: 16px; flex-wrap: wrap; padding: 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0; align-items: flex-end; width: 100%;">
+            <div class="campaign-config-bar" style="display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0; align-items: flex-end; width: 100%;">
                 <!-- Autopilot Dynamic Targeting Checkbox -->
                 <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 8px; min-width: 210px;">
                     <input type="checkbox" id="campaignAutopilotTargeting" style="cursor: pointer; width: 16px; height: 16px; margin: 0;">
@@ -363,9 +371,15 @@
                 
                 <!-- Left Pane: Eligible Leads Table Directory -->
                 <div class="campaign-left-pane">
-                    <div class="campaign-pane-header" style="padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); font-weight: 600; font-size: 0.85rem; color: var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;">
-                        <span>📇 Campaign Directory</span>
-                        <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-secondary);">Leads with Websites</span>
+                    <div class="campaign-pane-header" style="padding: 16px 20px; background: linear-gradient(135deg, rgba(0, 240, 255, 0.06) 0%, rgba(108, 92, 231, 0.04) 100%); border-bottom: 2px solid rgba(0, 240, 255, 0.15); font-weight: 700; font-size: 0.95rem; color: var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.3rem;">📇</span>
+                            <div>
+                                <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); letter-spacing: 0.02em;">Campaign Directory</div>
+                                <div style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted); margin-top: 2px;">Leads with Websites &amp; Contact Info</div>
+                            </div>
+                        </div>
+                        <span id="campaignDirectoryCount" style="font-size: 0.72rem; font-weight: 600; color: var(--accent-cyan); background: rgba(0, 240, 255, 0.08); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0, 240, 255, 0.15);"></span>
                     </div>
                     <div id="campaignTableBody" class="campaign-leads-list">
                         <!-- Populated dynamically with lead cards -->
@@ -376,9 +390,22 @@
                 <div class="campaign-right-pane" id="campaignOutboxReviewPanel">
                     <!-- Empty state when no lead selected -->
                     <div id="campaignOutboxEmptyState" class="campaign-outbox-empty-state" style="display: flex;">
-                        <span style="font-size: 2.5rem;">📬</span>
-                        <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Select a lead to review</div>
-                        <p style="font-size: 0.8rem; line-height: 1.4; margin: 0; max-width: 250px;">Click on any row in the directory list to load details, edit subject/body, and check the live preview card.</p>
+                        <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(108, 92, 231, 0.08)); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 240, 255, 0.12); box-shadow: 0 0 30px rgba(0, 240, 255, 0.06);">
+                            <span style="font-size: 2.5rem;">📬</span>
+                        </div>
+                        <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary); letter-spacing: 0.01em; margin-top: 4px;">Select a lead to review</div>
+                        <p style="font-size: 0.82rem; line-height: 1.55; margin: 0; max-width: 320px; color: var(--text-muted);">Click on any row in the directory list to load the lead details, edit subject & body, and preview the email before sending.</p>
+                        <div style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; justify-content: center;">
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                <span style="color: var(--accent-cyan); font-weight: 700;">1</span> Select Lead
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                <span style="color: var(--accent-violet); font-weight: 700;">2</span> Draft AI Email
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                <span style="color: var(--accent-green); font-weight: 700;">3</span> Send SMTP
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Active Review Editor Workspace -->
@@ -549,6 +576,19 @@
             <div style="background: white; border-radius: var(--radius-sm); border: 1px solid var(--border-color); height: 400px; overflow: hidden; position: relative;">
                 <iframe id="sentEmailIFrame" sandbox="" style="width: 100%; height: 100%; border: none; background: white;"></iframe>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======== Custom Confirm Modal ======== -->
+<div id="customConfirmModal" class="modal-overlay" style="z-index: 20000;">
+    <div class="modal" style="max-width: 450px; text-align: center; padding: 32px 24px; border: 1px solid var(--border-color); background: var(--bg-secondary);">
+        <span id="confirmModalIcon" style="font-size: 3.5rem; display: block; margin-bottom: 16px;">❓</span>
+        <h3 id="confirmModalTitle" style="font-size: 1.3rem; font-weight: 800; color: var(--text-primary); margin-bottom: 12px; font-family: var(--font-display);">Are you sure?</h3>
+        <p id="confirmModalMessage" style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 24px; white-space: pre-line; text-align: center;"></p>
+        <div style="display: flex; gap: 12px; justify-content: center; width: 100%;">
+            <button id="confirmModalCancelBtn" class="btn btn-ghost" style="padding: 10px 24px; min-width: 100px; cursor: pointer;">Cancel</button>
+            <button id="confirmModalConfirmBtn" class="btn btn-primary" style="padding: 10px 32px; min-width: 120px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-glow-cyan);">Confirm</button>
         </div>
     </div>
 </div>

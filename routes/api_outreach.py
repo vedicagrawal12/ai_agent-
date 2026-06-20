@@ -388,6 +388,12 @@ def send_smtp_email():
             "success": True,
             "message": f"Email successfully dispatched directly to {to_email}!"
         })
+    except smtplib.SMTPAuthenticationError as auth_err:
+        logger.error(f"SMTP Authentication failed: {auth_err}")
+        error_str = str(auth_err)
+        if 'BadCredentials' in error_str or 'Username and Password not accepted' in error_str:
+            return jsonify({"error": "SMTP Authentication Failed (BadCredentials): Google requires an App Password, not your regular Gmail password. Generate one at myaccount.google.com/apppasswords"}), 500
+        return jsonify({"error": f"SMTP Authentication failed: {error_str}"}), 500
     except Exception as e:
         logger.error(f"SMTP Delivery failed: {e}")
         return jsonify({"error": f"SMTP Delivery failed: {str(e)}"}), 500
