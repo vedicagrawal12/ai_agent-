@@ -11,6 +11,7 @@ from extensions import db, limiter
 from utils.whatsapp import WhatsAppMessenger
 from utils.ai_writer import AIOutreachWriter
 from collectors.base_collector import Lead
+from models import LeadModel
 
 logger = logging.getLogger(__name__)
 outreach_bp = Blueprint('api_outreach', __name__)
@@ -61,6 +62,17 @@ def generate_whatsapp_link():
             
         try:
             db.log_message(lead_id, template_key, message, user_id=g.user['id'])
+            db.update_whatsapp_sent(lead_id, True, user_id=g.user['id'])
+            
+            # If lead has Instagram or Facebook, set Day 5 social task to PENDING
+            lead_info = db.get_lead_by_id(lead_id, user_id=g.user['id'])
+            if lead_info and (lead_info.get("instagram") or lead_info.get("facebook")):
+                # Connect raw raw session to alter status
+                session = db.session
+                lead_obj = session.query(LeadModel).filter_by(id=lead_id, user_id=g.user['id']).first()
+                if lead_obj and lead_obj.social_task_status == 'NONE':
+                    lead_obj.social_task_status = 'PENDING'
+                    session.commit()
         except Exception as log_err:
             logger.error(f"Error logging WhatsApp message to DB: {log_err}")
             
@@ -108,6 +120,7 @@ def generate_ai_pitch():
         mockup_link = ""
         audit_link = ""
         audit_data = None
+        competitor_data = None
         if lead_id:
             mockup_link = f"{base_host}/preview/{lead_id}?sender_name={sender_name}&sender_brand={sender_brand}"
             lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
@@ -121,6 +134,7 @@ def generate_ai_pitch():
                         audit_link = f"{base_host}/audit/{lead_id}"
                     except Exception as e:
                         logger.error(f"Error parsing audit data: {e}")
+            competitor_data = db.get_competitors_benchmark(lead_id, user_id=g.user['id'])
   
         pitch = AIOutreachWriter.generate_pitch(
             lead_data=lead_data,
@@ -137,7 +151,8 @@ def generate_ai_pitch():
             min_words=min_words,
             language=language,
             audit_link=audit_link,
-            audit_data=audit_data
+            audit_data=audit_data,
+            competitor_data=competitor_data
         )
         
         lead_id = lead_data.get("id")
@@ -185,6 +200,7 @@ def generate_email_ai_pitch():
         mockup_link = ""
         audit_link = ""
         audit_data = None
+        competitor_data = None
         if lead_id:
             mockup_link = f"{base_host}/preview/{lead_id}?sender_name={sender_name}&sender_brand={sender_brand}"
             lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
@@ -198,6 +214,7 @@ def generate_email_ai_pitch():
                         audit_link = f"{base_host}/audit/{lead_id}"
                     except Exception as e:
                         logger.error(f"Error parsing audit data: {e}")
+            competitor_data = db.get_competitors_benchmark(lead_id, user_id=g.user['id'])
             
         # If autopilot is active, dynamically determine the best service
         autopilot = data.get("autopilot", False)
@@ -221,7 +238,8 @@ def generate_email_ai_pitch():
             min_words=min_words,
             language=language,
             audit_link=audit_link,
-            audit_data=audit_data
+            audit_data=audit_data,
+            competitor_data=competitor_data
         )
         
         subject_map = {
@@ -383,6 +401,13 @@ def send_smtp_email():
         if lead_id:
             # Enforce owner scope for stage update if user context is available
             db.update_lead_pipeline_stage(lead_id, "PITCHED", user_id=user_id)
+            lead_info = db.get_lead_by_id(lead_id, user_id=user_id)
+            if lead_info and (lead_info.get("instagram") or lead_info.get("facebook")):
+                session = db.session
+                lead_obj = session.query(LeadModel).filter_by(id=lead_id, user_id=user_id).first()
+                if lead_obj and lead_obj.social_task_status == 'NONE':
+                    lead_obj.social_task_status = 'PENDING'
+                    session.commit()
             
         return jsonify({
             "success": True,
@@ -394,6 +419,21 @@ def send_smtp_email():
         if 'BadCredentials' in error_str or 'Username and Password not accepted' in error_str:
             return jsonify({"error": "SMTP Authentication Failed (BadCredentials): Google requires an App Password, not your regular Gmail password. Generate one at myaccount.google.com/apppasswords"}), 500
         return jsonify({"error": f"SMTP Authentication failed: {error_str}"}), 500
+    except smtplib.SMTPResponseException as smtp_err:
+        logger.error(f"SMTP Server error {smtp_err.smtp_code}: {smtp_err.smtp_error}")
+        smtp_msg = smtp_err.smtp_error
+        if isinstance(smtp_msg, bytes):
+            smtp_msg = smtp_msg.decode("utf-8", errors="ignore")
+        
+        if smtp_err.smtp_code == 550 and ("limit exceeded" in smtp_msg.lower() or "5.4.5" in smtp_msg):
+            return jsonify({
+                "error": "SMTP Daily Sending Limit Exceeded. Google restricts daily outbound SMTP messages for free or new accounts.\n\n"
+                         "To fix this:\n"
+                         "1. Wait 24 hours for Google to reset your daily quota.\n"
+                         "2. Configure a different email provider (like SendGrid, Resend, or Brevo) with higher daily sending limits under Settings.\n"
+                         "3. Upgrade your Gmail account to a paid Google Workspace account."
+            }), 500
+        return jsonify({"error": f"SMTP Delivery failed: ({smtp_err.smtp_code}) {smtp_msg}"}), 500
     except Exception as e:
         logger.error(f"SMTP Delivery failed: {e}")
         return jsonify({"error": f"SMTP Delivery failed: {str(e)}"}), 500
@@ -567,4 +607,71 @@ def get_recent_delivered_emails():
         return jsonify({"success": True, "logs": logs})
     except Exception as e:
         logger.error(f"Error fetching recent logs: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@outreach_bp.route("/outreach/omnichannel-stats", methods=["GET"])
+def get_omnichannel_stats():
+    """Fetch aggregated campaign stats for the omnichannel sequencing dashboard."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        stats = db.get_omnichannel_campaign_stats(user_id)
+        return jsonify({"success": True, "stats": stats})
+    except Exception as e:
+        logger.error(f"Error fetching omnichannel stats: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@outreach_bp.route("/outreach/omnichannel-leads", methods=["GET"])
+def get_omnichannel_leads():
+    """Fetch active leads in campaign sequences for the omnichannel tracking pipeline."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        leads = db.get_omnichannel_leads(user_id)
+        return jsonify({"success": True, "leads": leads})
+    except Exception as e:
+        logger.error(f"Error fetching omnichannel leads: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@outreach_bp.route("/outreach/complete-social-task/<int:lead_id>", methods=["POST"])
+def complete_social_task(lead_id):
+    """Mark a Day 5 manual social connection/DM task as completed."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        success = db.complete_social_task(lead_id, user_id)
+        if success:
+            return jsonify({"success": True, "message": "Social connection task marked completed."})
+        return jsonify({"error": "Failed to update social task status"}), 500
+    except Exception as e:
+        logger.error(f"Error completing social task for lead {lead_id}: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@outreach_bp.route("/outreach/leads/<int:lead_id>/whatsapp-status", methods=["POST"])
+def update_whatsapp_status(lead_id):
+    """Manually update or override WhatsApp sent tracking status."""
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        data = request.get_json() or {}
+        sent = data.get("sent", False)
+        success = db.update_whatsapp_sent(lead_id, sent, user_id)
+        if success:
+            # If WhatsApp is sent, set Day 5 social task to PENDING if they have IG/FB
+            lead_info = db.get_lead_by_id(lead_id, user_id=user_id)
+            if sent and lead_info and (lead_info.get("instagram") or lead_info.get("facebook")):
+                session = db.session
+                lead_obj = session.query(LeadModel).filter_by(id=lead_id, user_id=user_id).first()
+                if lead_obj and lead_obj.social_task_status == 'NONE':
+                    lead_obj.social_task_status = 'PENDING'
+                    session.commit()
+            return jsonify({"success": True, "message": f"WhatsApp sent status updated to {sent}."})
+        return jsonify({"error": "Lead not found or failed to update"}), 500
+    except Exception as e:
+        logger.error(f"Error updating WhatsApp status for lead {lead_id}: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500

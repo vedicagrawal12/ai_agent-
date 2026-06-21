@@ -57,3 +57,8 @@ Desktop.ini
 scratch/
 *.html
 !templates/**/*.html
+
+# Celery Beat
+celerybeat-schedule*
+celerybeat.pid
+

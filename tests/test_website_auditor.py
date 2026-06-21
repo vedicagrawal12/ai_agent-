@@ -189,3 +189,54 @@ def test_outreach_ai_generation_with_audit(auth_client, db):
         assert "/audit/" in prompt_sent
         assert "Mobile viewport missing" in prompt_sent
         assert "SSL Missing" in prompt_sent
+
+
+def test_outreach_ai_generation_micro_limit(auth_client, db):
+    """Verify AI pitch writer constructs a simplified brief prompt when min_words <= 100."""
+    user = db.get_user_by_username("testuser")
+    
+    audit_payload = {
+        "overall_score": 42,
+        "scores": {"speed": 30, "seo": 50, "mobile": 0, "ssl": 0, "alt": 0},
+        "recommendations": [
+            {"type": "error", "category": "Security", "title": "SSL Missing", "description": "Uses HTTP instead of HTTPS"}
+        ]
+    }
+    
+    # Save a lead
+    lead = Lead(name="Slow Gym", place_id="place_slow", website="https://slowgym.com", city="Bhopal")
+    db.save_leads([lead], user["id"])
+    saved_lead = db.get_all_leads(user_id=user["id"])[0]
+    
+    db.update_lead_audit_data(saved_lead["id"], json.dumps(audit_payload), user_id=user["id"])
+    
+    # Call Generate AI Pitch endpoint with min_words=50
+    with patch("utils.ai_writer.AIOutreachWriter._call_gemini_api") as mock_gemini:
+        mock_gemini.return_value = "Mocked concise pitch."
+        
+        resp = auth_client.post("/api/outreach/generate-ai", json={
+            "lead": {"id": saved_lead["id"], "name": "Slow Gym", "city": "Bhopal", "category": "Gym"},
+            "tone": "elite",
+            "length": "detailed",
+            "service": "web_design",
+            "min_words": 50
+        }, headers={"X-Gemini-API-Key": "AIzaFakeKey123"})
+        
+        assert resp.status_code == 200
+        assert resp.json["success"] is True
+        
+        args, kwargs = mock_gemini.call_args
+        prompt_sent = args[0]
+        
+        # Verify simplified audit directive is included
+        assert "WEBSITE SEO & PERFORMANCE AUDIT RESULTS" in prompt_sent
+        assert "Keep it extremely brief and direct due to strict word limit constraints" in prompt_sent
+        
+        # Verify detailed scores and recommendations are NOT in the prompt
+        assert "Category Scores:" not in prompt_sent
+        assert "SSL Missing" not in prompt_sent
+        
+        # Verify strict word limit constraint message is in length directives
+        assert "strictly be between 50 and 75 words total" in prompt_sent
+        assert "condense or skip detailed descriptions" in prompt_sent
+

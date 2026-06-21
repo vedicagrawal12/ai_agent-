@@ -163,6 +163,30 @@ class Database:
         try:
             Base.metadata.create_all(Database._engine)
             
+            # Add dynamic tracking columns to existing leads table if they don't exist
+            conn = self._get_connection()
+            try:
+                cursor = conn.cursor()
+                try:
+                    cursor.execute("ALTER TABLE leads ADD COLUMN whatsapp_sent BOOLEAN DEFAULT FALSE;")
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+                
+                try:
+                    cursor.execute("ALTER TABLE leads ADD COLUMN social_task_status VARCHAR(50) DEFAULT 'NONE';")
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+                
+                try:
+                    cursor.execute("ALTER TABLE leads ADD COLUMN social_task_completed_at TIMESTAMP;")
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+            finally:
+                self._release_connection(conn)
+
             # Ensure at least one admin exists (equivalent to old seed query)
             session = self.session
             has_admin = session.query(UserModel).filter_by(is_admin=True).first()
@@ -430,6 +454,158 @@ class Database:
             session.rollback()
             return 0
 
+    def complete_social_task(self, lead_id: int, user_id: int) -> bool:
+        """Mark a Day 5 social connection/DM task as completed."""
+        session = self.session
+        try:
+            lead = session.query(LeadModel).filter_by(id=lead_id, user_id=user_id).first()
+            if lead:
+                lead.social_task_status = 'COMPLETED'
+                lead.social_task_completed_at = utcnow()
+                lead.updated_at = utcnow()
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            logging.error(f"[Database] Error completing social task for lead {lead_id}: {e}", exc_info=True)
+            session.rollback()
+            return False
+
+    def update_whatsapp_sent(self, lead_id: int, sent: bool, user_id: int) -> bool:
+        """Update the whatsapp_sent tracking status for a lead."""
+        session = self.session
+        try:
+            lead = session.query(LeadModel).filter_by(id=lead_id, user_id=user_id).first()
+            if lead:
+                lead.whatsapp_sent = sent
+                lead.updated_at = utcnow()
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            logging.error(f"[Database] Error updating WhatsApp status for lead {lead_id}: {e}", exc_info=True)
+            session.rollback()
+            return False
+
+    def get_omnichannel_leads(self, user_id: int) -> List[Dict]:
+        """Fetch all leads enrolled in outreach sequence with email/WhatsApp/social status."""
+        session = self.session
+        try:
+            leads = (session.query(LeadModel)
+                     .filter_by(user_id=user_id)
+                     .filter(LeadModel.priority != 'IGNORE')
+                     .order_by(LeadModel.created_at.desc())
+                     .all())
+            res = []
+            for l in leads:
+                d = to_dict(l)
+                logs = (session.query(MessageLogModel)
+                        .filter_by(lead_id=l.id, user_id=user_id)
+                        .order_by(MessageLogModel.sent_at.desc())
+                        .all())
+                
+                email_sent = False
+                email_opened = False
+                email_clicked = False
+                email_replied = False
+                
+                for log in logs:
+                    if log.template_used in ("cold_email", "drip_followup_1", "drip_followup_2"):
+                        email_sent = True
+                        if log.opened:
+                            email_opened = True
+                        if log.clicked:
+                            email_clicked = True
+                        if log.is_reply:
+                            email_replied = True
+                
+                d["email_sent"] = email_sent
+                d["email_opened"] = email_opened
+                d["email_clicked"] = email_clicked
+                d["email_replied"] = email_replied
+                
+                whatsapp_replied = False
+                for log in logs:
+                    if log.template_used in ("website_pitch", "digital_presence", "simple_intro", "custom"):
+                        if log.is_reply:
+                            whatsapp_replied = True
+                            
+                d["whatsapp_replied"] = whatsapp_replied
+                res.append(d)
+            return res
+        except Exception as e:
+            logging.error(f"[Database] Error fetching omnichannel leads: {e}", exc_info=True)
+            return []
+
+    def get_omnichannel_campaign_stats(self, user_id: int) -> Dict:
+        """Fetch aggregated campaign stats for omnichannel outreach sequence."""
+        session = self.session
+        try:
+            leads = (session.query(LeadModel)
+                     .filter_by(user_id=user_id)
+                     .filter(LeadModel.priority != 'IGNORE')
+                     .all())
+            
+            total_leads = len(leads)
+            emails_sent = 0
+            emails_opened = 0
+            emails_clicked = 0
+            emails_replied = 0
+            whatsapps_sent = sum(1 for l in leads if l.whatsapp_sent)
+            whatsapps_pending = 0
+            social_tasks_pending = sum(1 for l in leads if l.social_task_status == 'PENDING')
+            social_tasks_completed = sum(1 for l in leads if l.social_task_status == 'COMPLETED')
+            
+            for l in leads:
+                has_email = False
+                has_open = False
+                has_click = False
+                has_reply = False
+                
+                logs = (session.query(MessageLogModel)
+                        .filter_by(lead_id=l.id, user_id=user_id)
+                        .all())
+                
+                for log in logs:
+                    if log.template_used in ("cold_email", "drip_followup_1", "drip_followup_2"):
+                        has_email = True
+                        if log.opened:
+                            has_open = True
+                        if log.clicked:
+                            has_click = True
+                        if log.is_reply:
+                            has_reply = True
+                
+                if has_email:
+                    emails_sent += 1
+                if has_open:
+                    emails_opened += 1
+                if has_click:
+                    emails_clicked += 1
+                if has_reply:
+                    emails_replied += 1
+                
+                if has_email and not l.whatsapp_sent and l.pipeline_stage in ('PITCHED', 'NEW') and not has_reply:
+                    whatsapps_pending += 1
+            
+            return {
+                "total_leads": total_leads,
+                "emails_sent": emails_sent,
+                "emails_opened": emails_opened,
+                "emails_clicked": emails_clicked,
+                "emails_replied": emails_replied,
+                "whatsapps_sent": whatsapps_sent,
+                "whatsapps_pending": whatsapps_pending,
+                "social_tasks_pending": social_tasks_pending,
+                "social_tasks_completed": social_tasks_completed
+            }
+        except Exception as e:
+            logging.error(f"[Database] Error fetching omnichannel stats: {e}", exc_info=True)
+            return {
+                "total_leads": 0, "emails_sent": 0, "emails_opened": 0, "emails_clicked": 0, "emails_replied": 0,
+                "whatsapps_sent": 0, "whatsapps_pending": 0, "social_tasks_pending": 0, "social_tasks_completed": 0
+            }
+
     def get_stats(self, user_id: int = None) -> Dict:
         """Get dashboard statistics for a specific user."""
         if user_id is None:
@@ -635,6 +811,167 @@ class Database:
         except Exception as e:
             logging.error(f"Error fetching lead by ID {lead_id}: {e}", exc_info=True)
             return None
+
+    def get_competitors_benchmark(self, lead_id: int, user_id: int = None) -> Dict:
+        """Fetch/generate competitor comparison metrics matrix for a lead."""
+        session = self.session
+        try:
+            # 1. Get target lead
+            lead = session.query(LeadModel).filter_by(id=lead_id).first()
+            if not lead:
+                return {"lead": {}, "competitors": []}
+            
+            # Use the provided user_id, or fall back to the lead's owner
+            effective_user_id = user_id if user_id is not None else lead.user_id
+            
+            # Project lead fields directly to avoid returning datetime/metadata objects
+            lead_dict = {
+                "id": lead.id,
+                "name": lead.name,
+                "website": lead.website,
+                "rating": lead.rating,
+                "reviews": lead.reviews,
+                "category": lead.category,
+                "city": lead.city,
+                "phone": lead.phone,
+                "whatsapp_number": lead.whatsapp_number,
+                "email": lead.email,
+                "custom_pitch": lead.custom_pitch,
+                "is_broken_website": lead.is_broken_website
+            }
+            
+            # Parse audit data if present
+            lead_audit = {}
+            if lead.audit_data:
+                try:
+                    lead_audit = json.loads(lead.audit_data)
+                except Exception:
+                    pass
+            
+            # Extract lead's own audit scores
+            lead_dict['speed_score'] = lead_audit.get('scores', {}).get('speed', 0) if lead_audit else 0
+            lead_dict['seo_score'] = lead_audit.get('scores', {}).get('seo', 0) if lead_audit else 0
+            lead_dict['mobile_score'] = lead_audit.get('scores', {}).get('mobile', 0) if lead_audit else 0
+            lead_dict['ssl_score'] = lead_audit.get('scores', {}).get('ssl', 0) if lead_audit else 0
+            lead_dict['overall_score'] = lead_audit.get('overall_score', 0) if lead_audit else 0
+            
+            # 2. Get real database competitors
+            competitors = []
+            if lead.city and lead.category:
+                # Same user_id, same city, same category (case-insensitive)
+                db_comps = (session.query(LeadModel)
+                            .filter(LeadModel.user_id == effective_user_id)
+                            .filter(LeadModel.id != lead.id)
+                            .filter(func.lower(LeadModel.city) == func.lower(lead.city))
+                            .filter(func.lower(LeadModel.category) == func.lower(lead.category))
+                            .filter(LeadModel.priority != 'IGNORE')
+                            .limit(3)
+                            .all())
+                
+                for c in db_comps:
+                    c_audit = {}
+                    if c.audit_data:
+                        try:
+                            c_audit = json.loads(c.audit_data)
+                        except Exception:
+                            pass
+                    
+                    # Project competitor fields directly, excluding datetimes
+                    c_dict = {
+                        "id": c.id,
+                        "name": c.name,
+                        "website": c.website,
+                        "rating": c.rating,
+                        "reviews": c.reviews,
+                        "category": c.category,
+                        "city": c.city,
+                        "speed_score": c_audit.get('scores', {}).get('speed', 80) if c_audit else (80 if c.website else 0),
+                        "seo_score": c_audit.get('scores', {}).get('seo', 85) if c_audit else (85 if c.website else 0),
+                        "mobile_score": c_audit.get('scores', {}).get('mobile', 100) if c_audit else (100 if c.website else 0),
+                        "ssl_score": c_audit.get('scores', {}).get('ssl', 100) if c_audit else (100 if c.website else 0),
+                        "overall_score": c_audit.get('overall_score', 85) if c_audit else (85 if c.website else 0),
+                        "is_mock": False
+                    }
+                    competitors.append(c_dict)
+            
+            # 3. Fallback logic: generate mockup competitors if fewer than 2 exist
+            if len(competitors) < 2:
+                needed = 3 - len(competitors)
+                cat_lower = (lead.category or "").lower()
+                city_name = lead.city or "Local"
+                
+                niche_names = []
+                if any(k in cat_lower for k in ['gym', 'fitness', 'yoga', 'crossfit', 'workout', 'pilates']):
+                    niche_names = ["Pulse Fitness Center", "Iron Strength Gym", "Peak Performance Club"]
+                elif any(k in cat_lower for k in ['salon', 'spa', 'barber', 'beauty', 'hair']):
+                    niche_names = ["Glow & Style Lounge", "Enchante Beauty Salon", "Urban Salon & Spa"]
+                elif any(k in cat_lower for k in ['restaurant', 'cafe', 'hotel', 'bakery', 'food']):
+                    niche_names = ["The Daily Grind Cafe", "The Spice Table", f"Bistro {city_name}"]
+                elif any(k in cat_lower for k in ['dentist', 'dental', 'clinic', 'doctor', 'health']):
+                    niche_names = ["Apex Dental Care", "CareFirst Clinic", "Metro Health Centre"]
+                elif any(k in cat_lower for k in ['school', 'coaching', 'tutor', 'academy', 'education']):
+                    niche_names = ["Pinnacle Coaching Institute", "Elite Success Academy", "Alpha Tutoring"]
+                elif any(k in cat_lower for k in ['real estate', 'builder', 'interior', 'construction']):
+                    niche_names = ["Horizon Real Estate", "Prime Realty Group", "Urban Design Studio"]
+                else:
+                    niche_names = [f"Apex {lead.category or 'Business'} Studio", f"Premier {lead.category or 'Business'} Co.", f"Elite {lead.category or 'Business'} Partners"]
+                
+                import random
+                # Use a local RNG instance seeded with lead_id for stable, repeatable
+                # mock competitors — without corrupting the global random state.
+                rng = random.Random(lead_id)
+                
+                for i in range(needed):
+                    comp_name = niche_names[i % len(niche_names)]
+                    
+                    # Avoid duplicate name collision with target lead or other competitors
+                    attempt = 0
+                    suffixes = [" Elite", " Pro", " Premium", " Choice", " Group"]
+                    base_comp_name = comp_name
+                    while (
+                        (lead.name and comp_name.strip().lower() == lead.name.strip().lower()) or 
+                        any(c["name"].strip().lower() == comp_name.strip().lower() for c in competitors)
+                    ):
+                        suffix = suffixes[attempt % len(suffixes)]
+                        comp_name = f"{base_comp_name}{suffix}"
+                        attempt += 1
+                    
+                    lead_reviews = lead.reviews or 0
+                    comp_rating = round(rng.uniform(4.3, 4.8), 1)
+                    comp_reviews = int(lead_reviews * rng.uniform(1.2, 1.8)) + rng.randint(15, 50)
+                    
+                    comp_speed = rng.randint(85, 96)
+                    comp_seo = rng.randint(85, 95)
+                    comp_mobile = 100
+                    comp_ssl = 100
+                    comp_overall = int((comp_speed * 0.3) + (comp_seo * 0.3) + (comp_mobile * 0.2) + (comp_ssl * 0.1) + (100 * 0.1))
+                    
+                    competitors.append({
+                        "id": -1 - i,
+                        "name": comp_name,
+                        "website": f"https://{comp_name.lower().replace(' & ', '-').replace(' ', '')}.com",
+                        "phone": f"+91 98765 4321{i}",
+                        "rating": comp_rating,
+                        "reviews": comp_reviews,
+                        "category": lead.category,
+                        "city": lead.city,
+                        "speed_score": comp_speed,
+                        "seo_score": comp_seo,
+                        "mobile_score": comp_mobile,
+                        "ssl_score": comp_ssl,
+                        "overall_score": comp_overall,
+                        "is_mock": True
+                    })
+            
+            return {
+                "lead": lead_dict,
+                "competitors": competitors[:3]
+            }
+        except Exception as e:
+            logging.error(f"Error compiling competitors benchmark for lead {lead_id}: {e}", exc_info=True)
+            return {"lead": {}, "competitors": []}
+        finally:
+            self.remove_session()
 
     def update_lead_pitch(self, lead_id: int, custom_pitch: str, user_id: int = None) -> bool:
         """Update the custom AI generated pitch for a lead."""
@@ -1229,3 +1566,52 @@ class Database:
             logging.error(f"[Database] Error saving Drip configuration for user {user_id}: {e}", exc_info=True)
             session.rollback()
             return False
+
+    # ---- User Portfolio Accessors ----
+    def save_user_portfolio(self, user_id: int, portfolio_url: str, projects: list) -> bool:
+        """Save a user's scanned portfolio URL and projects list into system_settings."""
+        session = self.session
+        try:
+            # Save portfolio URL
+            url_setting = session.query(SystemSettingsModel).filter_by(key=f"portfolio_url_{user_id}").first()
+            if not url_setting:
+                url_setting = SystemSettingsModel(key=f"portfolio_url_{user_id}", value=portfolio_url)
+                session.add(url_setting)
+            else:
+                url_setting.value = portfolio_url
+            
+            # Save portfolio projects parsed JSON
+            projects_setting = session.query(SystemSettingsModel).filter_by(key=f"portfolio_projects_{user_id}").first()
+            projects_json = json.dumps(projects)
+            if not projects_setting:
+                projects_setting = SystemSettingsModel(key=f"portfolio_projects_{user_id}", value=projects_json)
+                session.add(projects_setting)
+            else:
+                projects_setting.value = projects_json
+                
+            session.commit()
+            return True
+        except Exception as e:
+            logging.error(f"[Database] Error saving portfolio for user {user_id}: {e}", exc_info=True)
+            session.rollback()
+            return False
+
+    def get_user_portfolio(self, user_id: int) -> dict:
+        """Retrieve a user's portfolio URL and scanned projects."""
+        session = self.session
+        try:
+            url_setting = session.query(SystemSettingsModel).filter_by(key=f"portfolio_url_{user_id}").first()
+            projects_setting = session.query(SystemSettingsModel).filter_by(key=f"portfolio_projects_{user_id}").first()
+            
+            url = url_setting.value if url_setting else ""
+            projects = []
+            if projects_setting and projects_setting.value:
+                try:
+                    projects = json.loads(projects_setting.value)
+                except Exception:
+                    pass
+            return {"portfolio_url": url, "projects": projects}
+        except Exception as e:
+            logging.error(f"[Database] Error getting portfolio for user {user_id}: {e}", exc_info=True)
+            return {"portfolio_url": "", "projects": []}
+

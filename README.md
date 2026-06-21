@@ -125,6 +125,25 @@ Iska dynamic web dashboard premium modern aesthetics (glassmorphism), high-perfo
      - **Engagement Ratios (Doughnut Chart):** Displays precise CTR, open-rate, and response percentage telemetry values.
      - **Dispatch Timeline (Line Chart):** Compiles daily email vs WhatsApp messaging volume counts over the last 14 days.
 
+4. **Omnichannel Outreach Sequencing Timeline:**
+   - Multi-step outreach sequence tracker in the dashboard tab view. It maps lead progression across three touchpoints: **Day 1: Cold Email**, **Day 3: WhatsApp Follow-up**, and **Day 5: Social Media DM Touchpoint** (Instagram/Facebook).
+   - Features dynamic progress glow colors (Pending action, Dispatched, Opened, Clicked, Replied, and Converted) and quick action buttons to dispatch manual emails/WhatsApp messages or mark Day 5 social DMs as completed.
+   - Enforces automatic queueing of Day 5 social touchpoint tasks to `PENDING` when WhatsApp or email are sent to leads with active social profiles.
+
+5. **Competitor Benchmarking & Contrast Engine (BUG-013 Avoidance):**
+   - Automatically crawls and compares competitor websites or compiles mock benchmarks using seed-based RNG logic.
+   - Evaluates speed, SEO, mobile responsiveness, and SSL security.
+   - Compares the lead's own performance metrics with local competitors to generate psychological urgency in Gemini AI outreach pitches.
+   - Name collision protection (BUG-013) automatically detects if a competitor's name matches the target lead and appends suffixes (e.g. " Elite", " Pro") to ensure distinct names.
+
+6. **Smart Portfolio Niche-Matching Engine:**
+   - Matches a lead's business category across 14 distinct verticals (Gyms, Clinics, Salons, Restaurants, Schools, Garages, Builders, Lawyers, Pets, Shops, Photographers, Plumbers, Travel, Hostels) against the user's scanned portfolio projects.
+   - Promotes the best-fit demo link as a featured recommendation on the public audit card.
+
+7. **SMTP Sending Safeguards & AI Post-Processing:**
+   - Detects Gmail 550 sending limit exceedances and shows a clear user guide to transition to dedicated email APIs (SendGrid, Brevo, Resend).
+   - Post-processes Gemini AI pitches to automatically replace placeholders (like `[insert link]`, `[mockup link]`) and generic paths with the actual, dynamic preview/audit link.
+
 ---
 
 ## 🔌 Tech Stack & Integrations
@@ -265,4 +284,9 @@ to start server :  .venv\Scripts\python app.py
 gemenai api key 
 AQ.Ab8RN6IWSCCmsA0eZ4i_i8_dNR_pLnGwbBrmv05GTmSHf95t0w
 ---
+
+
+
+
+sharma.raunakmt@gmail.com     pASS : fkmisjopsidmgoez
 *Developed with love for high-speed local business outreach, visual excellence, and secure B2B conversions.* 🎯

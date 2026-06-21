@@ -272,6 +272,35 @@ const App = {
             this.refineAIPitch();
         });
 
+        // AI Generate Social DM Button
+        UI.el.aiSocialGenerateBtn?.addEventListener('click', () => {
+            this.generateAISocialPitch();
+        });
+
+        // Refine Social Pitch Button
+        UI.el.refineSocialPitchBtn?.addEventListener('click', () => {
+            this.refineAISocialPitch();
+        });
+
+        // Custom Service selection toggles for Socials
+        UI.el.socialServiceSelect?.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                if (UI.el.socialCustomServiceContainer) UI.el.socialCustomServiceContainer.style.display = 'block';
+                if (UI.el.socialCustomServiceInput) UI.el.socialCustomServiceInput.focus();
+            } else {
+                if (UI.el.socialCustomServiceContainer) UI.el.socialCustomServiceContainer.style.display = 'none';
+            }
+        });
+
+        // Open Social DM Action Buttons
+        UI.el.openInstagramDmBtn?.addEventListener('click', () => {
+            this.openSocialDM('instagram');
+        });
+
+        UI.el.openFacebookDmBtn?.addEventListener('click', () => {
+            this.openSocialDM('facebook');
+        });
+
         // Custom Service selection toggles
         UI.el.pitchServiceSelect?.addEventListener('change', (e) => {
             if (e.target.value === 'custom') {
@@ -395,6 +424,10 @@ const App = {
             this.switchView('kanban');
         });
 
+        document.getElementById('omniViewBtn')?.addEventListener('click', () => {
+            this.switchView('omni');
+        });
+
         document.getElementById('analyticsViewBtn')?.addEventListener('click', () => {
             this.switchView('analytics');
         });
@@ -430,6 +463,11 @@ const App = {
         // Custom message input
         document.getElementById('customMessageInput')?.addEventListener('input', () => {
             this.updateMessagePreview();
+        });
+
+        // Custom social message input
+        document.getElementById('customSocialMessageInput')?.addEventListener('input', () => {
+            this.updateSocialMessagePreview();
         });
 
         // Send WhatsApp button

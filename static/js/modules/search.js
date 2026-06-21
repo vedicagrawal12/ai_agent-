@@ -212,14 +212,18 @@ export const searchModule = {
         
         const listBtn = document.getElementById('listViewBtn');
         const kanbanBtn = document.getElementById('kanbanViewBtn');
+        const omniBtn = document.getElementById('omniViewBtn');
         const analyticsBtn = document.getElementById('analyticsViewBtn');
         
         if (listBtn) listBtn.classList.remove('active');
         if (kanbanBtn) kanbanBtn.classList.remove('active');
+        if (omniBtn) omniBtn.classList.remove('active');
         if (analyticsBtn) analyticsBtn.classList.remove('active');
         
         if (view === 'kanban') {
             if (kanbanBtn) kanbanBtn.classList.add('active');
+        } else if (view === 'omni') {
+            if (omniBtn) omniBtn.classList.add('active');
         } else if (view === 'analytics') {
             if (analyticsBtn) analyticsBtn.classList.add('active');
             if (typeof this.fetchRecentDelivered === 'function') {

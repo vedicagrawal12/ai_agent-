@@ -39,6 +39,7 @@
     <div class="view-switcher-container" style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(255, 255, 255, 0.03); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); width: fit-content;">
         <button id="listViewBtn" class="view-btn active">📇 List View</button>
         <button id="kanbanViewBtn" class="view-btn">📋 Kanban CRM</button>
+        <button id="omniViewBtn" class="view-btn">📡 Omnichannel Tracker</button>
         <button id="analyticsViewBtn" class="view-btn">📊 Outreach Analytics</button>
     </div>
 
@@ -200,6 +201,86 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Omnichannel Sequenced Campaign Tracker Dashboard -->
+            <div id="omniContainer" class="omni-container" style="display: none; margin-top: 16px;">
+                
+                <!-- Campaign Flow Title / Guidelines -->
+                <div style="background: rgba(189, 0, 255, 0.05); border: 1px solid rgba(189, 0, 255, 0.15); border-radius: var(--radius-md); padding: 14px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: var(--shadow-glow-violet);">
+                    <div>
+                        <h4 style="font-size: 0.95rem; font-weight: bold; color: var(--text-primary); margin-bottom: 2px;">📡 Omnichannel Outreach Sequencing</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Day 1: 📧 Cold Email Pitch &nbsp;&nbsp;&rarr;&nbsp;&nbsp; Day 3: 💬 WhatsApp Follow-up &nbsp;&nbsp;&rarr;&nbsp;&nbsp; Day 5: 📱 LinkedIn Connect / Instagram DM task queue</p>
+                    </div>
+                    <span style="font-size: 0.75rem; font-weight: bold; background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(0, 240, 255, 0.2);">
+                        ⚡ Real-Time Pipeline Active
+                    </span>
+                </div>
+
+                <!-- Aggregated Sequence Campaign Stats -->
+                <div class="omni-stats-grid">
+                    <div class="omni-stat-card blue">
+                        <span class="omni-stat-icon">🎯</span>
+                        <div class="omni-stat-value" id="omniStatTotalLeads">0</div>
+                        <div class="omni-stat-label">Sequence Enrolled</div>
+                    </div>
+                    <div class="omni-stat-card purple">
+                        <span class="omni-stat-icon">📧</span>
+                        <div class="omni-stat-value" id="omniStatEmailsSent">0</div>
+                        <div class="omni-stat-label">Emails Sent</div>
+                    </div>
+                    <div class="omni-stat-card green">
+                        <span class="omni-stat-icon">💬</span>
+                        <div class="omni-stat-value" id="omniStatWhatsAppsSent">0</div>
+                        <div class="omni-stat-label">WhatsApp Dispatched</div>
+                    </div>
+                    <div class="omni-stat-card orange">
+                        <span class="omni-stat-icon">📱</span>
+                        <div class="omni-stat-value" id="omniStatSocialTasks">0</div>
+                        <div class="omni-stat-label">Social Tasks Queue</div>
+                    </div>
+                </div>
+
+                <!-- Two-Column Layout (Sidebar Tasks + Pipeline Table) -->
+                <div class="omni-grid">
+                    
+                    <!-- Main Timeline Sequence Pipeline Table -->
+                    <div class="omni-card pipeline-table-card">
+                        <div class="omni-card-title">
+                            📈 Leads Campaign Sequence Progression
+                        </div>
+                        <div class="table-scroll">
+                            <table class="leads-table">
+                                <thead>
+                                    <tr>
+                                        <th>Business Name</th>
+                                        <th>Niche / City</th>
+                                        <th style="text-align: center;">Sequence Progress & Status Timeline</th>
+                                        <th style="text-align: center;">Override Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="omniPipelineTableBody">
+                                    <!-- Rendered Dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar: Urgent Day 5 Manual Touchpoints -->
+                    <div class="omni-card" style="max-width: 100%;">
+                        <div class="omni-card-title">
+                            ⚠️ Day 5: Manual Social DM Tasks
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.4;">
+                            The following leads reached **Day 5** of the campaign sequence with no reply. Open their profile, paste the copied pitch, and close the task.
+                        </div>
+                        <div class="task-queue-list" id="omniTaskQueueContainer">
+                            <!-- Rendered Dynamically -->
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
 
         </div>

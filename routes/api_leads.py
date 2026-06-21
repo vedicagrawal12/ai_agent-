@@ -728,3 +728,14 @@ def get_lead_outreach_logs(lead_id):
         return jsonify({"error": "Lead not found"}), 404
     logs = db.get_lead_outreach_logs(lead_id, g.user['id'])
     return jsonify(logs)
+
+@leads_bp.route("/leads/<int:lead_id>/competitors", methods=["GET"])
+@limiter.limit("30 per minute")
+def get_lead_competitors(lead_id):
+    """Fetch competitor benchmarking metrics comparison for a lead."""
+    lead = db.get_lead_by_id(lead_id, user_id=g.user['id'])
+    if not lead:
+        return jsonify({"error": "Lead not found"}), 404
+        
+    benchmark = db.get_competitors_benchmark(lead_id, user_id=g.user['id'])
+    return jsonify(benchmark)

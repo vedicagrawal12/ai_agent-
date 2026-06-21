@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         :root {
@@ -476,16 +477,185 @@
             color: var(--accent-green);
             margin-bottom: 8px;
         }
-
         .perfect-desc {
             font-size: 0.92rem;
             color: var(--text-secondary);
         }
+
+        /* ============================================================
+           Interactive Floating Pitch Banner (Audit Report version)
+           ============================================================ */
+        .pitch-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            color: #ffffff;
+        }
+
+        .pitch-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pitch-badge {
+            background: linear-gradient(135deg, var(--accent-blue), #4f46e5);
+            color: #ffffff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 50px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pitch-text {
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .pitch-text strong {
+            color: #ffffff;
+        }
+
+        .pitch-cta-btn {
+            background: #25D366; /* WhatsApp Green */
+            color: #ffffff;
+            text-decoration: none;
+            padding: 8px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+        }
+
+        .pitch-cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+            filter: brightness(1.1);
+        }
+
+        /* Competitor Comparison Styles */
+        .competitor-matrix-section {
+            margin-top: 40px;
+        }
+        .competitor-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 32px;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            .competitor-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+        .matrix-table-wrapper {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background-color: var(--bg-card);
+        }
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .matrix-table th, .matrix-table td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .matrix-table th {
+            font-weight: 700;
+            color: var(--text-secondary);
+            background-color: var(--bg-page);
+        }
+        .matrix-table tr.highlight-row {
+            background-color: var(--accent-red-light);
+            font-weight: 600;
+        }
+        .matrix-table tr.highlight-row td {
+            border-top: 1.5px solid rgba(239, 68, 68, 0.15);
+            border-bottom: 1.5px solid rgba(239, 68, 68, 0.15);
+        }
+        .matrix-table tr.competitor-row:hover {
+            background-color: var(--bg-page);
+        }
+        .matrix-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .matrix-badge.you {
+            background-color: var(--accent-red);
+            color: white;
+        }
+        .matrix-badge.comp {
+            background-color: var(--accent-blue);
+            color: white;
+        }
+        .radar-chart-wrapper {
+            position: relative;
+            height: 340px;
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
     </style>
 </head>
-<body>
-    <div class="container">
+<body {% if show_banner %}style="padding-top: 85px;"{% endif %}>
+    {% if show_banner %}
+    <!-- ============================================================
+         Interactive Pitch Overlay (Brought to you by LeadHunter AI)
+         ============================================================ -->
+    <div class="pitch-banner">
+        <div class="pitch-info">
+            <span class="pitch-badge">Diagnostic Report</span>
+            <div class="pitch-text">
+                This is a website performance & diagnostic report prepared for <strong>{{ lead.name }}</strong> by <strong>{{ sender_brand or sender_name or 'LeadHunter Agency Partner' }}</strong>.
+            </div>
+        </div>
         
+        {% if lead.phone or lead.whatsapp_number %}
+        <a href="https://wa.me/{{ lead.whatsapp_number or lead.phone }}?text=Hi!%20I%20saw%20the%20website%20performance%20report%20you%20prepared.%20Let's%20discuss%20improving%20it." target="_blank" class="pitch-cta-btn" style="text-decoration: none;">
+            <svg style="width:18px;height:18px;fill:currentColor;" viewBox="0 0 24 24">
+                <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 0 0 1.333 4.982L2 22l5.202-1.362a9.92 9.92 0 0 0 4.808 1.226h.003c5.505 0 9.99-4.477 9.99-9.985C22.003 6.478 17.518 2 12.012 2zm6.19 13.916c-.27.76-1.34 1.383-1.85 1.436-.45.047-.99.076-2.61-.582-2.07-.84-3.39-2.943-3.49-3.08-.1-.136-.8-1.066-.8-2.031 0-.966.5-1.442.68-1.636.18-.194.39-.243.52-.243.13 0 .26 0 .37.005.12.005.28-.044.44.335.16.388.55 1.34.6 1.437.05.097.08.21.01.34-.07.13-.13.22-.26.37-.13.15-.27.33-.39.45-.13.12-.26.26-.11.52.15.25.66 1.096 1.42 1.77.97.868 1.79 1.137 2.05 1.267.26.13.41.11.56-.06c.15-.17.65-.76.82-.97.18-.21.36-.18.6-.09.24.09 1.52.72 1.79.85.27.13.45.2.52.32.07.13.07.74-.2 1.503z"/>
+            </svg>
+            Let's Fix These Issues!
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div class="container">
         <!-- Branding Header -->
         <div class="branding-header">
             <div class="brand-logo">
@@ -655,8 +825,259 @@
                     {% endif %}
                 </div>
             </div>
-
         </div>
+
+        <!-- Competitor Benchmarking Matrix & Radar Chart Section -->
+        {% if competitors and competitors|length > 0 %}
+        <div class="main-card competitor-matrix-section" style="margin-top: 32px;">
+            <h2 class="section-title">⚔️ Local Competitor Comparison Matrix</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 0.95rem; line-height: 1.5;">
+                We benchmarked <strong>{{ lead.name }}</strong> against top local competitors in the <strong>{{ lead.category or 'local' }}</strong> niche in <strong>{{ lead.city }}</strong>. Check out the performance gaps below.
+            </p>
+            
+            {% set lead_seo = audit.scores.seo if audit and audit.scores and audit.scores.seo is defined else 0 %}
+            {% set lead_speed = audit.scores.speed if audit and audit.scores and audit.scores.speed is defined else 0 %}
+            {% set lead_mobile = audit.scores.mobile if audit and audit.scores and audit.scores.mobile is defined else 0 %}
+            {% set lead_ssl = audit.scores.ssl if audit and audit.scores and audit.scores.ssl is defined else 0 %}
+            {% set lead_ssl_configured = audit.metrics.ssl_configured if audit and audit.metrics and audit.metrics.ssl_configured is defined else false %}
+            {% set lead_has_viewport = audit.metrics.has_viewport if audit and audit.metrics and audit.metrics.has_viewport is defined else false %}
+
+            <div class="competitor-grid">
+                <!-- Left: Table Matrix -->
+                <div class="matrix-table-wrapper">
+                    <table class="matrix-table">
+                        <thead>
+                            <tr>
+                                <th>Business Name</th>
+                                <th style="text-align: center;">SEO Score</th>
+                                <th style="text-align: center;">Speed Score</th>
+                                <th style="text-align: center;">Rating</th>
+                                <th style="text-align: center;">Reviews</th>
+                                <th style="text-align: center;">SSL Sec.</th>
+                                <th style="text-align: center;">Mobile</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Lead Row -->
+                            <tr class="highlight-row">
+                                <td>
+                                    <span class="matrix-badge you">YOU</span>
+                                    <strong>{{ lead.name }}</strong>
+                                </td>
+                                <td style="text-align: center; color: {% if lead_seo >= 80 %}var(--accent-green){% elif lead_seo >= 50 %}var(--accent-orange){% else %}var(--accent-red){% endif %};">
+                                    {{ lead_seo }}/100
+                                </td>
+                                <td style="text-align: center; color: {% if lead_speed >= 80 %}var(--accent-green){% elif lead_speed >= 50 %}var(--accent-orange){% else %}var(--accent-red){% endif %};">
+                                    {{ lead_speed }}/100
+                                </td>
+                                <td style="text-align: center;">⭐ {{ "%.1f"|format(lead.rating or 0.0) }}</td>
+                                <td style="text-align: center;">{{ lead.reviews or 0 }}</td>
+                                <td style="text-align: center;">
+                                    {% if lead_ssl_configured %}🟢 Yes{% else %}🔴 No{% endif %}
+                                </td>
+                                <td style="text-align: center;">
+                                    {% if lead_has_viewport %}🟢 Yes{% else %}🔴 No{% endif %}
+                                </td>
+                            </tr>
+                            <!-- Competitor Rows -->
+                            {% for comp in competitors %}
+                                <tr class="competitor-row">
+                                    <td>
+                                        <span class="matrix-badge comp">{% if comp.is_mock %}LOCAL{% else %}COMP{% endif %}</span>
+                                        <span>{{ comp.name }}</span>
+                                    </td>
+                                    <td style="text-align: center; color: {% if comp.seo_score >= 80 %}var(--accent-green){% elif comp.seo_score >= 50 %}var(--accent-orange){% else %}var(--accent-red){% endif %}; font-weight: 600;">
+                                        {{ comp.seo_score }}/100
+                                    </td>
+                                    <td style="text-align: center; color: {% if comp.speed_score >= 80 %}var(--accent-green){% elif comp.speed_score >= 50 %}var(--accent-orange){% else %}var(--accent-red){% endif %}; font-weight: 600;">
+                                        {{ comp.speed_score }}/100
+                                    </td>
+                                    <td style="text-align: center;">⭐ {{ "%.1f"|format(comp.rating or 0.0) }}</td>
+                                    <td style="text-align: center;">{{ comp.reviews or 0 }}</td>
+                                    <td style="text-align: center;">
+                                        {% if comp.ssl_score > 0 %}🟢 Yes{% else %}🔴 No{% endif %}
+                                    </td>
+                                    <td style="text-align: center;">
+                                        {% if comp.mobile_score > 0 %}🟢 Yes{% else %}🔴 No{% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Right: Radar Chart -->
+                <div class="radar-chart-wrapper">
+                    <canvas id="competitorRadarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var canvasEl = document.getElementById('competitorRadarChart');
+            if (!canvasEl) return;
+            var ctx = canvasEl.getContext('2d');
+            var chart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Page Speed', 'SEO Optimization', 'Mobile Usability', 'SSL Security', 'GBP Prominence'],
+                    datasets: [
+                        {
+                            label: '{{ lead.name }} (You)',
+                            data: [
+                                {{ lead_speed }},
+                                {{ lead_seo }},
+                                {{ lead_mobile }},
+                                {{ lead_ssl }},
+                                {{ (lead.rating or 0.0) * 20 }}
+                            ],
+                            backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                        },
+                        {% for comp in competitors %}
+                        {
+                            label: '{{ comp.name }}',
+                            data: [
+                                {{ comp.speed_score }},
+                                {{ comp.seo_score }},
+                                {{ comp.mobile_score }},
+                                {{ comp.ssl_score }},
+                                {{ (comp.rating or 0.0) * 20 }}
+                            ],
+                            backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                            borderColor: 'rgba(37, 99, 235, 0.7)',
+                            borderWidth: 1.5,
+                            pointBackgroundColor: 'rgba(37, 99, 235, 0.7)',
+                        },
+                        {% endfor %}
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: 'rgba(148, 163, 184, 0.2)'
+                            },
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.2)'
+                            },
+                            pointLabels: {
+                                font: {
+                                    family: "'Plus Jakarta Sans', sans-serif",
+                                    size: 11,
+                                    weight: '600'
+                                },
+                                color: '#475569'
+                            },
+                            ticks: {
+                                backdropColor: 'transparent',
+                                color: '#94a3b8',
+                                font: {
+                                    size: 9
+                                },
+                                beginAtZero: true,
+                                max: 100,
+                                stepSize: 20
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: "'Plus Jakarta Sans', sans-serif",
+                                    size: 11,
+                                    weight: '500'
+                                },
+                                color: '#0f172a'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        </script>
+        {% endif %}
+
+        <!-- Premium Portfolio Showcase Section -->
+        <div class="main-card portfolio-section" style="margin-top: 32px;">
+            <h2 class="section-title">✨ Our Premium Work (Built for Similar Businesses)</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 0.95rem;">
+                Here are some live, high-performance websites and booking systems we have developed. We build custom designs focused on high loading speed, mobile responsive grids, and solid SEO frameworks.
+            </p>
+            
+            {% if matched_project %}
+            <!-- Featured Matched Project -->
+            <div class="featured-project-card" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(99, 102, 241, 0.08)); border: 1.5px solid var(--accent-blue); padding: 24px; border-radius: var(--radius-md); margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; background: var(--accent-blue-light); color: var(--accent-blue); padding: 4px 10px; border-radius: 50px; letter-spacing: 0.5px;">🔥 Recommended for your Niche</span>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-blue);">Demo Active</span>
+                </div>
+                <h3 style="font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{{ matched_project.title }}</h3>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">{{ matched_project.desc }}</p>
+                
+                {% if matched_project.tech_tags %}
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;">
+                    {% for tech_tag in matched_project.tech_tags %}
+                    <span style="font-size: 0.75rem; background: var(--border-color); color: var(--text-secondary); padding: 2px 8px; border-radius: 4px;">{{ tech_tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if matched_project.demo_url %}
+                <a href="{{ matched_project.demo_url }}" target="_blank" class="cta-btn" style="align-self: flex-start; margin-top: 8px; background: var(--accent-blue); color: white; border: none; font-size: 0.85rem; padding: 10px 24px; display: inline-flex; align-items: center; gap: 6px; border-radius: var(--radius-sm); text-decoration: none;">
+                    🔗 View Live Demo
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if other_projects and other_projects|length > 0 %}
+            <!-- Other Portfolio Projects Grid -->
+            <h3 style="font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-top: 24px; margin-bottom: 16px;">Other Selected Projects</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                {% for proj in other_projects %}
+                <div class="portfolio-project-card" style="background: var(--bg-page); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s ease; box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <h4 style="font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">{{ proj.title }}</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.45; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">{{ proj.desc }}</p>
+                        
+                        {% if proj.tech_tags %}
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+                            {% for tech_tag in proj.tech_tags %}
+                            <span style="font-size: 0.7rem; background: var(--border-color); color: var(--text-muted); padding: 1px 6px; border-radius: 4px;">{{ tech_tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if proj.demo_url %}
+                    <a href="{{ proj.demo_url }}" target="_blank" style="align-self: flex-start; margin-top: 16px; font-size: 0.82rem; font-weight: 600; color: var(--accent-blue); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                        🔗 Live Demo <span style="font-size:0.75rem;">➔</span>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if not matched_project and (not other_projects or other_projects|length == 0) %}
+            <!-- Portfolio Fallback Showcase -->
+            <div style="background: var(--bg-page); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 24px; text-align: center; color: var(--text-secondary);">
+                <span style="font-size: 2rem; display: block; margin-bottom: 8px;">💼</span>
+                <p>Want to see our full, premium developer portfolio & design samples?</p>
+                <a href="{{ portfolio_url or '#' }}" target="_blank" style="color: var(--accent-blue); font-weight: 600; text-decoration: underline; margin-top: 8px; display: inline-block;">
+                    Visit Our Main Agency Portfolio
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
         {% else %}
         <!-- Error or Missing Scan -->
         <div class="main-card" style="text-align: center; padding: 60px 20px;">

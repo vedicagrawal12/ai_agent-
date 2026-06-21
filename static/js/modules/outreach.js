@@ -416,6 +416,202 @@ export const outreachModule = {
         }
     },
 
+    updateSocialMessagePreview() {
+        const preview = document.getElementById('socialMessagePreview');
+        const customMessageInput = document.getElementById('customSocialMessageInput');
+        const customArea = document.getElementById('customSocialMessageArea');
+        if (customMessageInput && customMessageInput.value.trim() !== '') {
+            if (preview) preview.innerHTML = customMessageInput.value.replace(/\n/g, '<br>');
+            if (customArea) customArea.style.display = 'block';
+        } else {
+            if (preview) preview.innerHTML = 'Click generate to create a custom social media pitch...';
+            if (customArea) customArea.style.display = 'none';
+        }
+    },
+
+    async generateAISocialPitch() {
+        const lead = AppState.selectedLead;
+        if (!lead) return;
+
+        const geminiKeyRaw = localStorage.getItem('gemini_api_key');
+        const geminiKey = geminiKeyRaw ? await CryptoHelper.decrypt(geminiKeyRaw, AppState.encryptionKey) : '';
+        if (!geminiKey) {
+            UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        const projectSample = this.getBestPortfolioProjectSample(lead);
+        const tone = UI.el.socialToneSelect?.value || 'elite';
+        const length = UI.el.socialLengthSelect?.value || 'short';
+        const minWords = parseInt(UI.el.socialMinWordsSelect?.value) || 100;
+        let service = UI.el.socialServiceSelect?.value || 'social_media';
+        if (service === 'custom') {
+            service = UI.el.socialCustomServiceInput?.value.trim() || 'Custom Service';
+        }
+
+        try {
+            UI.showLoading('AI Writer generating social pitch...');
+            
+            const data = await API.request('/api/outreach/generate-ai', {
+                method: 'POST',
+                headers: {
+                    'X-Gemini-API-Key': geminiKey
+                },
+                body: JSON.stringify({
+                    lead: lead,
+                    project_sample: projectSample,
+                    tone: tone,
+                    length: length,
+                    service: service,
+                    min_words: minWords,
+                    language: UI.el.socialLanguageSelect?.value || 'hinglish',
+                    sender: {
+                        name: localStorage.getItem('sender_name') || '',
+                        brand: localStorage.getItem('sender_brand') || '',
+                        role: localStorage.getItem('sender_role') || ''
+                    },
+                    custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
+                })
+            });
+
+            if (data.success && data.pitch) {
+                const customArea = document.getElementById('customSocialMessageArea');
+                if (customArea) customArea.style.display = 'block';
+
+                const customMessageInput = document.getElementById('customSocialMessageInput');
+                if (customMessageInput) {
+                    customMessageInput.value = data.pitch;
+                }
+
+                this.updateSocialMessagePreview();
+                UI.showToast('✨ Unique AI Social DM pitch generated successfully!', 'success');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    async refineAISocialPitch() {
+        const lead = AppState.selectedLead;
+        if (!lead) return;
+
+        const geminiKeyRaw = localStorage.getItem('gemini_api_key');
+        const geminiKey = geminiKeyRaw ? await CryptoHelper.decrypt(geminiKeyRaw, AppState.encryptionKey) : '';
+        if (!geminiKey) {
+            UI.showToast('Please configure your Gemini API Key in Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        const customMessageInput = document.getElementById('customSocialMessageInput');
+        const previousPitch = customMessageInput?.value.trim() || '';
+        const refineFeedback = document.getElementById('socialPitchRefineInput')?.value.trim() || '';
+
+        if (!refineFeedback) {
+            UI.showToast('Please enter some refinement feedback first!', 'warning');
+            return;
+        }
+
+        const projectSample = this.getBestPortfolioProjectSample(lead);
+        const tone = UI.el.socialToneSelect?.value || 'elite';
+        const length = UI.el.socialLengthSelect?.value || 'short';
+        const minWords = parseInt(UI.el.socialMinWordsSelect?.value) || 100;
+        let service = UI.el.socialServiceSelect?.value || 'social_media';
+        if (service === 'custom') {
+            service = UI.el.socialCustomServiceInput?.value.trim() || 'Custom Service';
+        }
+
+        try {
+            UI.showLoading('AI Writer refining social pitch...');
+            
+            const data = await API.request('/api/outreach/generate-ai', {
+                method: 'POST',
+                headers: {
+                    'X-Gemini-API-Key': geminiKey
+                },
+                body: JSON.stringify({
+                    lead: lead,
+                    project_sample: projectSample,
+                    tone: tone,
+                    length: length,
+                    service: service,
+                    min_words: minWords,
+                    language: UI.el.socialLanguageSelect?.value || 'hinglish',
+                    sender: {
+                        name: localStorage.getItem('sender_name') || '',
+                        brand: localStorage.getItem('sender_brand') || '',
+                        role: localStorage.getItem('sender_role') || ''
+                    },
+                    refine_feedback: refineFeedback,
+                    previous_pitch: previousPitch,
+                    custom_pitch_rules: localStorage.getItem('custom_pitch_rules') || ''
+                })
+            });
+
+            if (data.success && data.pitch) {
+                if (customMessageInput) {
+                    customMessageInput.value = data.pitch;
+                }
+                
+                const refineInput = document.getElementById('socialPitchRefineInput');
+                if (refineInput) {
+                    refineInput.value = '';
+                }
+
+                this.updateSocialMessagePreview();
+                UI.showToast('Social pitch refined successfully!', 'success');
+            } else {
+                UI.showToast(data.error || 'Failed to refine social pitch.', 'error');
+            }
+        } catch (error) {
+            UI.showToast(error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    async openSocialDM(channel) {
+        const lead = AppState.selectedLead;
+        if (!lead) return;
+
+        const targetUrl = channel === 'instagram' ? lead.instagram : lead.facebook;
+        if (!targetUrl) {
+            UI.showToast(`No ${channel === 'instagram' ? 'Instagram' : 'Facebook'} profile link available for this lead.`, 'error');
+            return;
+        }
+
+        const customMessageInput = document.getElementById('customSocialMessageInput');
+        const pitchText = customMessageInput?.value.trim() || '';
+
+        if (!pitchText) {
+            UI.showToast('Please generate or write a pitch message first!', 'warning');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(pitchText);
+            UI.showToast(`📋 Pitch copied! Opening ${channel === 'instagram' ? 'Instagram' : 'Facebook'}...`, 'success');
+        } catch (clipErr) {
+            const textArea = document.createElement('textarea');
+            textArea.value = pitchText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            UI.showToast(`📋 Pitch copied! Opening ${channel === 'instagram' ? 'Instagram' : 'Facebook'}...`, 'success');
+        }
+
+        setTimeout(() => {
+            const sanitizedUrl = UI.sanitizeUrl(targetUrl);
+            if (sanitizedUrl !== '#') {
+                window.open(sanitizedUrl, '_blank');
+            }
+        }, 800);
+    },
+
     openEmail(indexOrLead) {
         const lead = typeof indexOrLead === 'object' ? indexOrLead : AppState.leads[indexOrLead];
         if (!lead) return;
@@ -2114,5 +2310,69 @@ export const outreachModule = {
         }
         
         UI.openModal('sentEmailContentModal');
+    },
+
+    openOutreachModal(leadId) {
+        const lead = AppState.leads.find(l => l.id === leadId);
+        if (lead) {
+            this.openEmail(lead);
+        } else {
+            UI.showToast('Lead not found in current view', 'error');
+        }
+    },
+    
+    openWhatsAppModal(leadId) {
+        const lead = AppState.leads.find(l => l.id === leadId);
+        if (lead) {
+            this.openWhatsApp(lead);
+        } else {
+            UI.showToast('Lead not found in current view', 'error');
+        }
+    },
+
+    async runSocialTask(leadId, profileUrl) {
+        const lead = AppState.leads.find(l => l.id === leadId);
+        if (!lead) {
+            UI.showToast('Lead not found', 'error');
+            return;
+        }
+
+        let pitch = lead.custom_pitch || `Hi ${lead.name}, I noticed your website has some speed and SEO issues. We would love to help you fix them. Check out your diagnostic report: ${window.location.origin}/preview/${lead.id}`;
+        try {
+            await navigator.clipboard.writeText(pitch);
+            UI.showToast('📋 Pitch copied to clipboard!', 'success');
+        } catch (err) {
+            console.error('Clipboard copy failed:', err);
+            const ta = document.createElement('textarea');
+            ta.value = pitch;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            UI.showToast('📋 Pitch copied to clipboard!', 'success');
+        }
+
+        if (profileUrl && profileUrl !== '#') {
+            window.open(profileUrl, '_blank');
+        } else {
+            UI.showToast('Opening social task manual workflow...', 'info');
+        }
+
+        try {
+            const res = await API.request(`/api/outreach/complete-social-task/${leadId}`, {
+                method: 'POST'
+            });
+            if (res && res.success) {
+                UI.showToast('Day 5 Social Task completed successfully!', 'success');
+                lead.social_task_status = 'COMPLETED';
+                lead.social_task_completed_at = new Date().toISOString();
+                UI.renderLeads(AppState.leads);
+            } else {
+                UI.showToast(res.error || 'Failed to update task status', 'error');
+            }
+        } catch (err) {
+            console.error('Error completing social task:', err);
+            UI.showToast('Network error updating task status', 'error');
+        }
     }
 };

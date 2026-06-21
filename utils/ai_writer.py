@@ -47,7 +47,8 @@ class AIOutreachWriter:
         min_words: int = 150,
         language: str = "hinglish",
         audit_link: str = "",
-        audit_data: dict = None
+        audit_data: dict = None,
+        competitor_data: dict = None
     ) -> str:
         """
         Generates a highly personalized, human-like sales pitch using the Gemini API.
@@ -62,14 +63,22 @@ class AIOutreachWriter:
 
         if audit_data and audit_link:
             overall_score = audit_data.get("overall_score", 0)
-            scores = audit_data.get("scores", {})
-            recommendations = audit_data.get("recommendations", [])
-            warnings_text = []
-            for rec in recommendations:
-                warnings_text.append(f"  - [{rec.get('category')}] {rec.get('title')}: {rec.get('description')}")
-            warnings_str = "\n".join(warnings_text) if warnings_text else "  - None (website has a perfect score!)"
-            
-            audit_directive = f"""
+            if min_words <= 100:
+                audit_directive = f"""
+- WEBSITE SEO & PERFORMANCE AUDIT RESULTS (CRITICAL: Keep it extremely brief and direct due to strict word limit constraints):
+  * Public Audit Report URL: {audit_link}
+  * Overall Site Score: {overall_score}/100
+  * CRITICAL COPYWRITING DIRECTIVE: Briefly mention the audit score ({overall_score}/100) or report link {audit_link}. Do NOT list out individual category scores (Speed/SEO/SSL etc.) or detailed recommendations.
+"""
+            else:
+                scores = audit_data.get("scores", {})
+                recommendations = audit_data.get("recommendations", [])
+                warnings_text = []
+                for rec in recommendations:
+                    warnings_text.append(f"  - [{rec.get('category')}] {rec.get('title')}: {rec.get('description')}")
+                warnings_str = "\n".join(warnings_text) if warnings_text else "  - None (website has a perfect score!)"
+                
+                audit_directive = f"""
 - WEBSITE SEO & PERFORMANCE AUDIT RESULTS (CRITICAL: Mention these specific real-world data points and critical issues to show the prospect you did a real audit of their website):
   * Public Audit Report URL: {audit_link}
   * Overall Site Score: {overall_score}/100
@@ -79,6 +88,76 @@ class AIOutreachWriter:
   * CRITICAL COPYWRITING DIRECTIVE: Mention specific low scores (e.g. speed, missing SSL, or missing viewport/mobile responsiveness) to create urgency, and invite them to view their complete public report card at {audit_link}.
 """
             custom_rules_directive += "\n" + audit_directive
+
+        if competitor_data and competitor_data.get("competitors"):
+            comps = competitor_data.get("competitors")
+            comp_lines = []
+            for c in comps:
+                is_mock_str = "(Generated local benchmark competitor)" if c.get("is_mock") else ""
+                has_website = bool(c.get("website") and c.get("website").strip())
+                if has_website and c.get("speed_score", 0) > 0:
+                    comp_lines.append(
+                        f"  - {c.get('name')}: Has Website ({c.get('website')}), Rating={c.get('rating')}/5.0, Reviews={c.get('reviews')}, Website Speed={c.get('speed_score', 80)}/100, SEO Score={c.get('seo_score', 85)}/100, SSL Security={c.get('ssl_score', 100)}/100. {is_mock_str}"
+                    )
+                else:
+                    comp_lines.append(
+                        f"  - {c.get('name')}: NO WEBSITE YET, Rating={c.get('rating')}/5.0, Reviews={c.get('reviews')}. {is_mock_str}"
+                    )
+            comp_str = "\n".join(comp_lines)
+            
+            lead_speed = lead_data.get('speed_score', 0) if lead_data else 0
+            if not lead_speed and audit_data:
+                lead_speed = audit_data.get('scores', {}).get('speed', 0)
+            lead_seo = lead_data.get('seo_score', 0) if lead_data else 0
+            if not lead_seo and audit_data:
+                lead_seo = audit_data.get('scores', {}).get('seo', 0)
+                
+            better_comp = None
+            # 1. Prefer a competitor with a website who has better metrics than the lead
+            for c in comps:
+                has_web = bool(c.get("website") and c.get("website").strip())
+                if has_web and (c.get('speed_score', 0) > lead_speed or c.get('seo_score', 0) > lead_seo):
+                    better_comp = c
+                    break
+            
+            # 2. Look for any competitor with a website
+            if not better_comp:
+                for c in comps:
+                    if bool(c.get("website") and c.get("website").strip()):
+                        better_comp = c
+                        break
+            
+            # 3. Fallback to the first competitor
+            if not better_comp:
+                better_comp = comps[0]
+                
+            better_comp_name = better_comp.get('name')
+            better_comp_has_website = bool(better_comp.get("website") and better_comp.get("website").strip())
+            
+            if min_words <= 100:
+                competitor_directive = f"""
+- COMPETITOR BENCHMARKING (CRITICAL: Keep it extremely brief due to strict word limit constraints):
+  * Best Competitor: {better_comp_name}
+  * CRITICAL COPYWRITING DIRECTIVE: Briefly mention that a local competitor like '{better_comp_name}' is active/outpacing them in {lead_data.get('city', 'their city')} to create urgency. Do NOT detail other competitor rating, speed, or SEO numbers.
+"""
+            else:
+                if better_comp_has_website:
+                    better_comp_speed = better_comp.get('speed_score', 80)
+                    better_comp_seo = better_comp.get('seo_score', 85)
+                    key_insight_str = f"Competitor '{better_comp_name}' is outpacing them online with a website ({better_comp.get('website')}) speed of {better_comp_speed}/100 and SEO score of {better_comp_seo}/100."
+                    copywriting_directive_str = f"Mention '{better_comp_name}' (or other competitors from the list) and contrast their metrics to explain why local customers are choosing the competitor. Explain that when potential customers search in {lead_data.get('city', 'their city')}, they compare these options, and the competitor's superior digital presence/GBP prominence is stealing their potential revenue."
+                else:
+                    key_insight_str = f"Competitor '{better_comp_name}' does not have a website listed, but they are still visible and popular on Google Maps with a rating of {better_comp.get('rating')}/5.0 and {better_comp.get('reviews')} reviews. Lacking a website represents a massive leakage/gap for both the target lead and this competitor."
+                    copywriting_directive_str = f"Mention '{better_comp_name}' (or other competitors from the list) and highlight that they are capturing leads through GMB despite having no website. Explain that if the lead builds an elite website/digital storefront, they will instantly stand out and dominate search results, making them the default choice for local customers in {lead_data.get('city', 'their city')} who currently look at options with zero or broken websites."
+                
+                competitor_directive = f"""
+- COMPETITOR BENCHMARKING & COMPARISON DETAILS (CRITICAL: Use this real-world competitive context to create psychological urgency in the business owner. Call out their specific local competitors by name and contrast their performance metrics):
+  * Local Competitors in {lead_data.get('city', 'their city')}:
+{comp_str}
+  * KEY INSIGHT: {key_insight_str}
+  * CRITICAL COPYWRITING DIRECTIVE: {copywriting_directive_str}
+"""
+            custom_rules_directive += "\n" + competitor_directive
 
         # Resolve persona and service directives based on target service
         persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)
@@ -124,6 +203,12 @@ class AIOutreachWriter:
 - STRUCTURE: Casual hook, Digital Gap/Leak analysis, Solution & Social Proof (mentioning {project_sample}), and call to action.
 - WORD COUNT REQUIREMENT (CRITICAL): The generated pitch must strictly be at least {min_words} words. Elaborate on details to meet this length naturally.
 """
+            elif min_words <= 100:
+                length_directives = f"""
+- LENGTH: Micro-brief, extremely concise, and DM-friendly (strictly between {min_words} and {min_words + 25} words, structured inside 1-2 very short paragraphs).
+- STRUCTURE: Fast, direct hook, the primary digital gap, and a quick offer to view the mockup draft. Keep it ultra-short.
+- WORD COUNT REQUIREMENT (CRITICAL): The generated pitch must strictly be between {min_words} and {min_words + 25} words total. To achieve this, you MUST condense or skip detailed descriptions, ignore long templates, keep the hook to 1 short sentence, skip detailed service roadmaps, merge the matched portfolio case study to just a brief mention or link, and write no more than 2-3 very short sentences in total. Do NOT write long paragraphs.
+"""
             else:
                 length_directives = f"""
 - LENGTH: Brief, snappy, and DM-friendly (minimum {min_words} words, structured inside 2-3 short paragraphs).
@@ -163,6 +248,12 @@ class AIOutreachWriter:
   3. Custom solution and portfolio matching.
   4. Mockup layout draft offer.
 - WORD COUNT REQUIREMENT (CRITICAL): The generated pitch must strictly be at least {min_words} words. Elaborate on details to meet this length naturally.
+"""
+            elif min_words <= 100:
+                length_directives = f"""
+- LENGTH: Micro-brief, extremely concise, and DM-friendly (strictly between {min_words} and {min_words + 25} words, structured inside 1-2 very short paragraphs).
+- STRUCTURE: Fast, direct hook, the primary digital gap, and a quick offer to view the mockup draft. Keep it ultra-short.
+- WORD COUNT REQUIREMENT (CRITICAL): The generated pitch must strictly be between {min_words} and {min_words + 25} words total. To achieve this, you MUST condense or skip detailed descriptions, ignore long templates, keep the hook to 1 short sentence, skip detailed service roadmaps, merge the matched portfolio case study to just a brief mention or link, and write no more than 2-3 very short sentences in total. Do NOT write long paragraphs.
 """
             else:
                 length_directives = f"""
@@ -266,7 +357,8 @@ class AIOutreachWriter:
                 category_directives=category_directives
             )
 
-        return AIOutreachWriter._call_gemini_api(prompt, api_key, tone=tone)
+        raw_pitch = AIOutreachWriter._call_gemini_api(prompt, api_key, tone=tone)
+        return AIOutreachWriter._post_process_pitch(raw_pitch, mockup_link, audit_link)
 
     @staticmethod
     def generate_email_pitch(
@@ -281,7 +373,8 @@ class AIOutreachWriter:
         min_words: int = 150,
         language: str = "hinglish",
         audit_link: str = "",
-        audit_data: dict = None
+        audit_data: dict = None,
+        competitor_data: dict = None
     ) -> str:
         """
         Generates a highly personalized, human-like sales cold email with a Subject Line and Body.
@@ -295,14 +388,22 @@ class AIOutreachWriter:
 
         if audit_data and audit_link:
             overall_score = audit_data.get("overall_score", 0)
-            scores = audit_data.get("scores", {})
-            recommendations = audit_data.get("recommendations", [])
-            warnings_text = []
-            for rec in recommendations:
-                warnings_text.append(f"  - [{rec.get('category')}] {rec.get('title')}: {rec.get('description')}")
-            warnings_str = "\n".join(warnings_text) if warnings_text else "  - None (website has a perfect score!)"
-            
-            audit_directive = f"""
+            if min_words <= 100:
+                audit_directive = f"""
+- WEBSITE SEO & PERFORMANCE AUDIT RESULTS (CRITICAL: Keep it extremely brief and direct due to strict word limit constraints):
+  * Public Audit Report URL: {audit_link}
+  * Overall Site Score: {overall_score}/100
+  * CRITICAL COPYWRITING DIRECTIVE: Briefly mention the audit score ({overall_score}/100) or report link {audit_link}. Do NOT list out individual category scores (Speed/SEO/SSL etc.) or detailed recommendations.
+"""
+            else:
+                scores = audit_data.get("scores", {})
+                recommendations = audit_data.get("recommendations", [])
+                warnings_text = []
+                for rec in recommendations:
+                    warnings_text.append(f"  - [{rec.get('category')}] {rec.get('title')}: {rec.get('description')}")
+                warnings_str = "\n".join(warnings_text) if warnings_text else "  - None (website has a perfect score!)"
+                
+                audit_directive = f"""
 - WEBSITE SEO & PERFORMANCE AUDIT RESULTS (CRITICAL: Mention these specific real-world data points and critical issues to show the prospect you did a real audit of their website):
   * Public Audit Report URL: {audit_link}
   * Overall Site Score: {overall_score}/100
@@ -312,6 +413,76 @@ class AIOutreachWriter:
   * CRITICAL COPYWRITING DIRECTIVE: Mention specific low scores (e.g. speed, missing SSL, or missing viewport/mobile responsiveness) to create urgency, and invite them to view their complete public report card at {audit_link}.
 """
             custom_rules_directive += "\n" + audit_directive
+
+        if competitor_data and competitor_data.get("competitors"):
+            comps = competitor_data.get("competitors")
+            comp_lines = []
+            for c in comps:
+                is_mock_str = "(Generated local benchmark competitor)" if c.get("is_mock") else ""
+                has_website = bool(c.get("website") and c.get("website").strip())
+                if has_website and c.get("speed_score", 0) > 0:
+                    comp_lines.append(
+                        f"  - {c.get('name')}: Has Website ({c.get('website')}), Rating={c.get('rating')}/5.0, Reviews={c.get('reviews')}, Website Speed={c.get('speed_score', 80)}/100, SEO Score={c.get('seo_score', 85)}/100, SSL Security={c.get('ssl_score', 100)}/100. {is_mock_str}"
+                    )
+                else:
+                    comp_lines.append(
+                        f"  - {c.get('name')}: NO WEBSITE YET, Rating={c.get('rating')}/5.0, Reviews={c.get('reviews')}. {is_mock_str}"
+                    )
+            comp_str = "\n".join(comp_lines)
+            
+            lead_speed = lead_data.get('speed_score', 0) if lead_data else 0
+            if not lead_speed and audit_data:
+                lead_speed = audit_data.get('scores', {}).get('speed', 0)
+            lead_seo = lead_data.get('seo_score', 0) if lead_data else 0
+            if not lead_seo and audit_data:
+                lead_seo = audit_data.get('scores', {}).get('seo', 0)
+                
+            better_comp = None
+            # 1. Prefer a competitor with a website who has better metrics than the lead
+            for c in comps:
+                has_web = bool(c.get("website") and c.get("website").strip())
+                if has_web and (c.get('speed_score', 0) > lead_speed or c.get('seo_score', 0) > lead_seo):
+                    better_comp = c
+                    break
+            
+            # 2. Look for any competitor with a website
+            if not better_comp:
+                for c in comps:
+                    if bool(c.get("website") and c.get("website").strip()):
+                        better_comp = c
+                        break
+            
+            # 3. Fallback to the first competitor
+            if not better_comp:
+                better_comp = comps[0]
+                
+            better_comp_name = better_comp.get('name')
+            better_comp_has_website = bool(better_comp.get("website") and better_comp.get("website").strip())
+            
+            if min_words <= 100:
+                competitor_directive = f"""
+- COMPETITOR BENCHMARKING (CRITICAL: Keep it extremely brief due to strict word limit constraints):
+  * Best Competitor: {better_comp_name}
+  * CRITICAL COPYWRITING DIRECTIVE: Briefly mention that a local competitor like '{better_comp_name}' is active/outpacing them in {lead_data.get('city', 'their city')} to create urgency. Do NOT detail other competitor rating, speed, or SEO numbers.
+"""
+            else:
+                if better_comp_has_website:
+                    better_comp_speed = better_comp.get('speed_score', 80)
+                    better_comp_seo = better_comp.get('seo_score', 85)
+                    key_insight_str = f"Competitor '{better_comp_name}' is outpacing them online with a website ({better_comp.get('website')}) speed of {better_comp_speed}/100 and SEO score of {better_comp_seo}/100."
+                    copywriting_directive_str = f"Mention '{better_comp_name}' (or other competitors from the list) and contrast their metrics to explain why local customers are choosing the competitor. Explain that when potential customers search in {lead_data.get('city', 'their city')}, they compare these options, and the competitor's superior digital presence/GBP prominence is stealing their potential revenue."
+                else:
+                    key_insight_str = f"Competitor '{better_comp_name}' does not have a website listed, but they are still visible and popular on Google Maps with a rating of {better_comp.get('rating')}/5.0 and {better_comp.get('reviews')} reviews. Lacking a website represents a massive leakage/gap for both the target lead and this competitor."
+                    copywriting_directive_str = f"Mention '{better_comp_name}' (or other competitors from the list) and highlight that they are capturing leads through GMB despite having no website. Explain that if the lead builds an elite website/digital storefront, they will instantly stand out and dominate search results, making them the default choice for local customers in {lead_data.get('city', 'their city')} who currently look at options with zero or broken websites."
+                
+                competitor_directive = f"""
+- COMPETITOR BENCHMARKING & COMPARISON DETAILS (CRITICAL: Use this real-world competitive context to create psychological urgency in the business owner. Call out their specific local competitors by name and contrast their performance metrics):
+  * Local Competitors in {lead_data.get('city', 'their city')}:
+{comp_str}
+  * KEY INSIGHT: {key_insight_str}
+  * CRITICAL COPYWRITING DIRECTIVE: {copywriting_directive_str}
+"""
+            custom_rules_directive += "\n" + competitor_directive
 
         # Resolve persona and service directives based on target service
         persona_directive, service_directives = AIOutreachWriter._resolve_service_directives(service)
@@ -404,6 +575,16 @@ class AIOutreachWriter:
   6. Professional sign-off.
 - WORD COUNT REQUIREMENT (CRITICAL): The generated email body must strictly be at least {min_words} words. Elaborate on details to meet this length naturally.
 """
+        elif min_words <= 100:
+            email_length_directives = f"""
+- LENGTH: Short, crisp cold email (strictly between {min_words} and {min_words + 30} words, structured inside 2-3 short paragraphs in the email body).
+- STRUCTURE:
+  1. Human greeting.
+  2. Quick hook referencing reviews/rating.
+  3. Single-sentence gap description and mockup CTA ({mockup_link}).
+  4. Quick sign-off.
+- WORD COUNT REQUIREMENT (CRITICAL): The generated email body must strictly be between {min_words} and {min_words + 30} words total. To achieve this, you MUST condense or skip detailed descriptions, ignore long templates, keep the hook to 1 short sentence, skip detailed service roadmaps, merge the matched portfolio case study to just a brief mention or link, and write no more than 3-4 very short sentences in total. Do NOT write long paragraphs.
+"""
         else:
             email_length_directives = f"""
 - LENGTH: Standard cold email (minimum {min_words} words, structured inside 3-4 paragraphs in the email body).
@@ -454,7 +635,8 @@ class AIOutreachWriter:
         )
 
 
-        return AIOutreachWriter._call_gemini_api(prompt, api_key, tone=tone)
+        raw_pitch = AIOutreachWriter._call_gemini_api(prompt, api_key, tone=tone)
+        return AIOutreachWriter._post_process_pitch(raw_pitch, mockup_link, audit_link)
 
     @staticmethod
     def _call_gemini_api(prompt: str, api_key: str, tone: str = "elite") -> str:
@@ -746,3 +928,39 @@ class AIOutreachWriter:
   * URGENCY: Every day without a strong digital presence, potential customers are choosing competitors who appear more professional and accessible online.
   * CTA ALIGNMENT: Offer a custom mockup/draft tailored to their specific business type showing professional branding, service showcase, and customer inquiry/booking capability.
 """
+
+    @staticmethod
+    def _post_process_pitch(pitch: str, mockup_link: str, audit_link: str) -> str:
+        """
+        Post-processes the generated pitch to replace any generic URL patterns,
+        hallucinated links, or placeholders with the actual dynamic URLs.
+        """
+        if not pitch:
+            return pitch
+            
+        import re
+        
+        # Replace placeholders like [insert link], [mockup link], [preview link], [audit link], etc.
+        placeholders = [
+            r"\[insert\s+link\]", r"\[mockup\s+link\]", r"\[preview\s+link\]", r"\[audit\s+link\]",
+            r"\[insert_link\]", r"\[mockup_link\]", r"\[preview_link\]", r"\[audit_link\]",
+            r"\[your\s+mockup\s+link\]", r"\[your\s+report\s+link\]"
+        ]
+        
+        target_link = mockup_link or audit_link
+        if target_link:
+            for pattern in placeholders:
+                pitch = re.sub(pattern, target_link, pitch, flags=re.IGNORECASE)
+                
+        # Match and replace generic localhost/domain links generated by LLM (like http://127.0.0.1:5000/preview)
+        if mockup_link:
+            # Match preview paths that do not have an ID suffix
+            preview_pattern = r"https?://(?:127\.0\.0\.1|localhost|[\w.-]+)(?::\d+)?/preview(?!/\d+)"
+            pitch = re.sub(preview_pattern, mockup_link, pitch)
+            
+        if audit_link:
+            # Match audit paths that do not have an ID suffix
+            audit_pattern = r"https?://(?:127\.0\.0\.1|localhost|[\w.-]+)(?::\d+)?/audit(?!/\d+)"
+            pitch = re.sub(audit_pattern, audit_link, pitch)
+            
+        return pitch

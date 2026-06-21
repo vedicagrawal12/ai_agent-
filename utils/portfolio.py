@@ -141,3 +141,69 @@ class PortfolioParser:
                 logging.warning(f"Error parsing card chunk: {err}")
                 
         return projects
+
+def get_best_matching_project(category: str, name: str, projects: list) -> tuple:
+    """
+    Finds the best matching project for the lead's category/name.
+    If no match is found, fallback to the first project in the list as requested.
+    Returns (matched_project, other_projects)
+    """
+    if not projects:
+        return None, []
+        
+    category_lower = (category or "").lower()
+    name_lower = (name or "").lower()
+    search_text = f"{category_lower} {name_lower}"
+    
+    # Fuzzy keyword mapping covering multiple industry verticals
+    category_keyword_map = [
+        { "keywords": ['gym', 'fitness', 'yoga', 'crossfit', 'workout', 'pilates', 'boxing', 'zumba', 'martial'], "project_keywords": ['gym', 'fitness', 'workout', 'health'] },
+        { "keywords": ['dentist', 'dental', 'clinic', 'doctor', 'hospital', 'dermatolog', 'physician', 'ortho', 'eye', 'physio', 'chiro', 'ayurved', 'pharma', 'patholog', 'diagnostic'], "project_keywords": ['clinic', 'doctor', 'hospital', 'health', 'medical', 'dental', 'care'] },
+        { "keywords": ['salon', 'spa', 'parlour', 'parlor', 'barber', 'beauty', 'nail', 'hair', 'makeup', 'grooming', 'skincare', 'tattoo', 'mehndi', 'bridal'], "project_keywords": ['salon', 'beauty', 'spa', 'barber', 'grooming', 'style'] },
+        { "keywords": ['restaurant', 'cafe', 'hotel', 'bakery', 'bar', 'dhaba', 'food', 'dine', 'dining', 'catering', 'sweet', 'pizza', 'biryani', 'juice', 'tea', 'coffee', 'lounge', 'pub', 'banquet', 'resort', 'prandium'], "project_keywords": ['hotel', 'restaurant', 'cafe', 'food', 'dining', 'prandium', 'bakery', 'catering'] },
+        { "keywords": ['school', 'coaching', 'tutor', 'academy', 'institute', 'training', 'education', 'college', 'preschool', 'playschool', 'nursery', 'classes', 'learning'], "project_keywords": ['school', 'education', 'academy', 'learning', 'coaching', 'course', 'training'] },
+        { "keywords": ['garage', 'car wash', 'mechanic', 'automobile', 'auto', 'bike', 'vehicle', 'tyre', 'car dealer', 'showroom', 'service center'], "project_keywords": ['auto', 'car', 'vehicle', 'garage', 'mechanic', 'bike'] },
+        { "keywords": ['builder', 'property', 'real estate', 'architect', 'interior', 'construction', 'contractor', 'developer', 'flat', 'apartment', 'villa'], "project_keywords": ['property', 'real estate', 'construction', 'builder', 'architect', 'interior', 'home'] },
+        { "keywords": ['lawyer', 'advocate', 'legal', 'chartered', 'accountant', 'tax', 'consultant', 'financial', 'insurance', 'loan', 'investment'], "project_keywords": ['lawyer', 'legal', 'finance', 'accounting', 'consulting', 'tax'] },
+        { "keywords": ['pet ', 'pets', 'veterinary', 'vet ', 'animal', 'dog ', 'dogs', 'puppy', 'kitten', 'kennel', 'aquarium'], "project_keywords": ['pet', 'vet', 'animal', 'dog'] },
+        { "keywords": ['shop', 'store', 'boutique', 'electronics', 'furniture', 'jewel', 'clothing', 'garment', 'fashion', 'textile', 'gift', 'handicraft', 'grocery', 'supermarket', 'kirana'], "project_keywords": ['shop', 'store', 'ecommerce', 'boutique', 'retail', 'fashion', 'product'] },
+        { "keywords": ['photographer', 'photography', 'wedding', 'event', 'planner', 'dj', 'decoration', 'florist', 'caterer', 'videograph', 'studio', 'music', 'band'], "project_keywords": ['photo', 'wedding', 'event', 'studio', 'portfolio', 'creative', 'film'] },
+        { "keywords": ['plumber', 'electrician', 'painter', 'pest control', 'ac repair', 'cleaning', 'laundry', 'packers', 'movers', 'carpenter', 'locksmith', 'solar', 'cctv', 'security'], "project_keywords": ['service', 'repair', 'cleaning', 'home', 'maintenance'] },
+        { "keywords": ['travel', 'tour', 'taxi', 'cab', 'courier', 'logistics', 'transport', 'bus', 'flight', 'visa', 'rental'], "project_keywords": ['travel', 'tour', 'booking', 'trip', 'transport', 'cab'] },
+        { "keywords": ['hostel', 'pg', 'paying guest', 'stay', 'accommodation', 'lodge', 'guest house', 'homestay', 'dormitory'], "project_keywords": ['hostel', 'buddy', 'stay', 'accommodation', 'booking', 'room'] }
+    ]
+    
+    matched_project = None
+    other_projects = []
+    
+    # 1. Try to find a group match
+    matched_group = None
+    for group in category_keyword_map:
+        if any(kw in search_text for kw in group["keywords"]):
+            matched_group = group
+            break
+            
+    if matched_group:
+        for p in projects:
+            p_text = f"{p.get('title', '')} {p.get('desc', '')}".lower()
+            if any(kw in p_text for kw in matched_group["project_keywords"]):
+                matched_project = p
+                break
+                
+    # 2. Fallback: if no category match is found, select the first project in the portfolio list
+    if not matched_project and projects:
+        matched_project = projects[0]
+        
+    # Helper to parse tech tag lists for all returned projects
+    for p in projects:
+        tech = p.get('tech', '')
+        p['tech_tags'] = [t.strip() for t in tech.split(',') if t.strip()] if tech else []
+        
+    # Compile other projects list
+    if matched_project:
+        other_projects = [p for p in projects if p != matched_project]
+    else:
+        other_projects = projects
+        
+    return matched_project, other_projects
+

@@ -102,6 +102,25 @@ export const UI = {
             refinePitchBtn: document.getElementById('refinePitchBtn'),
             sendWhatsAppBtn: document.getElementById('sendWhatsAppBtn'),
             
+            // Socials Tab elements
+            socialBusinessName: document.getElementById('socialBusinessName'),
+            socialCoordinates: document.getElementById('socialCoordinates'),
+            socialServiceSelect: document.getElementById('socialServiceSelect'),
+            socialCustomServiceContainer: document.getElementById('socialCustomServiceContainer'),
+            socialCustomServiceInput: document.getElementById('socialCustomServiceInput'),
+            socialToneSelect: document.getElementById('socialToneSelect'),
+            socialLengthSelect: document.getElementById('socialLengthSelect'),
+            socialMinWordsSelect: document.getElementById('socialMinWordsSelect'),
+            socialLanguageSelect: document.getElementById('socialLanguageSelect'),
+            aiSocialGenerateBtn: document.getElementById('aiSocialGenerateBtn'),
+            customSocialMessageArea: document.getElementById('customSocialMessageArea'),
+            customSocialMessageInput: document.getElementById('customSocialMessageInput'),
+            socialPitchRefineInput: document.getElementById('socialPitchRefineInput'),
+            refineSocialPitchBtn: document.getElementById('refineSocialPitchBtn'),
+            socialMessagePreview: document.getElementById('socialMessagePreview'),
+            openInstagramDmBtn: document.getElementById('openInstagramDmBtn'),
+            openFacebookDmBtn: document.getElementById('openFacebookDmBtn'),
+            
             // Email Modal elements
             emailModal: document.getElementById('emailModal'),
             emailBusinessName: document.getElementById('emailBusinessName'),
@@ -166,7 +185,9 @@ export const UI = {
             // Kanban elements
             listViewBtn: document.getElementById('listViewBtn'),
             kanbanViewBtn: document.getElementById('kanbanViewBtn'),
+            omniViewBtn: document.getElementById('omniViewBtn'),
             kanbanContainer: document.getElementById('kanbanContainer'),
+            omniContainer: document.getElementById('omniContainer'),
             
             toastContainer: document.getElementById('toastContainer'),
         };
@@ -249,39 +270,53 @@ export const UI = {
         this.el.emptyState.style.display = 'none';
         
         const analyticsContainer = document.getElementById('analyticsContainer');
+        const omniContainer = this.el.omniContainer;
+        
+        // Hide all views first
+        this.el.tableContainer.style.display = 'none';
+        if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
+        if (analyticsContainer) analyticsContainer.style.display = 'none';
+        if (omniContainer) omniContainer.style.display = 'none';
+        
         if (AppState.currentView === 'analytics') {
-            this.el.tableContainer.style.display = 'none';
-            if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
             if (analyticsContainer) analyticsContainer.style.display = 'block';
             if (window.App && typeof window.App.refreshAnalytics === 'function') {
                 window.App.refreshAnalytics();
             }
+        } else if (AppState.currentView === 'omni') {
+            if (omniContainer) omniContainer.style.display = 'block';
+            this.renderOmnichannelTracker(leads);
+            if (window.gsap) {
+                window.gsap.fromTo('.omni-stat-card',
+                    { opacity: 0, y: 15 },
+                    { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: 'power2.out', overwrite: 'auto' }
+                );
+                window.gsap.fromTo('.omni-card',
+                    { opacity: 0, scale: 0.98, y: 10 },
+                    { opacity: 1, scale: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power2.out', overwrite: 'auto', delay: 0.1 }
+                );
+            }
+        } else if (AppState.currentView === 'kanban') {
+            if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'block';
+            this.renderKanbanBoard(leads);
+            if (window.gsap) {
+                window.gsap.fromTo('.kanban-column', 
+                    { opacity: 0, y: 15 }, 
+                    { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power2.out', overwrite: 'auto' }
+                );
+                window.gsap.fromTo('.kanban-card', 
+                    { opacity: 0, y: 10 }, 
+                    { opacity: 1, y: 0, duration: 0.3, stagger: 0.02, ease: 'power1.out', delay: 0.15, overwrite: 'auto' }
+                );
+            }
         } else {
-            if (analyticsContainer) analyticsContainer.style.display = 'none';
-            if (AppState.currentView === 'kanban') {
-                this.el.tableContainer.style.display = 'none';
-                if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'block';
-                this.renderKanbanBoard(leads);
-                if (window.gsap) {
-                    window.gsap.fromTo('.kanban-column', 
-                        { opacity: 0, y: 15 }, 
-                        { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power2.out', overwrite: 'auto' }
-                    );
-                    window.gsap.fromTo('.kanban-card', 
-                        { opacity: 0, y: 10 }, 
-                        { opacity: 1, y: 0, duration: 0.3, stagger: 0.02, ease: 'power1.out', delay: 0.15, overwrite: 'auto' }
-                    );
-                }
-            } else {
-                this.el.tableContainer.style.display = 'block';
-                if (this.el.kanbanContainer) this.el.kanbanContainer.style.display = 'none';
-                this.el.leadsTableBody.innerHTML = leads.map((lead, i) => this.createLeadRow(lead, i)).join('');
-                if (window.gsap) {
-                    window.gsap.fromTo('.leads-table tbody tr', 
-                        { opacity: 0, x: -8 }, 
-                        { opacity: 1, x: 0, duration: 0.35, stagger: 0.015, ease: 'power1.out', overwrite: 'auto' }
-                    );
-                }
+            this.el.tableContainer.style.display = 'block';
+            this.el.leadsTableBody.innerHTML = leads.map((lead, i) => this.createLeadRow(lead, i)).join('');
+            if (window.gsap) {
+                window.gsap.fromTo('.leads-table tbody tr', 
+                    { opacity: 0, x: -8 }, 
+                    { opacity: 1, x: 0, duration: 0.35, stagger: 0.015, ease: 'power1.out', overwrite: 'auto' }
+                );
             }
         }
         
@@ -760,9 +795,201 @@ export const UI = {
         return '#';
     },
 
+    async renderOmnichannelTracker(leads) {
+        // 1. Fetch Stats from backend API
+        try {
+            const statsRes = await API.request('/api/outreach/omnichannel-stats');
+            if (statsRes && statsRes.success) {
+                const s = statsRes.stats;
+                this.animateNumber(document.getElementById('omniStatTotalLeads'), s.total_leads || 0);
+                this.animateNumber(document.getElementById('omniStatEmailsSent'), s.emails_sent || 0);
+                this.animateNumber(document.getElementById('omniStatWhatsAppsSent'), s.whatsapps_sent || 0);
+                this.animateNumber(document.getElementById('omniStatSocialTasks'), s.social_tasks_pending || 0);
+            }
+        } catch (err) {
+            console.error('[Omni] Error loading stats:', err);
+        }
+
+        // 2. Fetch Leads with Omnichannel detailed status
+        let omniLeads = [];
+        try {
+            const leadsRes = await API.request('/api/outreach/omnichannel-leads');
+            if (leadsRes && leadsRes.success) {
+                omniLeads = leadsRes.leads;
+            } else {
+                omniLeads = leads || [];
+            }
+        } catch (err) {
+            console.error('[Omni] Error loading leads:', err);
+            omniLeads = leads || [];
+        }
+
+        // 3. Render Sequence Timeline Table Rows
+        const tbody = document.getElementById('omniPipelineTableBody');
+        if (tbody) {
+            if (omniLeads.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 32px;">No active leads enrolled in campaign sequences.</td></tr>`;
+            } else {
+                tbody.innerHTML = omniLeads.map(lead => {
+                    // Step 1: Email (Cold email sent)
+                    let emailClass = '';
+                    let emailTooltip = 'Day 1: Cold Email (Not Sent)';
+                    if (lead.email_sent) {
+                        emailClass = 'completed';
+                        emailTooltip = 'Day 1: Cold Email (Sent)';
+                        if (lead.email_opened) {
+                            emailClass = 'opened-glow';
+                            emailTooltip = 'Day 1: Cold Email (Opened)';
+                        }
+                        if (lead.email_clicked) {
+                            emailClass = 'clicked-glow';
+                            emailTooltip = 'Day 1: Cold Email (Clicked Link)';
+                        }
+                        if (lead.email_replied) {
+                            emailClass = 'success-glow';
+                            emailTooltip = 'Day 1: Cold Email (Replied)';
+                        }
+                    }
+
+                    // Step 2: WhatsApp (Day 3 Followup)
+                    let waClass = '';
+                    let waTooltip = 'Day 3: WhatsApp Follow-up (Not Sent)';
+                    if (lead.whatsapp_sent) {
+                        waClass = 'success-glow';
+                        waTooltip = 'Day 3: WhatsApp Follow-up (Dispatched)';
+                        if (lead.whatsapp_replied) {
+                            waClass = 'success-glow';
+                            waTooltip = 'Day 3: WhatsApp Follow-up (Replied)';
+                        }
+                    } else if (lead.email_sent && !lead.email_replied) {
+                        waClass = 'active-pending';
+                        waTooltip = 'Day 3: WhatsApp Follow-up (Pending action)';
+                    }
+
+                    // Step 3: Social DM / Connect (Day 5 Task)
+                    let socialClass = '';
+                    let socialTooltip = 'Day 5: Social Media Touchpoint (No profiles scanned)';
+                    if (lead.social_task_status === 'COMPLETED') {
+                        socialClass = 'success-glow';
+                        socialTooltip = 'Day 5: Social Media Touchpoint (DM Sent / Connected)';
+                    } else if (lead.social_task_status === 'PENDING') {
+                        socialClass = 'active-pending';
+                        socialTooltip = 'Day 5: Social Media Touchpoint (Task Pending in queue)';
+                    } else if (lead.instagram || lead.facebook) {
+                        socialTooltip = 'Day 5: Social Media Touchpoint (Idle - Social profiles found)';
+                    }
+
+                    // Step 4: Conversion (Closed/Converted)
+                    let convertClass = '';
+                    let convertTooltip = 'Pipeline Stage: Not Converted';
+                    if (lead.pipeline_stage === 'CONVERTED' || lead.pipeline_stage === 'CLOSED') {
+                        convertClass = 'success-glow';
+                        convertTooltip = 'Pipeline Stage: Converted 🎉';
+                    }
+
+                    // Timeline connectors classes
+                    const line1Class = lead.email_sent ? 'completed' : '';
+                    const line2Class = lead.whatsapp_sent ? 'success-glow' : (waClass === 'active-pending' ? 'active-pending' : '');
+                    const line3Class = lead.social_task_status === 'COMPLETED' ? 'success-glow' : '';
+
+                    // Niche category formatting
+                    const niche = lead.category ? lead.category.charAt(0).toUpperCase() + lead.category.slice(1) : 'Business';
+
+                    // Quick Override Actions button
+                    let actionHtml = '';
+                    if (lead.pipeline_stage !== 'CONVERTED' && lead.pipeline_stage !== 'CLOSED') {
+                        actionHtml = `
+                            <div style="display: flex; gap: 6px; justify-content: center;">
+                                <button onclick="App.openOutreachModal(${lead.id})" class="btn btn-sm btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;">
+                                    📧 Email
+                                </button>
+                                <button onclick="App.openWhatsAppModal(${lead.id})" class="btn btn-sm btn-secondary" style="padding: 4px 8px; font-size: 0.75rem; color: #25D366; border-color: rgba(37, 211, 102, 0.2);">
+                                    💬 WhatsApp
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        actionHtml = `<span style="color: var(--accent-green); font-size: 0.75rem; font-weight: bold; text-shadow: var(--shadow-glow-green);">🏆 Closed Won</span>`;
+                    }
+
+                    return `
+                        <tr>
+                            <td>
+                                <div style="font-weight: 700; color: var(--text-primary); cursor: pointer;" onclick="App.showLeadDetails(${lead.id})">
+                                    ${this.escapeHtml(lead.name)}
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">${niche}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono);">${this.escapeHtml(lead.city)}</div>
+                            </td>
+                            <td>
+                                <div class="timeline-cell-wrapper">
+                                    <!-- Step 1: Email -->
+                                    <div class="timeline-step-node ${emailClass}" data-tooltip="${emailTooltip}">📧</div>
+                                    <div class="timeline-step-line ${line1Class}"></div>
+                                    
+                                    <!-- Step 2: WhatsApp -->
+                                    <div class="timeline-step-node ${waClass}" data-tooltip="${waTooltip}">💬</div>
+                                    <div class="timeline-step-line ${line2Class}"></div>
+                                    
+                                    <!-- Step 3: Social Task -->
+                                    <div class="timeline-step-node ${socialClass}" data-tooltip="${socialTooltip}">📱</div>
+                                    <div class="timeline-step-line ${line3Class}"></div>
+                                    
+                                    <!-- Step 4: Converted -->
+                                    <div class="timeline-step-node ${convertClass}" data-tooltip="${convertTooltip}">🏆</div>
+                                </div>
+                            </td>
+                            <td>
+                                ${actionHtml}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 4. Render Sidebar Day 5 Manual Tasks Queue
+        const taskContainer = document.getElementById('omniTaskQueueContainer');
+        if (taskContainer) {
+            const pendingTasks = omniLeads.filter(l => l.social_task_status === 'PENDING');
+            if (pendingTasks.length === 0) {
+                taskContainer.innerHTML = `
+                    <div style="padding: 24px; text-align: center; border: 1px dashed var(--border-color); border-radius: var(--radius-md); color: var(--text-muted); font-size: 0.8rem;">
+                        🎉 No pending manual social connection tasks! All sequence steps automated.
+                    </div>
+                `;
+            } else {
+                taskContainer.innerHTML = pendingTasks.map(lead => {
+                    const profileLink = lead.instagram || lead.facebook || '#';
+                    const platformLabel = lead.instagram ? 'Instagram' : 'Facebook';
+                    const badgeClass = lead.instagram ? 'task-badge-ig' : 'task-badge-li';
+                    
+                    return `
+                        <div class="task-queue-item">
+                            <div class="task-item-header">
+                                <span class="task-item-title">${this.escapeHtml(lead.name)}</span>
+                                <span class="task-item-badge ${badgeClass}">${platformLabel}</span>
+                            </div>
+                            <div class="task-item-text">
+                                City: ${this.escapeHtml(lead.city)} | Sequence at **Day 5**
+                            </div>
+                            <div class="task-item-actions">
+                                <button onclick="App.runSocialTask(${lead.id}, '${this.escapeHtml(profileLink)}')" class="btn btn-sm btn-primary" style="background: var(--accent-cyan); color: black; font-weight: 700; width: 100%; border: none; justify-content: center; box-shadow: var(--shadow-glow-cyan);">
+                                    🚀 DM & Complete Task
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+    },
+
     initTiltEffects() {
         document.body.addEventListener('mousemove', (e) => {
-            const card = e.target.closest('.stat-card, .kanban-card');
+            const card = e.target.closest('.stat-card, .kanban-card, .omni-stat-card, .task-queue-item, .omni-card');
             if (!card) return;
             
             const rect = card.getBoundingClientRect();
@@ -788,7 +1015,7 @@ export const UI = {
         });
         
         document.body.addEventListener('mouseleave', (e) => {
-            const card = e.target.closest('.stat-card, .kanban-card');
+            const card = e.target.closest('.stat-card, .kanban-card, .omni-stat-card, .task-queue-item, .omni-card');
             if (card) {
                 if (window.gsap) {
                     window.gsap.to(card, {

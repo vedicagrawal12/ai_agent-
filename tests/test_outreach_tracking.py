@@ -176,3 +176,73 @@ def test_get_outreach_logs_endpoint(auth_client, db):
     assert len(resp2.json) == 1
     assert resp2.json[0]["template_used"] == "cold_email"
     assert resp2.json[0]["message_sent"] == "Hello testing!"
+
+
+def test_omnichannel_outreach_dashboard_endpoints(auth_client, db):
+    """Verify omnichannel outreach campaign tracking endpoints."""
+    user = db.get_user_by_username("testuser")
+    user_id = user["id"]
+    
+    # Create test lead with socials
+    lead = Lead(
+        name="Omni Gym",
+        place_id="place_omni_1",
+        city="Bhopal",
+        email="omni@gym.com",
+        instagram="https://instagram.com/omnigym"
+    )
+    db.save_leads([lead], user_id)
+    saved_leads = db.get_all_leads(user_id=user_id)
+    saved_lead = [l for l in saved_leads if l["place_id"] == "place_omni_1"][0]
+    
+    # Update socials in database
+    db.update_lead_socials(saved_lead["id"], "https://instagram.com/omnigym", "", user_id)
+    
+    # Manually queue Day 5 task for testing complete-social-task endpoint
+    from models import LeadModel
+    session = db.session
+    lead_obj = session.query(LeadModel).filter_by(id=saved_lead["id"]).first()
+    lead_obj.social_task_status = 'PENDING'
+    session.commit()
+    
+    # 1. Test omnichannel-stats endpoint
+    resp_stats = auth_client.get('/api/outreach/omnichannel-stats')
+    assert resp_stats.status_code == 200
+    assert resp_stats.json["success"] is True
+    stats = resp_stats.json["stats"]
+    assert "total_leads" in stats
+    assert "emails_sent" in stats
+    assert "whatsapps_sent" in stats
+    assert "social_tasks_pending" in stats
+    
+    # 2. Test omnichannel-leads endpoint
+    resp_leads = auth_client.get('/api/outreach/omnichannel-leads')
+    assert resp_leads.status_code == 200
+    assert resp_leads.json["success"] is True
+    leads_list = resp_leads.json["leads"]
+    assert len(leads_list) > 0
+    match_lead = [l for l in leads_list if l["id"] == saved_lead["id"]][0]
+    assert match_lead["name"] == "Omni Gym"
+    assert match_lead["instagram"] == "https://instagram.com/omnigym"
+    
+    # 3. Test complete social task endpoint
+    resp_complete = auth_client.post(f'/api/outreach/complete-social-task/{saved_lead["id"]}')
+    assert resp_complete.status_code == 200
+    assert resp_complete.json["success"] is True
+    
+    # Verify DB update
+    updated_lead = db.get_lead_by_id(saved_lead["id"], user_id)
+    assert updated_lead["social_task_status"] == "COMPLETED"
+    assert updated_lead["social_task_completed_at"] is not None
+    
+    # 4. Test whatsapp status update endpoint
+    resp_wa = auth_client.post(
+        f'/api/outreach/leads/{saved_lead["id"]}/whatsapp-status',
+        json={"sent": True}
+    )
+    assert resp_wa.status_code == 200
+    assert resp_wa.json["success"] is True
+    
+    # Verify DB update
+    updated_lead2 = db.get_lead_by_id(saved_lead["id"], user_id)
+    assert updated_lead2["whatsapp_sent"] is True

@@ -38,7 +38,7 @@ whatsapp_pitch_broken: |
   - Google Maps Reviews: {reviews}
   - Listed Broken Website: {website_url}
   {custom_rules_directive}
-  Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
+  Dynamic diagnostic audit report link containing website performance & speed scorecard built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
   {mockup_link}
   
   Best matching project proof to naturally mention:
@@ -70,7 +70,7 @@ whatsapp_pitch_broken: |
      - If SEO/GMB: Broken site harms search ranking and authority, causing them to slip from search results.
      - If Social Media: Traffic from pages is wasted because the landing link is broken.
   4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally.
-  5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible. Offer a custom mockup layout or draft structure. If mockup link is provided ({mockup_link}), you MUST naturally weave this link into your CTA.
+  5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible. Offer to review their website performance issues and share template designs. If report link is provided ({mockup_link}), you MUST naturally weave this link into your CTA as a custom audit page.
   6. FORMATTING & LANGUAGE STYLE (CRITICAL FOR HUMAN FEEL):
      {language_directives}
      - Keep paragraphs short (maximum 2-3 sentences per paragraph) with clean spacing.
@@ -92,7 +92,7 @@ whatsapp_pitch_no_website: |
   - Google Maps Rating: {rating}
   - Google Maps Reviews: {reviews}
   {custom_rules_directive}
-  Dynamic live draft mockup link built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
+  Dynamic diagnostic audit report link containing website layout recommendations built specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
   {mockup_link}
   
   Best matching project proof to naturally mention:
@@ -122,7 +122,7 @@ whatsapp_pitch_no_website: |
      - If Social Media: Lacking a visually stunning active visual brand feed on Instagram where new clients search.
      - If Custom/Other Service: Explain how lacking this specific service limits their growth, booking rates, or efficiency, and how implementing it will give them a competitive edge.
   4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally.
-  5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible and low-friction. Offer a custom mockup layout or draft strategy. If mockup link is provided ({mockup_link}), you MUST naturally weave this link into your CTA.
+  5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible and low-friction. Offer a custom layout audit and strategy page. If report link is provided ({mockup_link}), you MUST naturally weave this link into your CTA.
   6. FORMATTING & LANGUAGE STYLE (CRITICAL FOR HUMAN FEEL):
      {language_directives}
      - Keep paragraphs short (maximum 2-3 sentences per paragraph).
@@ -145,7 +145,7 @@ whatsapp_pitch_working_website: |
   - Google Maps Reviews: {reviews}
   - Working Website URL: {website_url}
   {custom_rules_directive}
-  Dynamic live draft mockup link or proposal link designed specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
+  Dynamic website speed & diagnostic audit report link designed specifically for them (if provided, weave it naturally as the primary CTA, otherwise ask if you can share one):
   {mockup_link}
   
   Best matching project proof to naturally mention:
@@ -175,7 +175,7 @@ whatsapp_pitch_working_website: |
      - If Social Media: Explain that their website needs to be paired with a highly active, aesthetic Instagram/Facebook feed to capture the social-first younger audience who discover brands via social channels.
      - If Custom/Other Service: Explain how optimizing this specific service will scale their booking volume or lead generation, working hand-in-hand with their active website.
   4. THE SOCIAL PROOF: Incorporate the provided portfolio work sample sentence naturally.
-  5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible. Offer a custom mockup layout, draft strategy, or growth review. If mockup link is provided ({mockup_link}), you MUST naturally weave this link into your CTA.
+  5. HIGH-VALUE CALL TO ACTION (CTA): Make the offer absolutely irresistible. Offer a custom layout audit and performance review. If report link is provided ({mockup_link}), you MUST naturally weave this link into your CTA.
   6. FORMATTING & LANGUAGE STYLE (CRITICAL FOR HUMAN FEEL):
      {language_directives}
      - Keep paragraphs short (maximum 2-3 sentences per paragraph).
@@ -201,7 +201,7 @@ email_pitch: |
   Best matching project proof to mention in the email body:
   {project_sample}
   
-  Dynamic live draft mockup link designed specifically for them (if provided, weave it naturally as a key highlight, otherwise offer to make one):
+  Dynamic website speed & diagnostic performance report link designed specifically for them (if provided, weave it naturally as a key highlight, otherwise offer to make one):
   {mockup_link}
   
   SERVICE CONFIGURATION:
@@ -217,7 +217,7 @@ email_pitch: |
   {email_length_directives}
   
   Strict Copywriting Guidelines for Cold Email:
-  1. SUBJECT LINE: Write a short, highly curiosity-driven, and personalized subject line under 7 words. Never use spammy clickbait or all caps. It should feel like a genuine observation and align with the service (e.g. for SEO: "Question about {business_name}'s search visibility" or for GMB: "Google Maps optimization for {business_name}" or for Web Design: "Quick design layout for {business_name} setup").
+  1. SUBJECT LINE: Write a short, highly curiosity-driven, and personalized subject line under 7 words. Never use spammy clickbait or all caps. It should feel like a genuine observation and align with the service (e.g. for SEO: "Question about {business_name}'s search visibility" or for GMB: "Google Maps optimization for {business_name}" or for Web Design: "Diagnostic report for {business_name} website").
   2. STRUCTURE: 
      - Follow the structure described in LENGTH & STRUCTURE DIRECTIVES strictly. Ensure every section outlined is fully expanded into its own paragraph.
      - Use the INDUSTRY-SPECIFIC INTELLIGENCE to make your analysis feel researched and specific to their business category.

@@ -220,8 +220,37 @@ The LeadHunter Agent relies on a modular, service-oriented architecture:
     }
     ```
 * **`GET /api/leads`**: Get saved leads (supports filtering by `priority`, `city` and pagination `page`/`per_page`).
+* **`GET /api/leads/<lead_id>/competitors`**: Fetch competitor benchmarking comparison for a lead.
+  - **Response Schema**:
+    ```json
+    {
+      "lead": {
+        "id": 12,
+        "name": "Target Salon",
+        "speed_score": 45,
+        "seo_score": 60,
+        "mobile_score": 50,
+        "ssl_score": 0
+      },
+      "competitors": [
+        {
+          "id": -1,
+          "name": "Glow & Style Lounge",
+          "website": "https://glowstylelounge.com",
+          "phone": "+91 98765 43210",
+          "rating": 4.6,
+          "reviews": 45,
+          "speed_score": 90,
+          "seo_score": 88,
+          "mobile_score": 100,
+          "ssl_score": 100,
+          "is_mock": true
+        }
+      ]
+    }
+    ```
 * **`POST /api/leads/<lead_id>/scan-email`**: Scrape email address.
-  * **Response Schema (Success)**:
+  - **Response Schema (Success)**:
     ```json
     {
       "success": true,
@@ -234,7 +263,7 @@ The LeadHunter Agent relies on a modular, service-oriented architecture:
 
 ### Outreach APIs
 * **`POST /api/outreach/generate-ai`**: Generate personalized WhatsApp pitch.
-  * **Payload Schema**:
+  - **Payload Schema**:
     ```json
     {
       "lead": {"id": 12, "name": "Elite Grooming Salon", "city": "Mumbai", "reviews": 32, "rating": 4.2},
@@ -247,7 +276,7 @@ The LeadHunter Agent relies on a modular, service-oriented architecture:
       "language": "hinglish"
     }
     ```
-  * **Response Schema**:
+  - **Response Schema**:
     ```json
     {
       "success": true,
@@ -258,6 +287,10 @@ The LeadHunter Agent relies on a modular, service-oriented architecture:
 * **`POST /api/track/open/<log_id>`**: Tracking pixel endpoint. Returns 1x1 transparent GIF.
 * **`GET /api/track/click/<log_id>?dest=<dest_url>`**: Tracks click and redirects to destination URL.
 * **`POST /api/outreach/sync-replies`**: Triggers manual sync of inbound email replies.
+* **`GET /api/outreach/omnichannel-stats`**: Fetch campaign statistics (emails sent, WhatsApp messages sent, pending social media tasks).
+* **`GET /api/outreach/omnichannel-leads`**: Fetch active leads enrolled in campaign sequences.
+* **`POST /api/outreach/complete-social-task/<lead_id>`**: Mark a Day 5 manual social media connection/DM task as completed.
+* **`POST /api/outreach/leads/<lead_id>/whatsapp-status`**: Manually update/override WhatsApp outreach status.
 
 ### Analytics & Config APIs
 * **`GET /api/stats/analytics`**: Return telemetry metrics (funnel conversion steps, timeline list, ratio rates).
@@ -325,23 +358,38 @@ The system constructs prompts by stacking several layers of directives:
 1. **Persona**: Tailors the sender's voice based on the service (e.g., UI/UX designer for web design, Local SEO consultant for GMB optimization).
 2. **Context**: Injects lead-specific metrics, such as rating and Google review counts.
 3. **Technical Audit Data**: Highlights failures from the website audit (e.g., *"Your home page took 4.5 seconds to respond, which means you're losing up to 40% of visitors before they even see your brand."*).
-4. **Industry-Specific Pain Points**: Pulls from a categorized business rules matrix (detailed below).
-5. **Language & Dialect**: Instructs the model to output in English, Hindi, or Hinglish.
-6. **Word Count**: Mandates a strict minimum word count (`min_words`), using structures (hooks, gap analyses, case study references, CTA roadmaps) to prevent truncation.
+4. **Competitor Benchmark Context**: Injects details of a real or generated local competitor (e.g. competitor name, website URL, speed and SEO scores) to contrast with the lead's metrics and drive conversion urgency.
+5. **Industry-Specific Pain Points**: Pulls from a categorized business rules matrix (detailed below).
+6. **Language & Dialect**: Instructs the model to output in English, Hindi, or Hinglish.
+7. **Word Count**: Mandates a strict minimum word count (`min_words`), using structures (hooks, gap analyses, case study references, CTA roadmaps) to prevent truncation.
 
-### Category-Specific Pain Points Mapping
-To make pitches feel authentic, the system uses a tailored business rules matrix:
-
-* **Gyms & Fitness**: Membership retention is the primary goal. The prompt highlights competitor online trial offers and suggests adding interactive booking tools to capture traffic.
-* **Restaurants & Cafes**: The system targets commission leakage. It emphasizes that relying solely on Zomato/Swiggy wastes 25-30% on margins, and presents direct ordering pages as a way to reclaim profits.
-* **Salons & Spas**: Visual proof drives customer choice. The prompt highlights how a modern web portfolio and direct online scheduling capture customers who book outside business hours.
-* **Clinics & Healthcare**: Trust is paramount. The prompt highlights how an outdated or insecure website (missing SSL) turns away prospective patients.
+### Category-Specific Pain Points Mapping & Portfolio Niche-Matching
+To make pitches feel authentic and suggest appropriate demos, the system supports 14 business verticals:
+* **Gyms & Fitness**: Targets membership retention and schedules booking.
+* **Clinics & Dental Care**: Targets missing SSL trust factors and patient slots scheduling.
+* **Salons & Spas**: Focuses on online booking outside business hours and visual showcases.
+* **Restaurants & Cafes**: Targets direct ordering systems to avoid Zomato/Swiggy commission cuts.
+* **Schools & Coaching**: Emphasizes topper results, faculty profiles, and testimonials.
+* **Auto Garages & Services**: Emphasizes urgent roadside/emergency click-to-call.
+* **Real Estate & Builders**: Targets project micro-sites and visual listing grids.
+* **Lawyers & Legal Services**: Focuses on professionalism, credibility, and inquiry forms.
+* **Pet Care & Vets**: Targets animal care booking and testimonials.
+* **Shops & Retail Boutiques**: Promotes e-commerce capability and retail product catalogs.
+* **Photographers & Studios**: Emphasizes image alt optimization, high speed, and elegant portfolio grids.
+* **Plumbers & Maintenance**: Focuses on local service validation and query lead forms.
+* **Travel & Booking**: Emphasizes tour package showcases and transport booking.
+* **Hostels & Accommodations**: Focuses on room availability updates and reservation routes.
 
 ### Dynamic Mockup Generation
 The outreach copy includes a dynamic preview link:
 `{base_host}/preview/{lead_id}?sender_name={sender_name}&sender_brand={sender_brand}`
 
-This serves a customized website landing page based on the business category (e.g., gym, restaurant, salon, or generic). This visual mockup demonstrates immediate value, increasing booking rates.
+This serves a customized website landing page audit card and portfolio showcase. This visual mockup demonstrates immediate value, increasing booking rates.
+
+### AI Outreach Post-Processing
+After the Gemini API returns the raw text generation, the server runs a regex-based post-processor (`AIOutreachWriter._post_process_pitch`) to:
+- Automatically replace placeholder variables (e.g., `[insert link]`, `[mockup link]`, `[preview link]`, `[audit link]`) with the actual, dynamic preview or audit URLs.
+- Identify and replace hallucinated localhost or dummy domain links generated by the LLM with the actual deployment URLs.
 
 ---
 

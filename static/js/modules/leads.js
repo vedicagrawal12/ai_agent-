@@ -61,7 +61,7 @@ export const leadsModule = {
 
         const mockupIframe = document.getElementById('mockupIframe');
         if (mockupIframe) {
-            if (lead.id) {
+            if (lead.id !== undefined && lead.id !== null && lead.id !== '') {
                 const senderName = localStorage.getItem('sender_name') || '';
                 const senderBrand = localStorage.getItem('sender_brand') || '';
                 const previewUrl = `/preview/${lead.id}?sender_name=${encodeURIComponent(senderName)}&sender_brand=${encodeURIComponent(senderBrand)}`;
@@ -90,6 +90,37 @@ export const leadsModule = {
             if (customMessageInput) customMessageInput.value = '';
         }
         if (customArea) customArea.style.display = 'none';
+
+        // Initialize Social DM Tab Defaults
+        const socialBusinessName = document.getElementById('socialBusinessName');
+        const socialCoordinates = document.getElementById('socialCoordinates');
+        if (socialBusinessName) socialBusinessName.textContent = lead.name;
+        
+        let socialLinksText = [];
+        if (lead.instagram) socialLinksText.push('Instagram (Available)');
+        if (lead.facebook) socialLinksText.push('Facebook (Available)');
+        
+        if (socialCoordinates) {
+            if (socialLinksText.length > 0) {
+                socialCoordinates.textContent = socialLinksText.join(' / ');
+                socialCoordinates.style.color = 'var(--accent-cyan)';
+            } else {
+                socialCoordinates.textContent = 'No socials scanned yet.';
+                socialCoordinates.style.color = 'var(--accent-red)';
+            }
+        }
+
+        const customSocialMessageInput = document.getElementById('customSocialMessageInput');
+        const customSocialArea = document.getElementById('customSocialMessageArea');
+        const socialMessagePreview = document.getElementById('socialMessagePreview');
+        if (customSocialMessageInput) customSocialMessageInput.value = '';
+        if (customSocialArea) customSocialArea.style.display = 'none';
+        if (socialMessagePreview) socialMessagePreview.textContent = 'Click generate to create a custom social media pitch...';
+        
+        if (UI.el.socialServiceSelect) {
+            UI.el.socialServiceSelect.value = 'social_media';
+            if (UI.el.socialCustomServiceContainer) UI.el.socialCustomServiceContainer.style.display = 'none';
+        }
 
         // Initialize Email Tab Defaults
         if (UI.el.emailSubjectInput) UI.el.emailSubjectInput.value = '';
@@ -215,13 +246,18 @@ export const leadsModule = {
             }
         }
 
-        if (lead.id) {
+        if (lead.id !== undefined && lead.id !== null && lead.id !== '') {
             this.loadOutreachLogs(lead.id);
+            this.loadCompetitors(lead.id);
         } else {
             const containers = document.querySelectorAll('#detailPane .outreach-history-list');
             containers.forEach(el => {
                 el.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-secondary);">No outreach history (unsaved lead).</div>';
             });
+            const tableBody = document.getElementById('dashboardCompetitorTableBody');
+            if (tableBody) {
+                tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--text-secondary);">Save the lead to generate competitor benchmarks.</td></tr>';
+            }
         }
 
         const detailPane = document.getElementById('detailPane');
@@ -255,17 +291,20 @@ export const leadsModule = {
     },
 
     async loadOutreachLogs(leadId) {
-        const containers = document.querySelectorAll('#detailPane .outreach-history-list');
-        containers.forEach(el => {
-            el.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-secondary);">Loading history...</div>';
-        });
+        const waContainer = document.getElementById('whatsappHistoryList');
+        const emailContainer = document.getElementById('emailHistoryList');
+        
+        if (waContainer) waContainer.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-secondary);">Loading history...</div>';
+        if (emailContainer) emailContainer.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-secondary);">Loading history...</div>';
 
         try {
             const data = await API.request(`/api/leads/${leadId}/outreach-logs`, {
                 method: 'GET'
             });
 
-            let html = '';
+            let waHtml = '';
+            let emailHtml = '';
+
             if (data && data.length > 0) {
                 data.forEach(log => {
                     const sentAt = new Date(log.sent_at).toLocaleString();
@@ -283,7 +322,7 @@ export const leadsModule = {
                         </div>`;
                     }
 
-                    html += `
+                    const itemHtml = `
                         <div style="padding: 8px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.8rem; margin-bottom: 6px; text-align: left;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                                 <strong>${icon} ${channel}</strong>
@@ -295,19 +334,25 @@ export const leadsModule = {
                             ${trackingInfo}
                         </div>
                     `;
+
+                    if (isEmail) {
+                        emailHtml += itemHtml;
+                    } else {
+                        waHtml += itemHtml;
+                    }
                 });
-            } else {
-                html = '<div style="font-size: 0.8rem; color: var(--text-secondary);">No outreach history.</div>';
             }
 
-            containers.forEach(el => {
-                el.innerHTML = html;
-            });
+            if (!waHtml) waHtml = '<div style="font-size: 0.8rem; color: var(--text-secondary);">No WhatsApp outreach history.</div>';
+            if (!emailHtml) emailHtml = '<div style="font-size: 0.8rem; color: var(--text-secondary);">No email outreach history.</div>';
+
+            if (waContainer) waContainer.innerHTML = waHtml;
+            if (emailContainer) emailContainer.innerHTML = emailHtml;
         } catch (error) {
             console.error('Error fetching outreach logs:', error);
-            containers.forEach(el => {
-                el.innerHTML = '<div style="font-size: 0.8rem; color: var(--accent-red);">Failed to load history.</div>';
-            });
+            const errHtml = '<div style="font-size: 0.8rem; color: var(--accent-red);">Failed to load history.</div>';
+            if (waContainer) waContainer.innerHTML = errHtml;
+            if (emailContainer) emailContainer.innerHTML = errHtml;
         }
     },
 
@@ -615,5 +660,91 @@ export const leadsModule = {
             document.body.removeChild(textArea);
             UI.showToast('📋 Audit report card link copied to clipboard!', 'success');
         });
+    },
+
+    async loadCompetitors(leadId) {
+        const tableBody = document.getElementById('dashboardCompetitorTableBody');
+        if (!tableBody) return;
+        
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--text-secondary);">⏳ Loading competitor metrics...</td></tr>';
+        
+        try {
+            const data = await API.request(`/api/leads/${leadId}/competitors`, {
+                method: 'GET'
+            });
+            
+            if (!data || !data.competitors) {
+                tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--text-secondary);">No competitor metrics available.</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            
+            // Helper: get color for a score value (green >= 80, orange >= 50, red < 50, neutral if 0/unaudited)
+            const scoreColor = (score, isAudited) => {
+                if (!isAudited || score === 0) return 'var(--text-secondary)';
+                if (score >= 80) return 'var(--accent-green)';
+                if (score >= 50) return 'var(--accent-orange)';
+                return 'var(--accent-red)';
+            };
+            
+            // First render the lead itself
+            const l = data.lead;
+            const lAudited = (l.speed_score !== undefined && l.speed_score !== 0) || (l.seo_score !== undefined && l.seo_score !== 0);
+            const lSpeed = lAudited && l.speed_score ? `${l.speed_score}/100` : 'Not Audited';
+            const lSeo = lAudited && l.seo_score ? `${l.seo_score}/100` : 'Not Audited';
+            const lSsl = l.ssl_score !== undefined ? (l.ssl_score > 0 ? '🟢 Yes' : '🔴 No') : 'Not Audited';
+            const lMobile = l.mobile_score !== undefined ? (l.mobile_score > 0 ? '🟢 Yes' : '🔴 No') : 'Not Audited';
+            const lRating = l.rating ? l.rating.toFixed(1) : 'N/A';
+            const lReviews = l.reviews !== undefined ? l.reviews : 'N/A';
+            
+            html += `
+                <tr class="highlight-row">
+                    <td>
+                        <span class="matrix-badge you">YOU</span>
+                        <strong>${l.name}</strong>
+                    </td>
+                    <td style="color: ${scoreColor(l.seo_score, lAudited)};">${lSeo}</td>
+                    <td style="color: ${scoreColor(l.speed_score, lAudited)};">${lSpeed}</td>
+                    <td>⭐ ${lRating}</td>
+                    <td>${lReviews}</td>
+                    <td>${lSsl}</td>
+                    <td>${lMobile}</td>
+                </tr>
+            `;
+            
+            // Next render the competitors
+            data.competitors.forEach(c => {
+                const cSpeed = `${c.speed_score}/100`;
+                const cSeo = `${c.seo_score}/100`;
+                const cSsl = c.ssl_score > 0 ? '🟢 Yes' : '🔴 No';
+                const cMobile = c.mobile_score > 0 ? '🟢 Yes' : '🔴 No';
+                const cRating = c.rating ? c.rating.toFixed(1) : 'N/A';
+                const cReviews = c.reviews !== undefined ? c.reviews : 'N/A';
+                const badgeText = c.is_mock ? 'LOCAL' : 'COMP';
+                const cSeoColor = scoreColor(c.seo_score, true);
+                const cSpeedColor = scoreColor(c.speed_score, true);
+                
+                html += `
+                    <tr class="competitor-row">
+                        <td>
+                            <span class="matrix-badge comp">${badgeText}</span>
+                            <span>${c.name}</span>
+                        </td>
+                        <td style="color: ${cSeoColor}; font-weight: 600;">${cSeo}</td>
+                        <td style="color: ${cSpeedColor}; font-weight: 600;">${cSpeed}</td>
+                        <td>⭐ ${cRating}</td>
+                        <td>${cReviews}</td>
+                        <td>${cSsl}</td>
+                        <td>${cMobile}</td>
+                    </tr>
+                `;
+            });
+            
+            tableBody.innerHTML = html;
+        } catch (error) {
+            console.error('Error fetching competitor benchmark data:', error);
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--accent-red);">Failed to load competitor metrics.</td></tr>';
+        }
     }
 };

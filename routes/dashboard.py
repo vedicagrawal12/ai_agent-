@@ -83,8 +83,9 @@ def verify_db():
 
 @dashboard_bp.route("/preview/<int:lead_id>")
 def live_preview_mockup(lead_id):
-    """Serve a stunning personalized website mockup for the business lead."""
-    lead = db.get_lead_by_id(lead_id, user_id=g.user['id'] if g.user else None)
+    """Serve a stunning personalized website audit report and portfolio showcase for the lead."""
+    # Note: We do NOT enforce login or user_id mapping for preview so that the link is publicly shareable!
+    lead = db.get_lead_by_id(lead_id)
     if not lead:
         return "Lead not found", 404
         
@@ -92,19 +93,45 @@ def live_preview_mockup(lead_id):
     sender_name = request.args.get("sender_name", "")
     sender_brand = request.args.get("sender_brand", "")
     
-    # Determine design theme based on category
-    category = (lead.get("category") or "").lower()
-    name = (lead.get("name") or "").lower()
+    # Parse audit data
+    audit_data_str = lead.get("audit_data", "")
+    audit = {}
+    if audit_data_str:
+        try:
+            import json
+            audit = json.loads(audit_data_str)
+        except Exception as e:
+            logger.error(f"Error parsing audit data for lead {lead_id}: {e}")
+            
+    # Fetch lead owner's portfolio from the database
+    portfolio_url = ""
+    matched_project = None
+    other_projects = []
     
-    theme = "default"
-    if any(x in category or x in name for x in ["gym", "fitness", "workout", "health", "sports", "trainer", "yoga"]):
-        theme = "gym"
-    elif any(x in category or x in name for x in ["hotel", "restaurant", "cafe", "food", "dine", "bakery", "sweet", "pizza", "burger", "coffee"]):
-        theme = "restaurant"
-    elif any(x in category or x in name for x in ["salon", "spa", "beauty", "hair", "parlor", "boutique", "grooming", "clinic", "dental", "doctor", "dentist"]):
-        theme = "salon"
-        
-    return render_template("preview_mockup.html", lead=lead, theme=theme, sender_name=sender_name, sender_brand=sender_brand)
+    user_id = lead.get("user_id")
+    if user_id:
+        portfolio_data = db.get_user_portfolio(user_id)
+        portfolio_url = portfolio_data.get("portfolio_url", "")
+        projects = portfolio_data.get("projects", [])
+        if projects:
+            from utils.portfolio import get_best_matching_project
+            matched_project, other_projects = get_best_matching_project(lead.get("category", ""), lead.get("name", ""), projects)
+            
+    competitors_data = db.get_competitors_benchmark(lead_id, user_id=user_id)
+    competitors = competitors_data.get("competitors", [])
+
+    return render_template(
+        "audit_report.html", 
+        lead=lead, 
+        audit=audit, 
+        show_banner=True, 
+        sender_name=sender_name, 
+        sender_brand=sender_brand, 
+        matched_project=matched_project, 
+        other_projects=other_projects, 
+        portfolio_url=portfolio_url,
+        competitors=competitors
+    )
 
 @dashboard_bp.route("/terms")
 def terms():
@@ -221,4 +248,30 @@ def audit_report_page(lead_id):
         except Exception as e:
             logger.error(f"Error parsing audit data for lead {lead_id}: {e}")
             
-    return render_template("audit_report.html", lead=lead, audit=audit)
+    # Fetch lead owner's portfolio from the database
+    portfolio_url = ""
+    matched_project = None
+    other_projects = []
+    
+    user_id = lead.get("user_id")
+    if user_id:
+        portfolio_data = db.get_user_portfolio(user_id)
+        portfolio_url = portfolio_data.get("portfolio_url", "")
+        projects = portfolio_data.get("projects", [])
+        if projects:
+            from utils.portfolio import get_best_matching_project
+            matched_project, other_projects = get_best_matching_project(lead.get("category", ""), lead.get("name", ""), projects)
+            
+    competitors_data = db.get_competitors_benchmark(lead_id, user_id=user_id)
+    competitors = competitors_data.get("competitors", [])
+
+    return render_template(
+        "audit_report.html", 
+        lead=lead, 
+        audit=audit, 
+        show_banner=False, 
+        matched_project=matched_project, 
+        other_projects=other_projects, 
+        portfolio_url=portfolio_url,
+        competitors=competitors
+    )

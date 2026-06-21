@@ -176,7 +176,7 @@ def validate_config():
 def scan_portfolio():
     """
     Fetch and parse projects from the user's portfolio URL.
-    This runs statelessly and lets the browser save the projects.
+    This parses projects and persists them to the database for public preview pages.
     """
     data = request.get_json()
     if not data:
@@ -188,6 +188,10 @@ def scan_portfolio():
         
     try:
         projects = PortfolioParser.fetch_and_parse(portfolio_url)
+        user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+        if user_id:
+            db.save_user_portfolio(user_id, portfolio_url, projects)
+            
         return jsonify({
             "success": True,
             "portfolio_url": portfolio_url,
