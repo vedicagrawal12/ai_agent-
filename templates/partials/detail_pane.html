@@ -10,7 +10,7 @@
     </div>
     
     <!-- SEO Audit Section -->
-    <div id="detailSEOAuditSection" class="detail-seo-audit-section" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: rgba(255,255,255,0.01);">
+    <div id="detailSEOAuditSection" class="detail-seo-audit-section" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: rgba(255,255,255,0.01); flex-shrink: 0;">
         <!-- Populated dynamically by UI.js / leads.js -->
     </div>
     
@@ -24,161 +24,62 @@
     <div class="detail-pane-body">
         <!-- Tab Content: WhatsApp -->
         <div class="detail-tab-content active" id="detailTab-whatsapp">
-            <div class="detail-section-card" style="margin-bottom: 0;">
-                <div class="detail-business-card">
-                    <div class="detail-business-info">
-                        <div class="detail-business-name" id="whatsappBusinessName">Business Name</div>
-                        <div class="detail-business-meta">📱 <span id="whatsappPhoneNumber">Phone</span></div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 8px;">
-                    <label class="form-label" style="font-size: 0.85rem; font-weight: 600;">Choose a Template</label>
-                </div>
-                
-                <div id="templateOptions" class="template-selector">
-                    <!-- Templates loaded dynamically -->
-                </div>
-
-                <div class="personalization-card">
-                    <div class="personalization-card-title">⚙️ Pitch Personalization Options</div>
-                    <!-- Service Select Row -->
-                    <div style="margin-bottom: 12px; width: 100%;">
-                        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchServiceSelect">Service to Pitch</label>
-                        <select id="pitchServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                            <option value="web_design" selected>Website Design & Development</option>
-                            <option value="seo">Search Engine Optimization (SEO)</option>
-                            <option value="social_media">Social Media Management (SMM)</option>
-                            <option value="gmb">Google Business Profile (GMB) Optimization</option>
-                            <option value="custom">Custom Niche Service</option>
-                        </select>
-                    </div>
-                    <!-- Custom Service Input (Hidden by default) -->
-                    <div id="pitchCustomServiceContainer" style="display: none; margin-bottom: 12px; width: 100%;">
-                        <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchCustomServiceInput">Specify Niche Service</label>
-                        <input type="text" id="pitchCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                    </div>
-                    <div class="personalization-grid" style="margin-bottom: 4px;">
-                        <div>
-                            <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="pitchToneSelect">Tone</label>
-                            <select id="pitchToneSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
-                                <option value="elite" selected>Elite Growth Consultant</option>
-                                <option value="friendly">Friendly Local Freelancer</option>
-                                <option value="direct">Direct Growth Partner</option>
-                            </select>
+            <div class="detail-split-layout">
+                <!-- Left Column: Settings and Input Parameters -->
+                <div class="detail-left-col">
+                    <div class="detail-section-card">
+                        <div class="detail-business-card">
+                            <div class="detail-business-info">
+                                <div class="detail-business-name" id="whatsappBusinessName">Business Name</div>
+                                <div class="detail-business-meta">📱 <span id="whatsappPhoneNumber">Phone</span></div>
+                            </div>
                         </div>
-                        <div>
-                            <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="pitchLengthSelect">Length</label>
-                            <select id="pitchLengthSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
-                                <option value="detailed" selected>Detailed Value Pitch</option>
-                                <option value="short">Short & Punchy (DM-friendly)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="pitchMinWordsSelect">Min Words</label>
-                            <select id="pitchMinWordsSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
-                                <option value="150" selected>150 words</option>
-                                <option value="250">250 words</option>
-                                <option value="350">350 words</option>
-                                <option value="450">450 words</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="pitchLanguageSelect">Language</label>
-                            <select id="pitchLanguageSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
-                                <option value="hinglish" selected>🇮🇳 Hinglish</option>
-                                <option value="english">🇬🇧 English</option>
-                                <option value="hindi">🇮🇳 Hindi</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
 
-                <div style="margin-top: 16px; margin-bottom: 8px;">
-                    <button id="aiGenerateBtn" class="btn-ai-generate">
-                        ✨ AI Generate Custom Pitch (Gemini)
-                    </button>
-                </div>
-
-                <div id="customMessageArea" style="display: none; margin-top: 16px;">
-                    <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Your Custom Message</label>
-                    <textarea id="customMessageInput" class="form-textarea" style="height: 120px;"
-                        placeholder="Type your message here... Use {business_name}, {city}, {category}, {rating}, {reviews} for personalization."></textarea>
-                    
-                    <div class="refine-input-group">
-                        <input type="text" id="pitchRefineInput" class="form-input" placeholder="e.g., make it a bit shorter..." style="font-size: 0.85rem;">
-                        <button id="refinePitchBtn" class="btn-refine">🔄 Refine</button>
-                    </div>
-                </div>
-
-                <div style="margin-top: 16px;">
-                    <label class="form-label" style="font-size: 0.82rem; font-weight: 600; margin-bottom: 6px;">Message Preview</label>
-                    <div id="messagePreview" class="message-preview">
-                        Select a template to preview the message...
-                    </div>
-                </div>
-            </div>
-            <!-- Outreach History Section -->
-            <div class="detail-section-card outreach-history-card" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
-                <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">📬 Outreach History</div>
-                <div class="outreach-history-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto;">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-            <div class="detail-pane-footer" style="padding: 16px 0 0 0; background: transparent; border-top: none;">
-                <button id="sendWhatsAppBtn" class="btn btn-whatsapp btn-full" style="font-weight: 700; height: 42px;">
-                    💬 Open WhatsApp
-                </button>
-            </div>
-        </div>
-        
-        <!-- Tab Content: Email -->
-        <div class="detail-tab-content" id="detailTab-email">
-            <div class="detail-section-card" style="margin-bottom: 0;">
-                <div class="detail-business-card">
-                    <div class="detail-business-info">
-                        <div class="detail-business-name" id="emailBusinessName">Business Name</div>
-                        <div class="detail-business-meta" id="emailCoordinates">
-                            📧 <span id="emailAddressText" style="font-weight: bold; color: var(--accent-cyan);">Scanning website...</span>
-                        </div>
-                    </div>
-                    <button id="scanEmailOnDemandBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; padding: 6px 12px; font-size: 0.8rem; display: none;">
-                        🔍 Scan Website
-                    </button>
-                </div>
-
-                <div class="personalization-card">
-                    <div class="personalization-card-title">⚙️ Pitch Personalization Options</div>
-                    <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 4px;">
-                        <div style="width: 100%;">
-                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailServiceSelect">Service to Pitch</label>
-                            <select id="emailServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
-                                <option value="web_design" selected>Website Design & Development</option>
-                                <option value="seo">Search Engine Optimization (SEO)</option>
-                                <option value="social_media">Social Media Management (SMM)</option>
-                                <option value="gmb">Google Business Profile (GMB) Optimization</option>
-                                <option value="custom">Custom Niche Service</option>
-                            </select>
-                        </div>
-                        <!-- Custom Service Input (Hidden by default) -->
-                        <div id="emailCustomServiceContainer" style="display: none; width: 100%; margin-bottom: 4px;">
-                            <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailCustomServiceInput">Specify Niche Service</label>
-                            <input type="text" id="emailCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                        <div style="margin-bottom: 8px;">
+                            <label class="form-label" style="font-size: 0.85rem; font-weight: 600;">Choose a Template</label>
                         </div>
                         
-                        <div style="display: flex; gap: 12px; align-items: flex-end; width: 100%;">
-                            <div class="personalization-grid" style="flex: 1; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                        <div id="templateOptions" class="template-selector">
+                            <!-- Templates loaded dynamically -->
+                        </div>
+
+                        <div class="personalization-card">
+                            <div class="personalization-card-title">⚙️ Pitch Personalization Options</div>
+                            <!-- Service Select Row -->
+                            <div style="margin-bottom: 12px; width: 100%;">
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchServiceSelect">Service to Pitch</label>
+                                <select id="pitchServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                    <option value="web_design" selected>Website Design & Development</option>
+                                    <option value="seo">Search Engine Optimization (SEO)</option>
+                                    <option value="social_media">Social Media Management (SMM)</option>
+                                    <option value="gmb">Google Business Profile (GMB) Optimization</option>
+                                    <option value="custom">Custom Niche Service</option>
+                                </select>
+                            </div>
+                            <!-- Custom Service Input (Hidden by default) -->
+                            <div id="pitchCustomServiceContainer" style="display: none; margin-bottom: 12px; width: 100%;">
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="pitchCustomServiceInput">Specify Niche Service</label>
+                                <input type="text" id="pitchCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                            </div>
+                            <div class="personalization-grid" style="margin-bottom: 4px;">
                                 <div>
-                                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="emailToneSelect">Tone</label>
-                                    <select id="emailToneSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="pitchToneSelect">Tone</label>
+                                    <select id="pitchToneSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
                                         <option value="elite" selected>Elite Growth Consultant</option>
                                         <option value="friendly">Friendly Local Freelancer</option>
                                         <option value="direct">Direct Growth Partner</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="emailMinWordsSelect">Min Words</label>
-                                    <select id="emailMinWordsSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="pitchLengthSelect">Length</label>
+                                    <select id="pitchLengthSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                                        <option value="detailed" selected>Detailed Value Pitch</option>
+                                        <option value="short">Short & Punchy (DM-friendly)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="pitchMinWordsSelect">Min Words</label>
+                                    <select id="pitchMinWordsSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
                                         <option value="150" selected>150 words</option>
                                         <option value="250">250 words</option>
                                         <option value="350">350 words</option>
@@ -186,46 +87,167 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="emailLanguageSelect">Language</label>
-                                    <select id="emailLanguageSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="pitchLanguageSelect">Language</label>
+                                    <select id="pitchLanguageSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
                                         <option value="hinglish" selected>🇮🇳 Hinglish</option>
                                         <option value="english">🇬🇧 English</option>
                                         <option value="hindi">🇮🇳 Hindi</option>
                                     </select>
                                 </div>
                             </div>
-                            <button id="aiGenerateEmailBtn" class="btn-ai-generate" style="width: auto; height: 32px; font-size: 0.8rem; padding: 0 14px;">
-                                ✨ AI Generate
+                        </div>
+
+                        <div style="margin-top: 16px; margin-bottom: 4px;">
+                            <button id="aiGenerateBtn" class="btn-ai-generate">
+                                ✨ AI Generate Custom Pitch (Gemini)
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div style="margin-top: 16px;">
-                    <div class="form-group">
-                        <label class="form-label" for="emailSubjectInput" style="font-size: 0.82rem; font-weight: 600;">Subject Line</label>
-                        <input type="text" id="emailSubjectInput" class="form-input" placeholder="Subject line will be generated or typed...">
+                <!-- Right Column: Outputs, Editors, and Actions -->
+                <div class="detail-right-col">
+                    <div class="detail-section-card" style="margin-bottom: 0;">
+                        <div id="customMessageArea" style="display: none; margin-top: 0px; margin-bottom: 16px;">
+                            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Your Custom Message</label>
+                            <textarea id="customMessageInput" class="form-textarea" style="height: 120px;"
+                                placeholder="Type your message here... Use {business_name}, {city}, {category}, {rating}, {reviews} for personalization."></textarea>
+                            
+                            <div class="refine-input-group">
+                                <input type="text" id="pitchRefineInput" class="form-input" placeholder="e.g., make it a bit shorter..." style="font-size: 0.85rem;">
+                                <button id="refinePitchBtn" class="btn-refine">🔄 Refine</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label" style="font-size: 0.82rem; font-weight: 600; margin-bottom: 6px;">Message Preview</label>
+                            <div id="messagePreview" class="message-preview" style="margin-top: 0;">
+                                Select a template to preview the message...
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group" style="margin-top: 12px;">
-                        <label class="form-label" for="emailBodyInput" style="font-size: 0.82rem; font-weight: 600;">Email Message Body</label>
-                        <textarea id="emailBodyInput" class="form-textarea" style="height: 180px;" placeholder="Email body will be generated or typed..."></textarea>
+
+                    <!-- Outreach History Section -->
+                    <div class="detail-section-card outreach-history-card" style="border-top: 1px solid var(--border-color);">
+                        <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">📬 Outreach History</div>
+                        <div class="outreach-history-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 120px; overflow-y: auto;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="detail-pane-footer" style="padding: 0; background: transparent; border-top: none; margin-top: auto;">
+                        <button id="sendWhatsAppBtn" class="btn btn-whatsapp btn-full" style="font-weight: 700; height: 42px;">
+                            💬 Open WhatsApp
+                        </button>
                     </div>
                 </div>
             </div>
-            <!-- Outreach History Section -->
-            <div class="detail-section-card outreach-history-card" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
-                <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">📬 Outreach History</div>
-                <div class="outreach-history-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto;">
-                    <!-- Populated dynamically -->
+        </div>
+        
+        <!-- Tab Content: Email -->
+        <div class="detail-tab-content" id="detailTab-email">
+            <div class="detail-split-layout">
+                <!-- Left Column: Settings and Parameters -->
+                <div class="detail-left-col">
+                    <div class="detail-section-card">
+                        <div class="detail-business-card">
+                            <div class="detail-business-info">
+                                <div class="detail-business-name" id="emailBusinessName">Business Name</div>
+                                <div class="detail-business-meta" id="emailCoordinates">
+                                    📧 <span id="emailAddressText" style="font-weight: bold; color: var(--accent-cyan);">Scanning website...</span>
+                                </div>
+                            </div>
+                            <button id="scanEmailOnDemandBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; padding: 6px 12px; font-size: 0.8rem; display: none;">
+                                🔍 Scan Website
+                            </button>
+                        </div>
+
+                        <div class="personalization-card">
+                            <div class="personalization-card-title">⚙️ Pitch Personalization Options</div>
+                            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 4px;">
+                                <div style="width: 100%;">
+                                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailServiceSelect">Service to Pitch</label>
+                                    <select id="emailServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                        <option value="web_design" selected>Website Design & Development</option>
+                                        <option value="seo">Search Engine Optimization (SEO)</option>
+                                        <option value="social_media">Social Media Management (SMM)</option>
+                                        <option value="gmb">Google Business Profile (GMB) Optimization</option>
+                                        <option value="custom">Custom Niche Service</option>
+                                    </select>
+                                </div>
+                                <!-- Custom Service Input (Hidden by default) -->
+                                <div id="emailCustomServiceContainer" style="display: none; width: 100%; margin-bottom: 4px;">
+                                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="emailCustomServiceInput">Specify Niche Service</label>
+                                    <input type="text" id="emailCustomServiceInput" class="form-input" placeholder="e.g. Google Ads management, Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                                </div>
+                                
+                                <div style="display: flex; gap: 12px; align-items: flex-end; width: 100%;">
+                                    <div class="personalization-grid" style="flex: 1; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                                        <div>
+                                            <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="emailToneSelect">Tone</label>
+                                            <select id="emailToneSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                                                <option value="elite" selected>Elite Growth Consultant</option>
+                                                <option value="friendly">Friendly Local Freelancer</option>
+                                                <option value="direct">Direct Growth Partner</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="emailMinWordsSelect">Min Words</label>
+                                            <select id="emailMinWordsSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                                                <option value="150" selected>150 words</option>
+                                                <option value="250">250 words</option>
+                                                <option value="350">350 words</option>
+                                                <option value="450">450 words</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="emailLanguageSelect">Language</label>
+                                            <select id="emailLanguageSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                                                <option value="hinglish" selected>🇮🇳 Hinglish</option>
+                                                <option value="english">🇬🇧 English</option>
+                                                <option value="hindi">🇮🇳 Hindi</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button id="aiGenerateEmailBtn" class="btn-ai-generate" style="width: auto; height: 32px; font-size: 0.8rem; padding: 0 14px;">
+                                        ✨ AI Generate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="detail-pane-footer email-footer detail-footer-buttons" style="padding: 16px 0 0 0; background: transparent; border-top: none; width: 100%;">
-                <button id="openMailClientBtn" class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; flex: 1; font-weight: 600; height: 40px;">
-                    ✉️ Native Draft (mailto:)
-                </button>
-                <button id="sendSmtpEmailBtn" class="btn btn-whatsapp" style="background: var(--accent-blue); font-weight: 700; flex: 1; color: white; border: none; height: 40px;">
-                    🚀 Send Direct (SMTP)
-                </button>
+
+                <!-- Right Column: Outputs and Actions -->
+                <div class="detail-right-col">
+                    <div class="detail-section-card">
+                        <div class="form-group">
+                            <label class="form-label" for="emailSubjectInput" style="font-size: 0.82rem; font-weight: 600;">Subject Line</label>
+                            <input type="text" id="emailSubjectInput" class="form-input" placeholder="Subject line will be generated or typed...">
+                        </div>
+                        <div class="form-group" style="margin-top: 12px;">
+                            <label class="form-label" for="emailBodyInput" style="font-size: 0.82rem; font-weight: 600;">Email Message Body</label>
+                            <textarea id="emailBodyInput" class="form-textarea" style="height: 180px;" placeholder="Email body will be generated or typed..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Outreach History Section -->
+                    <div class="detail-section-card outreach-history-card" style="border-top: 1px solid var(--border-color);">
+                        <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--accent-cyan);">📬 Outreach History</div>
+                        <div class="outreach-history-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 120px; overflow-y: auto;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="detail-pane-footer email-footer detail-footer-buttons" style="padding: 0; background: transparent; border-top: none; width: 100%; margin-top: auto;">
+                        <button id="openMailClientBtn" class="btn btn-secondary" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; flex: 1; font-weight: 600; height: 40px;">
+                            ✉️ Native Draft (mailto:)
+                        </button>
+                        <button id="sendSmtpEmailBtn" class="btn btn-whatsapp" style="background: var(--accent-blue); font-weight: 700; flex: 1; color: white; border: none; height: 40px;">
+                            🚀 Send Direct (SMTP)
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -236,7 +258,7 @@
                     <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">🖥️ Client Mockup Preview</span>
                     <button id="detailCopyMockupLinkBtn" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.75rem; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent;">📋 Copy Link</button>
                 </div>
-                <div class="mockup-iframe-wrapper" style="position: relative; background: #fff; height: 500px;">
+                <div class="mockup-iframe-wrapper" style="position: relative; background: #fff; flex: 1; min-height: 450px;">
                     <iframe id="mockupIframe" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
                 </div>
             </div>

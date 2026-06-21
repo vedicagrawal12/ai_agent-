@@ -71,6 +71,58 @@ export const leadsModule = {
             }
         }
 
+        // Initialize WhatsApp Tab Defaults
+        if (UI.el.pitchServiceSelect) {
+            const hasNoSite = !lead.website || !lead.website.trim();
+            const isBroken = !!lead.is_broken_website;
+            if (hasNoSite || isBroken) {
+                UI.el.pitchServiceSelect.value = 'web_design';
+            } else {
+                UI.el.pitchServiceSelect.value = 'seo';
+            }
+            if (UI.el.pitchCustomServiceContainer) UI.el.pitchCustomServiceContainer.style.display = 'none';
+        }
+        const customMessageInput = document.getElementById('customMessageInput');
+        const customArea = document.getElementById('customMessageArea');
+        if (lead.custom_pitch) {
+            if (customMessageInput) customMessageInput.value = lead.custom_pitch;
+        } else {
+            if (customMessageInput) customMessageInput.value = '';
+        }
+        if (customArea) customArea.style.display = 'none';
+
+        // Initialize Email Tab Defaults
+        if (UI.el.emailSubjectInput) UI.el.emailSubjectInput.value = '';
+        if (UI.el.emailBodyInput) UI.el.emailBodyInput.value = '';
+
+        if (UI.el.emailServiceSelect) {
+            const hasNoSite = !lead.website || !lead.website.trim();
+            const isBroken = !!lead.is_broken_website;
+            if (hasNoSite || isBroken) {
+                UI.el.emailServiceSelect.value = 'web_design';
+            } else {
+                UI.el.emailServiceSelect.value = 'seo';
+            }
+            if (UI.el.emailCustomServiceContainer) UI.el.emailCustomServiceContainer.style.display = 'none';
+        }
+
+        // Initialize radio selections and message preview
+        setTimeout(() => {
+            const firstRadio = document.querySelector('input[name="template"]:not([value="custom"])') || document.querySelector('input[name="template"]');
+            if (firstRadio) {
+                firstRadio.checked = true;
+                AppState.selectedTemplate = firstRadio.value;
+                const container = UI.el.templateOptions;
+                if (container) {
+                    container.querySelectorAll('.template-option').forEach(o => o.classList.remove('selected'));
+                    firstRadio.closest('.template-option')?.classList.add('selected');
+                }
+            }
+            if (outreachModule && typeof outreachModule.updateMessagePreview === 'function') {
+                outreachModule.updateMessagePreview();
+            }
+        }, 50);
+
         // Populate SEO Audit Section
         const seoSection = document.getElementById('detailSEOAuditSection');
         if (seoSection) {

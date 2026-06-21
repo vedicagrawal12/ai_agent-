@@ -1743,15 +1743,15 @@ body::before {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
-    width: 720px;
+    width: 1380px;
     max-width: 95vw;
-    height: 85vh;
-    max-height: 800px;
-    min-height: 500px;
+    height: 90vh;
+    max-height: 880px;
+    min-height: 600px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-lg), 0 0 50px rgba(0, 0, 0, 0.4);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     z-index: 1090;
     display: flex;
     flex-direction: column;
@@ -1765,6 +1765,11 @@ body::before {
     pointer-events: auto;
 }
 
+/* Lock body scroll when detail pane is open */
+body:has(.detail-pane.active) {
+    overflow: hidden;
+}
+
 /* Header */
 .detail-pane-header {
     display: flex;
@@ -1773,6 +1778,7 @@ body::before {
     padding: var(--space-lg);
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-secondary);
+    flex-shrink: 0;
 }
 
 .detail-pane-title-wrap {
@@ -1817,6 +1823,7 @@ body::before {
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
     padding: 0 var(--space-md);
+    flex-shrink: 0;
 }
 
 .detail-tab-btn {
@@ -1846,21 +1853,96 @@ body::before {
 /* Body */
 .detail-pane-body {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
     padding: var(--space-lg);
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
+    min-height: 0;
+    overscroll-behavior: contain;
 }
 
 .detail-tab-content {
     display: none;
     flex-direction: column;
     height: 100%;
+    min-height: 0;
+    flex: 1;
 }
 
 .detail-tab-content.active {
     display: flex;
+}
+
+/* Two-column split layout for large screens */
+.detail-split-layout {
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-lg);
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+}
+
+.detail-left-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    min-width: 280px;
+    overflow-y: auto;
+    padding-right: 6px;
+    overscroll-behavior: contain;
+}
+
+.detail-right-col {
+    flex: 1.2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    min-width: 300px;
+    overflow-y: auto;
+    padding-right: 6px;
+    overscroll-behavior: contain;
+}
+
+/* Custom premium scrollbar for detail columns */
+.detail-left-col::-webkit-scrollbar,
+.detail-right-col::-webkit-scrollbar {
+    width: 6px;
+}
+
+.detail-left-col::-webkit-scrollbar-track,
+.detail-right-col::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.detail-left-col::-webkit-scrollbar-thumb,
+.detail-right-col::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+}
+
+.detail-left-col::-webkit-scrollbar-thumb:hover,
+.detail-right-col::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 240, 255, 0.2);
+}
+
+@media (max-width: 1023px) {
+    .detail-pane-body {
+        overflow-y: auto;
+    }
+    .detail-split-layout {
+        flex-direction: column;
+        overflow-y: visible;
+        gap: var(--space-md);
+    }
+    .detail-left-col,
+    .detail-right-col {
+        overflow-y: visible;
+        padding-right: 0;
+        min-width: 0;
+    }
 }
 
 /* Cards & Forms in Panel */
