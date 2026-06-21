@@ -898,6 +898,8 @@ export const outreachModule = {
         } catch (error) {
             if (error.message && (error.message.includes('BadCredentials') || error.message.includes('Username and Password not accepted'))) {
                 UI.showToast('❌ SMTP Authentication Failed! Google requires an App Password (16-char code from Google Account Security), not your regular Gmail password.', 'error');
+            } else if (error.message && (error.message.includes('Limit Exceeded') || error.message.includes('limit exceeded') || error.message.includes('5.4.5'))) {
+                UI.showToast('❌ SMTP Daily Sending Limit Exceeded! Google restricts free accounts. Configure a dedicated provider (Brevo, Resend, SendGrid) in Settings, or wait 24 hours.', 'error');
             } else {
                 UI.showToast('SMTP Direct Send failed: ' + error.message, 'error');
             }
@@ -1555,6 +1557,8 @@ export const outreachModule = {
             lead.campaign_send_status = 'failed';
             if (error.message && (error.message.includes('BadCredentials') || error.message.includes('Username and Password not accepted'))) {
                 UI.showToast('❌ SMTP Auth Failed! Google requires an App Password, not your regular password. Go to Settings → SMTP.', 'error');
+            } else if (error.message && (error.message.includes('Limit Exceeded') || error.message.includes('limit exceeded') || error.message.includes('5.4.5'))) {
+                UI.showToast('❌ SMTP Daily Sending Limit Exceeded! Google restricts free accounts. Configure a dedicated provider (Brevo, Resend, SendGrid) in Settings, or wait 24 hours.', 'error');
             } else {
                 UI.showToast('Outreach failed: ' + error.message, 'error');
             }
@@ -1868,6 +1872,14 @@ export const outreachModule = {
                     }
                     break;
                 }
+                // If it's a daily sending limit error, show a highlighted warning and break early
+                if (err.message && (err.message.includes('Limit Exceeded') || err.message.includes('limit exceeded') || err.message.includes('5.4.5'))) {
+                    UI.showToast('❌ SMTP Daily Sending Limit Exceeded! Google has blocked further outgoing messages for the day. Configure a dedicated provider (Brevo, Resend, SendGrid) in Settings → SMTP, or wait 24 hours.', 'error');
+                    for (const remaining of sendableLeads.slice(processed + 1)) {
+                        remaining.campaign_send_status = 'failed';
+                    }
+                    break;
+                }
             }
 
             processed++;
@@ -2111,6 +2123,14 @@ export const outreachModule = {
                         if (err.message && (err.message.includes('BadCredentials') || err.message.includes('Username and Password not accepted'))) {
                             UI.showToast('❌ SMTP Authentication Failed! Google requires an App Password, not your regular password. Go to Settings → SMTP to fix.', 'error');
                             // Mark all remaining as failed
+                            for (const remaining of sendableLeads.slice(processedSend + 1)) {
+                                remaining.campaign_send_status = 'failed';
+                            }
+                            break;
+                        }
+                        // If it's a daily sending limit error, show a highlighted warning and break early
+                        if (err.message && (err.message.includes('Limit Exceeded') || err.message.includes('limit exceeded') || err.message.includes('5.4.5'))) {
+                            UI.showToast('❌ SMTP Daily Sending Limit Exceeded! Google has blocked further outgoing messages for the day. Configure a dedicated provider (Brevo, Resend, SendGrid) in Settings → SMTP, or wait 24 hours.', 'error');
                             for (const remaining of sendableLeads.slice(processedSend + 1)) {
                                 remaining.campaign_send_status = 'failed';
                             }
