@@ -27,6 +27,10 @@ def create_app(config_class=None):
     """Flask Application Factory."""
     app = Flask(__name__)
     
+    # Trust Render's reverse proxy for accurate IP addresses (fixes Rate Limiter)
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    
     # 1. Load Configurations
     if config_class is None:
         is_dev = "--dev" in sys.argv or os.getenv("FLASK_ENV") == "development"
