@@ -81,41 +81,48 @@ class Database:
             if Database._engine is None:
                 logging.info(f"[Database] Initializing SQLAlchemy engine with URL: {self.db_url}...")
                 
-                # Custom creator to ensure raw psycopg2 connections default to DictCursor for compatibility
-                def get_psycopg2_connection():
-                    from urllib.parse import urlparse, unquote
-                    url = urlparse(self.db_url)
-                    conn_kwargs = {
-                        "cursor_factory": psycopg2.extras.DictCursor
-                    }
-                    if url.username:
-                        conn_kwargs["user"] = unquote(url.username)
-                    if url.password:
-                        conn_kwargs["password"] = unquote(url.password)
-                    if url.hostname:
-                        conn_kwargs["host"] = url.hostname
-                    if url.port:
-                        conn_kwargs["port"] = url.port
-                    else:
-                        # Default PostgreSQL port when not specified (common on Render)
-                        conn_kwargs["port"] = 5432
-                    if url.path and len(url.path) > 1:
-                        # Strip leading slash from path to get dbname
-                        db_name = url.path.lstrip('/')
-                        if db_name:
-                            conn_kwargs["database"] = db_name
-                    # Log exactly what we're connecting with (mask password)
-                    safe_kwargs = {k: ('***' if k == 'password' else v) for k, v in conn_kwargs.items() if k != 'cursor_factory'}
-                    logging.info(f"[Database] psycopg2.connect kwargs: {safe_kwargs}")
-                    return psycopg2.connect(**conn_kwargs)
-
-                Database._engine = create_engine(
-                    "postgresql://",
-                    creator=get_psycopg2_connection,
-                    pool_size=10,
-                    max_overflow=20,
-                    pool_pre_ping=True
-                )
+                if self.db_url.startswith("sqlite"):
+                    Database._engine = create_engine(
+                        self.db_url,
+                        connect_args={"check_same_thread": False},
+                        pool_pre_ping=True
+                    )
+                else:
+                    # Custom creator to ensure raw psycopg2 connections default to DictCursor for compatibility
+                    def get_psycopg2_connection():
+                        from urllib.parse import urlparse, unquote
+                        url = urlparse(self.db_url)
+                        conn_kwargs = {
+                            "cursor_factory": psycopg2.extras.DictCursor
+                        }
+                        if url.username:
+                            conn_kwargs["user"] = unquote(url.username)
+                        if url.password:
+                            conn_kwargs["password"] = unquote(url.password)
+                        if url.hostname:
+                            conn_kwargs["host"] = url.hostname
+                        if url.port:
+                            conn_kwargs["port"] = url.port
+                        else:
+                            # Default PostgreSQL port when not specified (common on Render)
+                            conn_kwargs["port"] = 5432
+                        if url.path and len(url.path) > 1:
+                            # Strip leading slash from path to get dbname
+                            db_name = url.path.lstrip('/')
+                            if db_name:
+                                conn_kwargs["database"] = db_name
+                        # Log exactly what we're connecting with (mask password)
+                        safe_kwargs = {k: ('***' if k == 'password' else v) for k, v in conn_kwargs.items() if k != 'cursor_factory'}
+                        logging.info(f"[Database] psycopg2.connect kwargs: {safe_kwargs}")
+                        return psycopg2.connect(**conn_kwargs)
+    
+                    Database._engine = create_engine(
+                        "postgresql://",
+                        creator=get_psycopg2_connection,
+                        pool_size=10,
+                        max_overflow=20,
+                        pool_pre_ping=True
+                    )
                 Database._session_factory = sessionmaker(bind=Database._engine)
                 Database._scoped_session = scoped_session(Database._session_factory)
                 Database._pool_dsn = self.db_url
@@ -484,6 +491,22 @@ class Database:
             return False
         except Exception as e:
             logging.error(f"[Database] Error updating WhatsApp status for lead {lead_id}: {e}", exc_info=True)
+            session.rollback()
+            return False
+
+    def update_whatsapp_reply_received(self, lead_id: int, replied: bool) -> bool:
+        """Update the whatsapp_reply_received tracking status for a lead."""
+        session = self.session
+        try:
+            lead = session.query(LeadModel).filter_by(id=lead_id).first()
+            if lead:
+                lead.whatsapp_reply_received = replied
+                lead.updated_at = utcnow()
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            logging.error(f"[Database] Error updating WhatsApp reply status for lead {lead_id}: {e}", exc_info=True)
             session.rollback()
             return False
 

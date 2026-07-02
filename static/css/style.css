@@ -3438,11 +3438,7 @@ code {
     box-shadow: var(--shadow-sm);
 }
 
-.omni-stat-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--border-hover);
-    box-shadow: var(--shadow-md);
-}
+
 
 .omni-stat-card::before {
     content: '';
@@ -3454,13 +3450,9 @@ code {
 }
 
 .omni-stat-card.blue::before { background: var(--accent-blue); }
-.omni-stat-card.blue:hover { box-shadow: var(--shadow-glow-blue); }
 .omni-stat-card.purple::before { background: var(--accent-purple); }
-.omni-stat-card.purple:hover { box-shadow: var(--shadow-glow-violet); }
 .omni-stat-card.green::before { background: var(--accent-green); }
-.omni-stat-card.green:hover { box-shadow: var(--shadow-glow-green); }
 .omni-stat-card.orange::before { background: var(--accent-orange); }
-.omni-stat-card.orange:hover { box-shadow: var(--shadow-glow-orange); }
 
 .omni-stat-icon {
     font-size: 1.5rem;

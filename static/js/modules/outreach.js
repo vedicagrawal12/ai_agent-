@@ -261,6 +261,60 @@ export const outreachModule = {
         }
     },
 
+    async sendApiWhatsApp() {
+        const lead = AppState.currentWhatsAppLead;
+        if (!lead) return;
+
+        const body = document.getElementById('messagePreview')?.textContent || '';
+        if (!body) {
+            UI.showToast('Please generate or type a WhatsApp message first!', 'warning');
+            return;
+        }
+
+        if (!lead.whatsapp_number) {
+            UI.showToast('This lead does not have a WhatsApp number!', 'warning');
+            return;
+        }
+
+        try {
+            UI.showLoading('Dispatching message via WhatsApp API...');
+            
+            const data = await API.request('/api/outreach/send-whatsapp', {
+                method: 'POST',
+                body: JSON.stringify({
+                    lead_id: lead.id,
+                    body: body
+                })
+            });
+
+            if (data.success) {
+                UI.showToast(data.message || 'WhatsApp message successfully sent via API!', 'success');
+                this.closeDetailPane();
+                
+                try {
+                    lead.contacted = 1;
+                    lead.contact_date = new Date().toISOString();
+                    lead.pipeline_stage = 'PITCHED';
+                    UI.renderLeads(AppState.leads);
+                    
+                    if (lead.id) {
+                        setTimeout(() => {
+                            this.promptFollowupReminder(lead.id, lead.name);
+                        }, 500);
+                    }
+                } catch (contactErr) {
+                    console.error('Error marking contacted:', contactErr);
+                }
+            } else {
+                UI.showToast(data.error || 'WhatsApp API dispatch failed.', 'error');
+            }
+        } catch (error) {
+            UI.showToast('WhatsApp API Send failed: ' + error.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
     async generateAIPitch() {
         const lead = AppState.currentWhatsAppLead;
         if (!lead) return;
@@ -903,6 +957,79 @@ export const outreachModule = {
             } else {
                 UI.showToast('SMTP Direct Send failed: ' + error.message, 'error');
             }
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    async sendOmnichannelEmail() {
+        const lead = AppState.currentEmailLead;
+        if (!lead) return;
+
+        const toEmail = lead.email || '';
+        const subject = UI.el.emailSubjectInput?.value.trim() || '';
+        const body = UI.el.emailBodyInput?.value.trim() || '';
+
+        if (!toEmail) {
+            UI.showToast('Recipient email is missing! Try scanning the website first.', 'warning');
+            return;
+        }
+        if (!subject || !body) {
+            UI.showToast('Please type or generate a subject and body first!', 'warning');
+            return;
+        }
+        if (!lead.whatsapp_number) {
+            UI.showToast('This lead does not have a WhatsApp number! Use regular Direct Send instead.', 'warning');
+            return;
+        }
+        if (lead.line_type === 'LANDLINE') {
+            UI.showToast('This lead has a landline number! WhatsApp cannot be sent. Use regular Direct Send instead.', 'warning');
+            return;
+        }
+
+        const host = localStorage.getItem('smtp_host') || '';
+        const port = localStorage.getItem('smtp_port') || '';
+        const email = localStorage.getItem('smtp_email') || '';
+        const passwordRaw = localStorage.getItem('smtp_password') || '';
+        const password = passwordRaw ? await CryptoHelper.decrypt(passwordRaw, AppState.encryptionKey) : '';
+        const useSSL = localStorage.getItem('smtp_use_ssl') !== 'false';
+
+        if (!host || !port || !email || !password) {
+            UI.showToast('SMTP is disabled. Configure your SMTP Settings first!', 'error');
+            UI.openModal('settingsModal');
+            return;
+        }
+
+        try {
+            UI.showLoading('Connecting to SMTP & Meta APIs and dispatching messages...');
+            
+            const data = await API.request('/api/outreach/send-omnichannel', {
+                method: 'POST',
+                body: JSON.stringify({
+                    to_email: toEmail,
+                    subject: subject,
+                    body: body,
+                    lead_id: lead.id,
+                    smtp_config: {
+                        host: host,
+                        port: parseInt(port),
+                        email: email,
+                        password: password,
+                        use_ssl: useSSL
+                    }
+                })
+            });
+
+            if (data.success) {
+                UI.showToast(data.message || 'Omnichannel message successfully sent!', 'success');
+                this.closeDetailPane();
+                
+                this.markLeadPitched(lead);
+            } else {
+                UI.showToast(data.error || 'Omnichannel dispatch failed.', 'error');
+            }
+        } catch (error) {
+            UI.showToast('Omnichannel Send failed: ' + error.message, 'error');
         } finally {
             UI.hideLoading();
         }

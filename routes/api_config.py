@@ -145,6 +145,21 @@ def update_admin_serpapi_key():
     else:
         return jsonify({"error": "Failed to update master SerpApi key in database"}), 500
 
+@config_bp.route("/admin/config/whatsapp", methods=["POST"])
+@admin_required
+def update_admin_whatsapp_keys():
+    """Update system-wide WhatsApp API configurations. Admin only."""
+    data = request.get_json() or {}
+    api_token = data.get("whatsapp_api_token", "").strip()
+    phone_id = data.get("whatsapp_phone_id", "").strip()
+    
+    success1 = db.save_system_setting("whatsapp_api_token", api_token)
+    success2 = db.save_system_setting("whatsapp_phone_id", phone_id)
+    if success1 and success2:
+        return jsonify({"success": True, "message": "WhatsApp API keys updated successfully"})
+    else:
+        return jsonify({"error": "Failed to update WhatsApp API keys in database"}), 500
+
 @config_bp.route("/config/validate", methods=["POST"])
 def validate_config():
     """

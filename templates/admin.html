@@ -184,6 +184,49 @@
                         </span>
                     </div>
                 </div>
+
+                <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; margin-top: 20px;">
+                    <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span>💬</span> WhatsApp Business API
+                    </div>
+                    
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 16px;">
+                        Used for one-click Omnichannel blasts (WhatsApp + Email). Requires Meta Developer Account.
+                    </p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px;">
+                        <input 
+                            type="password" 
+                            id="waApiToken" 
+                            class="form-input" 
+                            placeholder="WhatsApp Temporary or Permanent Access Token..." 
+                            style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: var(--radius-md); font-family: var(--font-mono);"
+                            value="{{ status.whatsapp_api_token_masked or '' }}"
+                        >
+                        <input 
+                            type="text" 
+                            id="waPhoneId" 
+                            class="form-input" 
+                            placeholder="Phone Number ID (e.g., 1234567890)" 
+                            style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: var(--radius-md); font-family: var(--font-mono);"
+                            value="{{ status.whatsapp_phone_id_masked or '' }}"
+                        >
+                        <button 
+                            id="saveWaKeysBtn" 
+                            class="btn btn-primary" 
+                            onclick="saveWhatsAppKeys()" 
+                            style="align-self: flex-start; padding: 10px 20px; font-weight: 700; background: var(--accent-green); color: var(--bg-primary); border: none; border-radius: var(--radius-md); cursor: pointer; transition: all var(--transition-fast);"
+                        >
+                            Save WhatsApp Keys
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <span id="waKeysStatus" class="user-badge {% if status.whatsapp_api_token_configured and status.whatsapp_phone_id_configured %}active{% else %}inactive{% endif %}" style="display: inline-flex; align-items: center; gap: 4px;">
+                            {% if status.whatsapp_api_token_configured and status.whatsapp_phone_id_configured %}✓ Configured (DB){% else %}✗ Not Set{% endif %}
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -348,6 +391,51 @@
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save Master Key';
+            }
+        }
+
+        async function saveWhatsAppKeys() {
+            const apiToken = document.getElementById('waApiToken').value.trim();
+            const phoneId = document.getElementById('waPhoneId').value.trim();
+            const saveBtn = document.getElementById('saveWaKeysBtn');
+            
+            try {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+                
+                const response = await fetch('/api/admin/config/whatsapp', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCookie('csrf_token')
+                    },
+                    body: JSON.stringify({ 
+                        whatsapp_api_token: apiToken,
+                        whatsapp_phone_id: phoneId
+                    })
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showToast('WhatsApp keys updated successfully!', 'success');
+                    
+                    const badge = document.getElementById('waKeysStatus');
+                    if (apiToken && phoneId) {
+                        badge.className = 'user-badge active';
+                        badge.textContent = '✓ Configured (DB)';
+                    } else {
+                        badge.className = 'user-badge inactive';
+                        badge.textContent = '✗ Not Set';
+                    }
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToast(data.error || 'Failed to save WhatsApp keys.', 'error');
+                }
+            } catch (err) {
+                showToast('Network error saving WhatsApp keys.', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save WhatsApp Keys';
             }
         }
     </script>

@@ -62,3 +62,12 @@ scratch/
 celerybeat-schedule*
 celerybeat.pid
 
+
+# Binaries and Large Files
+*.exe
+*.zip
+
+# Local Data
+logfile
+pgsql/
+

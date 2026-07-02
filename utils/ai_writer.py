@@ -964,3 +964,52 @@ class AIOutreachWriter:
             pitch = re.sub(audit_pattern, audit_link, pitch)
             
         return pitch
+
+    @staticmethod
+    def generate_whatsapp_summary(email_pitch: str, api_key: str, business_name: str) -> str:
+        """
+        Generates a 1-2 sentence WhatsApp notification summarizing that an email was sent.
+        """
+        if not api_key:
+            raise Exception("Gemini API key is required for AI generation.")
+            
+        prompt = f"""
+You are a friendly business consultant. You just sent a detailed proposal/audit email to a potential client named '{business_name}'.
+You want to send them a quick WhatsApp message to let them know to check their email.
+
+Here is the email you sent:
+---
+{email_pitch}
+---
+
+Write a very short, friendly 1-2 sentence WhatsApp message (in conversational Hinglish or English) telling them:
+1. You just sent them an email with a custom website audit/proposal.
+2. They should check their inbox.
+
+Keep it extremely casual, warm, and zero-pressure. Do NOT include any placeholders like [Your Name]. Just the raw text message.
+"""
+        return AIOutreachWriter._call_gemini_api(prompt, api_key, tone="friendly")
+
+
+    @staticmethod
+    def generate_whatsapp_direct(lead_data: dict, api_key: str, tone: str, service: str, sender_info: dict, language: str) -> str:
+        """Generates a standalone, punchy WhatsApp pitch."""
+        if not api_key:
+            raise Exception("Gemini API key is required.")
+            
+        business_name = lead_data.get('name', 'Business Owner')
+        sender_name = sender_info.get('name', '')
+        sender_brand = sender_info.get('brand', '')
+        
+        prompt = f"""
+You are {sender_name} from {sender_brand}, an expert in {service}.
+Write a direct, punchy, and highly conversational WhatsApp outreach message to {business_name}.
+
+The goal is to pitch {service} to them. Keep it very short (under 75 words).
+Use emojis sparingly but effectively.
+Tone: {tone}
+Language: {language}
+
+Output ONLY the exact WhatsApp message text. No placeholders, no quotes, no extra text.
+"""
+        return AIOutreachWriter._call_gemini_api(prompt, api_key, tone=tone)

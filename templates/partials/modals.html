@@ -469,6 +469,206 @@
     </div>
 </div>
 
+<!-- ======== WhatsApp Campaign Modal ======== -->
+<div id="whatsappCampaignModal" class="modal-overlay">
+    <div class="modal campaign-modal">
+        <div class="modal-header" style="flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.5rem;">🚀</span>
+                <h3 class="modal-title">WhatsApp Campaign Center</h3>
+            </div>
+            <button class="modal-close">✕</button>
+        </div>
+        
+        <!-- Modal Body (Flex Column) -->
+        <div class="modal-body campaign-modal-body" style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 14px;">
+            
+            <!-- Campaign Stats Bar & Bulk Action Buttons -->
+            <div class="campaign-top-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0;">
+                <!-- Left: Stats -->
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <div class="campaign-stat"><span style="color: var(--text-secondary); font-size: 0.8rem;">Campaign Leads:</span> <strong id="whatsappCampaignStatLeads" style="color: var(--accent-cyan);">0</strong></div>
+                    <div class="campaign-stat"><span style="color: var(--text-secondary); font-size: 0.8rem;">Phones Found:</span> <strong id="whatsappCampaignStatEmails" style="color: var(--accent-green);">0</strong></div>
+                    <div class="campaign-stat"><span style="color: var(--text-secondary); font-size: 0.8rem;">Drafts Ready:</span> <strong id="whatsappCampaignStatDrafts" style="color: var(--accent-violet);">0</strong></div>
+                    <div class="campaign-stat"><span style="color: var(--text-secondary); font-size: 0.8rem;">Delivered:</span> <strong id="whatsappCampaignStatSent" style="color: var(--accent-orange);">0</strong></div>
+                </div>
+                
+                <!-- Right: Bulk Actions -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="whatsappCampaignAutopilotBtn" class="btn btn-primary btn-sm" style="background: var(--gradient-primary); border: none; box-shadow: var(--shadow-glow-cyan); cursor: pointer; font-weight: 700;">🤖 One-Click Autopilot</button>
+                    <button id="whatsappCampaignBulkScanBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan); background: transparent; cursor: pointer;">🔍 Scan All Phones</button>
+                    <button id="whatsappCampaignBulkDraftBtn" class="btn btn-secondary btn-sm" style="border: 1px solid var(--accent-violet); color: var(--accent-violet); background: transparent; cursor: pointer;">✨ Auto-Draft All (Gemini)</button>
+                    <button id="whatsappCampaignBulkSendBtn" class="btn btn-primary btn-sm" style="background: var(--accent-blue); border: none; box-shadow: var(--shadow-glow-blue); cursor: pointer; font-weight: 600;">🚀 Send All Drafts (Meta API)</button>
+                </div>
+            </div>
+            
+            <!-- Bulk Pitch Personalization Settings -->
+            <div class="campaign-config-bar" style="display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); flex-shrink: 0; align-items: flex-end; width: 100%;">
+                <!-- Autopilot Dynamic Targeting Checkbox -->
+                <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 8px; min-width: 210px;">
+                    <input type="checkbox" id="whatsappCampaignAutopilotTargeting" style="cursor: pointer; width: 16px; height: 16px; margin: 0;">
+                    <label for="whatsappCampaignAutopilotTargeting" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-cyan); cursor: pointer; user-select: none; margin: 0;">
+                        ⚡ Autopilot Targeting (Auto-detect)
+                    </label>
+                </div>
+
+                <div id="whatsappCampaignServiceSelectContainer" style="flex: 1.2; min-width: 180px;">
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="whatsappCampaignServiceSelect">Service to Pitch</label>
+                    <select id="whatsappCampaignServiceSelect" class="form-select" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                        <option value="web_design" selected>Website Design & Development</option>
+                        <option value="seo">Search Engine Optimization (SEO)</option>
+                        <option value="social_media">Social Media Management (SMM)</option>
+                        <option value="gmb">Google Business Profile (GMB) Optimization</option>
+                        <option value="custom">Custom Niche Service</option>
+                    </select>
+                </div>
+                
+                <div id="whatsappCampaignCustomServiceContainer" style="display: none; flex: 1.5; min-width: 200px;">
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="whatsappCampaignCustomServiceInput">Specify Niche Service</label>
+                    <input type="text" id="whatsappCampaignCustomServiceInput" class="form-input" placeholder="e.g. Graphic Design" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+                </div>                <div style="flex: 0.8; min-width: 120px;">
+                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="whatsappCampaignToneSelect">Tone</label>
+                    <select id="whatsappCampaignToneSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                        <option value="elite" selected>Elite Growth Consultant</option>
+                        <option value="friendly">Friendly Local Freelancer</option>
+                        <option value="direct">Direct Growth Partner</option>
+                    </select>
+                </div>
+
+                <div style="flex: 0.8; min-width: 120px;">
+                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="whatsappCampaignMinWordsSelect">Min Words</label>
+                    <select id="whatsappCampaignMinWordsSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                        <option value="150" selected>150 words</option>
+                        <option value="250">250 words</option>
+                        <option value="350">350 words</option>
+                        <option value="450">450 words</option>
+                    </select>
+                </div>
+
+                <div style="flex: 0.8; min-width: 120px;">
+                    <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;" for="whatsappCampaignLanguageSelect">Language</label>
+                    <select id="whatsappCampaignLanguageSelect" class="form-select" style="font-size: 0.78rem; padding: 6px 10px; width: 100%;">
+                        <option value="hinglish" selected>🇮🇳 Hinglish</option>
+                        <option value="english">🇬🇧 English</option>
+                        <option value="hindi">🇮🇳 Hindi</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Live Progress Bar -->
+            <div id="whatsappCampaignProgressContainer" style="display: none; padding: 12px; background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: var(--radius-md); flex-shrink: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span id="whatsappCampaignProgressLabel" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-cyan);">Browse Scan Progress...</span>
+                    <span id="whatsappCampaignProgressPercentage" style="font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan);">0%</span>
+                </div>
+                <div style="width: 100%; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden;">
+                    <div id="whatsappCampaignProgressBar" style="width: 0%; height: 100%; background: var(--accent-cyan); transition: width 0.2s ease;"></div>
+                </div>
+            </div>
+
+            <!-- Main Split-Pane Workspace -->
+            <div class="campaign-split-pane">
+                
+                <!-- Left Pane: Eligible Leads Table Directory -->
+                <div class="campaign-left-pane">
+                    <div class="campaign-pane-header" style="padding: 16px 20px; background: linear-gradient(135deg, rgba(0, 240, 255, 0.06) 0%, rgba(108, 92, 231, 0.04) 100%); border-bottom: 2px solid rgba(0, 240, 255, 0.15); font-weight: 700; font-size: 0.95rem; color: var(--accent-cyan); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.3rem;">📇</span>
+                            <div>
+                                <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); letter-spacing: 0.02em;">Campaign Directory</div>
+                                <div style="font-size: 0.72rem; font-weight: 500; color: var(--text-muted); margin-top: 2px;">Leads with Websites &amp; Contact Info</div>
+                            </div>
+                        </div>
+                        <span id="whatsappCampaignDirectoryCount" style="font-size: 0.72rem; font-weight: 600; color: var(--accent-cyan); background: rgba(0, 240, 255, 0.08); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0, 240, 255, 0.15);"></span>
+                    </div>
+                    <div id="whatsappCampaignTableBody" class="campaign-leads-list">
+                        <!-- Populated dynamically with lead cards -->
+                    </div>
+                </div>
+
+                <!-- Right Pane: Active Email Outbox Editor & Live HTML Preview -->
+                <div class="campaign-right-pane" id="whatsappCampaignOutboxReviewPanel">
+                    <!-- Empty state when no lead selected -->
+                    <div id="whatsappCampaignOutboxEmptyState" class="campaign-outbox-empty-state" style="display: flex;">
+                        <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(108, 92, 231, 0.08)); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 240, 255, 0.12); box-shadow: 0 0 30px rgba(0, 240, 255, 0.06);">
+                            <span style="font-size: 2.5rem;">📬</span>
+                        </div>
+                        <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary); letter-spacing: 0.01em; margin-top: 4px;">Select a lead to review</div>
+                        <p style="font-size: 0.82rem; line-height: 1.55; margin: 0; max-width: 320px; color: var(--text-muted);">Click on any row in the directory list to load the lead details, edit subject & body, and preview the email before sending.</p>
+                        <div style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; justify-content: center;">
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                <span style="color: var(--accent-cyan); font-weight: 700;">1</span> Select Lead
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                <span style="color: var(--accent-violet); font-weight: 700;">2</span> Draft AI WhatsApp
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                <span style="color: var(--accent-green); font-weight: 700;">3</span> Send Meta API
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Review Editor Workspace -->
+                    <div id="whatsappCampaignOutboxWorkspace" class="campaign-outbox-workspace" style="display: none;">
+                        <!-- Selected Lead Header -->
+                        <div style="padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div id="whatsappCampaignSelectedName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Hair Salon</div>
+                                <div id="whatsappCampaignSelectedEmail" style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 600; margin-top: 2px;">name@domain.com</div>
+                            </div>
+                            <span id="whatsappCampaignSelectedPriority" class="priority-badge priority-high" style="font-size: 0.75rem; padding: 2px 6px;">HIGH</span>
+                        </div>
+
+                        <!-- Workspace Scrollable Body -->
+                        <div style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px;">
+                            <!-- Subject Line Input -->
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;" for="whatsappCampaignSubjectInput">Subject Line</label>
+                                <input type="text" id="whatsappCampaignSubjectInput" class="form-input" style="font-size: 0.85rem; padding: 8px 10px;" placeholder="WhatsApp not required...">
+                            </div>
+
+                            <!-- Message Body Textarea -->
+                            <div class="form-group" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0;" for="whatsappCampaignBodyInput">WhatsApp Message Body</label>
+                                    <button id="whatsappCampaignSelectedAIGenBtn" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px; border: 1px solid var(--accent-violet); color: var(--accent-violet); background: transparent; cursor: pointer;">✨ Draft AI</button>
+                                </div>
+                                <textarea id="whatsappCampaignBodyInput" class="form-textarea" style="font-size: 0.82rem; line-height: 1.4; padding: 10px; flex: 1; min-height: 160px; font-family: inherit; resize: vertical;" placeholder="Personalized cold outreach message body..."></textarea>
+                            </div>
+
+                            <!-- Live Visual Mockup Preview Card -->
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0;">👁️ Live Preview Card (What they see)</label>
+                                <div class="campaign-live-preview-card" style="padding: 16px; background: white; color: #1e293b; border-radius: var(--radius-md); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                    <!-- Mockup Top Bar -->
+                                    <div style="padding: 8px 12px; background: #f1f5f9; border-radius: 6px; border-left: 4px solid #00d4ff; margin-bottom: 12px; font-size: 0.75rem; color: #475569; line-height: 1.4;">
+                                        📢 <strong>Preview Sticky Banner:</strong><br>
+                                        "This is a premium online preview designed for <span id="previewBusinessName" style="font-weight:700;">Salon</span> by <span id="previewDeveloperBrand" style="font-weight:600;color:#0f172a;">WebScale Studio</span>... [Let's Connect]"
+                                    </div>
+                                    <!-- Email Content Visual mockup -->
+                                    <div style="font-size: 0.8rem; line-height: 1.5; color: #334155; white-space: pre-wrap; max-height: 180px; overflow-y: auto; padding: 6px; background: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9;" id="whatsappCampaignEmailVisualPreview">
+                                        Hello there!
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selected Lead Workspace Footer Actions -->
+                        <div style="padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-top: 1px solid var(--border-color); flex-shrink: 0; display: flex; justify-content: flex-end; gap: 8px;">
+                            <button id="whatsappCampaignSelectedSkipBtn" class="btn btn-ghost btn-sm">Skip</button>
+                            <button id="whatsappCampaignSelectedSendBtn" class="btn btn-primary btn-sm" style="background: var(--accent-blue); border: none; box-shadow: var(--shadow-glow-blue); font-weight: 600; cursor: pointer;">🚀 Send Meta API</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-footer" style="flex-shrink: 0; border-top: 1px solid var(--border-color); padding: 12px 16px; display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary modal-close">Close Campaign Center</button>
+        </div>
+    </div>
+</div>
+
 <!-- ======== History Modal ======== -->
 <div id="historyModal" class="modal-overlay">
     <div class="modal">

@@ -99,8 +99,10 @@ export const UI = {
             customMessageArea: document.getElementById('customMessageArea'),
             customMessageInput: document.getElementById('customMessageInput'),
             pitchRefineInput: document.getElementById('pitchRefineInput'),
+            whatsappBodyInput: document.getElementById('whatsappBodyInput'),
             refinePitchBtn: document.getElementById('refinePitchBtn'),
             sendWhatsAppBtn: document.getElementById('sendWhatsAppBtn'),
+            sendApiWhatsAppBtn: document.getElementById('sendApiWhatsAppBtn'),
             
             // Socials Tab elements
             socialBusinessName: document.getElementById('socialBusinessName'),
@@ -137,14 +139,16 @@ export const UI = {
             emailBodyInput: document.getElementById('emailBodyInput'),
             openMailClientBtn: document.getElementById('openMailClientBtn'),
             sendSmtpEmailBtn: document.getElementById('sendSmtpEmailBtn'),
+            sendOmnichannelBtn: document.getElementById('sendOmnichannelBtn'),
             
             // Bulk Actions Elements
             bulkScanSocialsBtn: document.getElementById('bulkScanSocialsBtn'),
+            bulkEmailCampaignBtn: document.getElementById('bulkEmailCampaignBtn'),
+            bulkWhatsAppCampaignBtn: document.getElementById('bulkWhatsAppCampaignBtn'),
             bulkProgressBanner: document.getElementById('bulkProgressBanner'),
             bulkProgressLabel: document.getElementById('bulkProgressLabel'),
             bulkProgressPercentage: document.getElementById('bulkProgressPercentage'),
             bulkProgressBar: document.getElementById('bulkProgressBar'),
-            bulkEmailCampaignBtn: document.getElementById('bulkEmailCampaignBtn'),
             
             // Campaign modal elements
             emailCampaignModal: document.getElementById('emailCampaignModal'),
@@ -181,6 +185,42 @@ export const UI = {
             previewBusinessName: document.getElementById('previewBusinessName'),
             previewDeveloperBrand: document.getElementById('previewDeveloperBrand'),
             campaignEmailVisualPreview: document.getElementById('campaignEmailVisualPreview'),
+
+            // WhatsApp Campaign modal elements
+            whatsappCampaignModal: document.getElementById('whatsappCampaignModal'),
+            whatsappCampaignStatLeads: document.getElementById('whatsappCampaignStatLeads'),
+            whatsappCampaignStatEmails: document.getElementById('whatsappCampaignStatEmails'),
+            whatsappCampaignStatDrafts: document.getElementById('whatsappCampaignStatDrafts'),
+            whatsappCampaignStatSent: document.getElementById('whatsappCampaignStatSent'),
+            whatsappCampaignBulkScanBtn: document.getElementById('whatsappCampaignBulkScanBtn'),
+            whatsappCampaignBulkDraftBtn: document.getElementById('whatsappCampaignBulkDraftBtn'),
+            whatsappCampaignBulkSendBtn: document.getElementById('whatsappCampaignBulkSendBtn'),
+            whatsappCampaignAutopilotBtn: document.getElementById('whatsappCampaignAutopilotBtn'),
+            whatsappCampaignServiceSelect: document.getElementById('whatsappCampaignServiceSelect'),
+            whatsappCampaignCustomServiceContainer: document.getElementById('whatsappCampaignCustomServiceContainer'),
+            whatsappCampaignCustomServiceInput: document.getElementById('whatsappCampaignCustomServiceInput'),
+            whatsappCampaignToneSelect: document.getElementById('whatsappCampaignToneSelect'),
+            whatsappCampaignMinWordsSelect: document.getElementById('whatsappCampaignMinWordsSelect'),
+            whatsappCampaignLanguageSelect: document.getElementById('whatsappCampaignLanguageSelect'),
+            whatsappCampaignProgressContainer: document.getElementById('whatsappCampaignProgressContainer'),
+            whatsappCampaignProgressLabel: document.getElementById('whatsappCampaignProgressLabel'),
+            whatsappCampaignProgressPercentage: document.getElementById('whatsappCampaignProgressPercentage'),
+            whatsappCampaignProgressBar: document.getElementById('whatsappCampaignProgressBar'),
+            whatsappCampaignTableBody: document.getElementById('whatsappCampaignTableBody'),
+            whatsappCampaignOutboxReviewPanel: document.getElementById('whatsappCampaignOutboxReviewPanel'),
+            whatsappCampaignOutboxEmptyState: document.getElementById('whatsappCampaignOutboxEmptyState'),
+            whatsappCampaignOutboxWorkspace: document.getElementById('whatsappCampaignOutboxWorkspace'),
+            whatsappCampaignSelectedName: document.getElementById('whatsappCampaignSelectedName'),
+            whatsappCampaignSelectedEmail: document.getElementById('whatsappCampaignSelectedEmail'),
+            whatsappCampaignSelectedPriority: document.getElementById('whatsappCampaignSelectedPriority'),
+            whatsappCampaignSubjectInput: document.getElementById('whatsappCampaignSubjectInput'),
+            whatsappCampaignBodyInput: document.getElementById('whatsappCampaignBodyInput'),
+            whatsappCampaignSelectedAIGenBtn: document.getElementById('whatsappCampaignSelectedAIGenBtn'),
+            whatsappCampaignSelectedSkipBtn: document.getElementById('whatsappCampaignSelectedSkipBtn'),
+            whatsappCampaignSelectedSendBtn: document.getElementById('whatsappCampaignSelectedSendBtn'),
+            whatsappPreviewBusinessName: document.getElementById('whatsappPreviewBusinessName'),
+            whatsappPreviewDeveloperBrand: document.getElementById('whatsappPreviewDeveloperBrand'),
+            whatsappCampaignEmailVisualPreview: document.getElementById('whatsappCampaignEmailVisualPreview'),
             
             // Kanban elements
             listViewBtn: document.getElementById('listViewBtn'),
@@ -989,7 +1029,7 @@ export const UI = {
 
     initTiltEffects() {
         document.body.addEventListener('mousemove', (e) => {
-            const card = e.target.closest('.stat-card, .kanban-card, .omni-stat-card, .task-queue-item, .omni-card');
+            const card = e.target.closest('.stat-card, .kanban-card');
             if (!card) return;
             
             const rect = card.getBoundingClientRect();
@@ -1015,7 +1055,7 @@ export const UI = {
         });
         
         document.body.addEventListener('mouseleave', (e) => {
-            const card = e.target.closest('.stat-card, .kanban-card, .omni-stat-card, .task-queue-item, .omni-card');
+            const card = e.target.closest('.stat-card, .kanban-card');
             if (card) {
                 if (window.gsap) {
                     window.gsap.to(card, {

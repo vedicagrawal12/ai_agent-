@@ -61,6 +61,7 @@ class LeadModel(Base):
     last_followup_date = Column(DateTime, nullable=True)
     followup_count = Column(Integer, default=0, server_default='0')
     whatsapp_sent = Column(Boolean, default=False, server_default='false')
+    whatsapp_reply_received = Column(Boolean, default=False, server_default='false')
     social_task_status = Column(String(50), default='NONE', server_default='NONE')
     social_task_completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow, server_default='now()', index=True)

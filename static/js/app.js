@@ -11,6 +11,7 @@ import { UI } from './modules/ui.js';
 import { searchModule } from './modules/search.js';
 import { leadsModule } from './modules/leads.js';
 import { outreachModule } from './modules/outreach.js';
+import { whatsappOutreachModule } from './modules/whatsapp_outreach.js';
 import { settingsModule } from './modules/settings.js';
 import { analyticsModule } from './modules/analytics.js';
 
@@ -19,6 +20,7 @@ const App = {
     ...searchModule,
     ...leadsModule,
     ...outreachModule,
+    ...whatsappOutreachModule,
     ...settingsModule,
     ...analyticsModule,
 
@@ -257,6 +259,11 @@ const App = {
             this.sendSMTPEmail();
         });
 
+        // Send Omnichannel Button
+        UI.el.sendOmnichannelBtn?.addEventListener('click', () => {
+            this.sendOmnichannelEmail();
+        });
+
         // Scan Email on Demand button in modal
         UI.el.scanEmailOnDemandBtn?.addEventListener('click', () => {
             this.scanEmailOnDemand();
@@ -328,6 +335,21 @@ const App = {
         // Launch Email Outreach Campaign
         UI.el.bulkEmailCampaignBtn?.addEventListener('click', () => {
             this.openEmailCampaign();
+        });
+
+        // Launch WhatsApp Campaign
+        UI.el.bulkWhatsAppCampaignBtn?.addEventListener('click', () => {
+            this.openWhatsAppCampaign();
+        });
+
+        // WhatsApp Bulk Draft
+        UI.el.whatsappCampaignBulkDraftBtn?.addEventListener('click', () => {
+            this.generateWhatsAppCampaignDrafts();
+        });
+
+        // WhatsApp Bulk Send
+        UI.el.whatsappCampaignBulkSendBtn?.addEventListener('click', () => {
+            this.dispatchBulkWhatsApp();
         });
 
         // Campaign Custom Service selection toggles
@@ -471,8 +493,13 @@ const App = {
         });
 
         // Send WhatsApp button
-        document.getElementById('sendWhatsAppBtn')?.addEventListener('click', () => {
+        UI.el.sendWhatsAppBtn?.addEventListener('click', () => {
             this.sendWhatsApp();
+        });
+
+        // Send API WhatsApp Button
+        UI.el.sendApiWhatsAppBtn?.addEventListener('click', () => {
+            this.sendApiWhatsApp();
         });
 
         // Keyboard shortcuts

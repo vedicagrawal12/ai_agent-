@@ -444,6 +444,299 @@ def send_smtp_email():
             except Exception:
                 pass
 
+@outreach_bp.route("/outreach/send-omnichannel", methods=["POST"])
+@limiter.limit("60 per hour")
+def send_omnichannel():
+    """Send both an SMTP Email and a Meta WhatsApp Business API message."""
+    gemini_key = request.headers.get("X-Gemini-API-Key")
+    if not gemini_key:
+        return jsonify({"error": "Gemini API key is missing. Please configure it in Settings."}), 401
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+        
+    to_email = data.get("to_email", "").strip()
+    subject = data.get("subject", "").strip()
+    body = data.get("body", "").strip()
+    smtp_config = data.get("smtp_config", {})
+    lead_id = data.get("lead_id")
+    
+    if not to_email or not subject or not body:
+        return jsonify({"error": "Missing recipient, subject, or body details for Email."}), 400
+        
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    lead = None
+    if lead_id:
+        lead = db.get_lead_by_id(lead_id, user_id=user_id)
+        if not lead:
+            return jsonify({"error": "Lead not found"}), 404
+
+    wa_token = db.get_system_setting("whatsapp_api_token")
+    wa_phone_id = db.get_system_setting("whatsapp_phone_id")
+    if not wa_token or not wa_phone_id:
+        return jsonify({"error": "WhatsApp Business API is not configured in Admin Settings."}), 400
+
+    wa_number = lead.get("whatsapp_number") if lead else None
+    if not wa_number:
+        return jsonify({"error": "Lead does not have a WhatsApp number."}), 400
+
+    # --- 1. EMAIL DISPATCH ---
+    smtp_host = smtp_config.get("host", "").strip()
+    smtp_port = smtp_config.get("port")
+    sender_email = smtp_config.get("email", "").strip()
+    smtp_password = smtp_config.get("password", "").strip()
+    use_ssl = smtp_config.get("use_ssl", False)
+    
+    if not smtp_host or not smtp_port or not sender_email or not smtp_password:
+        return jsonify({"error": "Complete SMTP credentials are required to send direct email."}), 400
+
+    log_id = 0
+    if lead_id:
+        try:
+            log_id = db.log_message(lead_id, template="cold_email", message=body, user_id=user_id)
+        except Exception as db_err:
+            logger.error(f"Error logging outreach message: {db_err}")
+
+    base_host = request.host_url.rstrip('/')
+    url_pattern = re.compile(r'(https?://[^\s<>"]+)')
+    
+    def replace_url(match):
+        url = match.group(1)
+        clean_url = url
+        trailing = ""
+        while clean_url and clean_url[-1] in ".,;:!?()":
+            trailing = clean_url[-1] + trailing
+            clean_url = clean_url[:-1]
+            
+        if log_id:
+            encoded_url = urllib.parse.quote(clean_url)
+            tracking_url = f"{base_host}/api/track/click/{log_id}?dest={encoded_url}"
+            return f'\x00LINK_START\x00<a href="{tracking_url}" target="_blank">{html.escape(clean_url)}</a>{html.escape(trailing)}\x00LINK_END\x00'
+        else:
+            return f'\x00LINK_START\x00<a href="{clean_url}" target="_blank">{html.escape(clean_url)}</a>{html.escape(trailing)}\x00LINK_END\x00'
+            
+    marked_body = url_pattern.sub(replace_url, body)
+    parts = re.split(r'\x00LINK_START\x00|\x00LINK_END\x00', marked_body)
+    html_segments = []
+    for i, part in enumerate(parts):
+        if i % 2 == 0:
+            html_segments.append(html.escape(part))
+        else:
+            html_segments.append(part)
+    html_body = ''.join(html_segments).replace("\n", "<br>\n")
+    
+    if log_id:
+        pixel_url = f"{base_host}/api/track/open/{log_id}"
+        html_body += f'\n<img src="{pixel_url}" width="1" height="1" style="display:none;" alt="" />'
+        try:
+            stored_content = f"SUBJECT:{subject}\n{html_body}"
+            db.update_message_content(log_id, stored_content)
+        except Exception as update_err:
+            logger.error(f"Error updating message log content with HTML: {update_err}")
+
+    server = None
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['From'] = sender_email
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        
+        part1 = MIMEText(body, 'plain', 'utf-8')
+        part2 = MIMEText(html_body, 'html', 'utf-8')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        port = int(smtp_port)
+        if use_ssl:
+            server = smtplib.SMTP_SSL(smtp_host, port, timeout=10)
+        else:
+            server = smtplib.SMTP(smtp_host, port, timeout=10)
+            server.ehlo()
+            try:
+                server.starttls()
+                server.ehlo()
+            except Exception as tls_err:
+                logger.warning(f"STARTTLS failed: {tls_err}")
+                
+        server.login(sender_email, smtp_password)
+        server.sendmail(sender_email, [to_email], msg.as_string())
+        
+    except Exception as e:
+        logger.error(f"Omnichannel Email Delivery failed: {e}")
+        return jsonify({"error": f"Email Delivery failed: {str(e)}"}), 500
+    finally:
+        if server:
+            try:
+                server.quit()
+            except Exception:
+                pass
+
+    # --- 2. WHATSAPP AI GENERATION & DISPATCH ---
+    try:
+        business_name = lead.get("name", "there")
+        wa_summary = AIOutreachWriter.generate_whatsapp_summary(body, gemini_key, business_name)
+    except Exception as e:
+        logger.error(f"Failed to generate WhatsApp summary: {e}")
+        return jsonify({"error": f"Failed to generate WhatsApp AI summary: {str(e)}"}), 500
+        
+    wa_result = WhatsAppMessenger.send_business_api_message(wa_token, wa_phone_id, wa_number, wa_summary)
+    if not wa_result.get("success"):
+        return jsonify({"error": f"Email sent, but WhatsApp failed: {wa_result.get('error')}"}), 500
+
+    # --- 3. LOGGING & PIPELINE UPDATE ---
+    if lead_id:
+        db.update_lead_pipeline_stage(lead_id, "PITCHED", user_id=user_id)
+        db.update_whatsapp_sent(lead_id, True, user_id=user_id)
+        try:
+            db.log_message(lead_id, template="whatsapp_api", message=wa_summary, user_id=user_id)
+        except Exception as e:
+            logger.error(f"Failed to log WA message: {e}")
+
+        # Check for social connections
+        if lead.get("instagram") or lead.get("facebook"):
+            session = db.session
+            lead_obj = session.query(LeadModel).filter_by(id=lead_id, user_id=user_id).first()
+            if lead_obj and lead_obj.social_task_status == 'NONE':
+                lead_obj.social_task_status = 'PENDING'
+                session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"Omnichannel blast successful! Email and WhatsApp delivered.",
+        "whatsapp_preview": wa_summary
+    })
+
+@outreach_bp.route("/outreach/send-whatsapp", methods=["POST"])
+@limiter.limit("120 per hour")
+def send_whatsapp_direct():
+    """Send a WhatsApp message directly via Meta Business API."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+        
+    lead_id = data.get("lead_id")
+    template_name = data.get("template_name", "icebreaker_hello")
+    
+    user_id = g.user['id'] if (g.get('user') and 'id' in g.user) else None
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    lead = None
+    if lead_id:
+        lead = db.get_lead_by_id(lead_id, user_id=user_id)
+        if not lead:
+            return jsonify({"error": "Lead not found"}), 404
+
+    wa_token = request.headers.get("X-WhatsApp-Token") or db.get_system_setting("whatsapp_api_token")
+    wa_phone_id = request.headers.get("X-WhatsApp-Phone-ID") or db.get_system_setting("whatsapp_phone_id")
+    if not wa_token or not wa_phone_id:
+        return jsonify({"error": "WhatsApp Business API is not configured in Admin Settings or headers."}), 400
+
+    wa_number = lead.get("whatsapp_number") if lead else None
+    if not wa_number:
+        return jsonify({"error": "Lead does not have a WhatsApp number."}), 400
+
+    try:
+        wa_result = WhatsAppMessenger.send_business_api_template(wa_token, wa_phone_id, wa_number, template_name)
+        if not wa_result.get("success"):
+            return jsonify({"error": f"WhatsApp dispatch failed: {wa_result.get('error')}"}), 500
+            
+        if lead_id:
+            db.update_lead_pipeline_stage(lead_id, "PITCHED", user_id=user_id)
+            db.update_whatsapp_sent(lead_id, True, user_id=user_id)
+            try:
+                db.log_message(lead_id, template="whatsapp_icebreaker", message=f"Sent template: {template_name}", user_id=user_id)
+            except Exception as e:
+                logger.error(f"Failed to log WA message: {e}")
+
+            # Check for social connections
+            if lead.get("instagram") or lead.get("facebook"):
+                session = db.session
+                lead_obj = session.query(LeadModel).filter_by(id=lead_id, user_id=user_id).first()
+                if lead_obj and lead_obj.social_task_status == 'NONE':
+                    lead_obj.social_task_status = 'PENDING'
+                    session.commit()
+                    
+        return jsonify({
+            "success": True,
+            "message": "WhatsApp message successfully dispatched!"
+        })
+    except Exception as e:
+        logger.error(f"WhatsApp API delivery failed: {e}")
+        return jsonify({"error": f"WhatsApp Delivery failed: {str(e)}"}), 500
+
+@outreach_bp.route("/webhook/whatsapp", methods=["GET"])
+def verify_whatsapp_webhook():
+    """Verify the webhook with Meta."""
+    verify_token = "leadhunter_wa_webhook_123"
+    mode = request.args.get("hub.mode")
+    token = request.args.get("hub.verify_token")
+    challenge = request.args.get("hub.challenge")
+    
+    if mode and token:
+        if mode == "subscribe" and token == verify_token:
+            return challenge, 200
+        else:
+            return "Forbidden", 403
+    return "Not Found", 404
+
+@outreach_bp.route("/webhook/whatsapp", methods=["POST"])
+def handle_whatsapp_webhook():
+    """Receive messages from WhatsApp (lead replies)."""
+    data = request.get_json()
+    
+    try:
+        if data.get("object") == "whatsapp_business_account":
+            for entry in data.get("entry", []):
+                for change in entry.get("changes", []):
+                    value = change.get("value", {})
+                    if "messages" in value:
+                        for msg in value["messages"]:
+                            from_number = msg.get("from")
+                            msg_body = ""
+                            if msg.get("type") == "text":
+                                msg_body = msg.get("text", {}).get("body", "")
+                            
+                            clean_from_number = ''.join(filter(str.isdigit, str(from_number)))
+                            
+                            session = db.session
+                            lead = session.query(LeadModel).filter(
+                                LeadModel.whatsapp_number.like(f"%{clean_from_number}%")
+                            ).first()
+                            
+                            if lead and not lead.whatsapp_reply_received:
+                                db.update_whatsapp_reply_received(lead.id, True)
+                                db.log_message(lead.id, template="whatsapp_reply", message=msg_body, user_id=lead.user_id, is_reply=True)
+                                
+                                wa_token = db.get_system_setting("whatsapp_api_token")
+                                wa_phone_id = db.get_system_setting("whatsapp_phone_id")
+                                gemini_key = db.get_system_setting("gemini_api_key")
+                                
+                                if wa_token and wa_phone_id and gemini_key:
+                                    lead_dict = {
+                                        "name": lead.name, "city": lead.city, "category": lead.category, 
+                                        "rating": lead.rating, "reviews": lead.reviews, "notes": lead.notes
+                                    }
+                                    pitch = AIOutreachWriter.generate_whatsapp_direct(lead_dict, gemini_key, lead.name, [])
+                                    
+                                    if pitch and "error" not in pitch:
+                                        res = WhatsAppMessenger.send_business_api_message(wa_token, wa_phone_id, lead.whatsapp_number, pitch)
+                                        if res.get("success"):
+                                            db.log_message(lead.id, template="whatsapp_pitch", message=pitch, user_id=lead.user_id)
+                                            db.update_lead_pipeline_stage(lead.id, "PITCHED", user_id=lead.user_id)
+                                
+            return jsonify({"status": "ok"}), 200
+        else:
+            return "Not Found", 404
+    except Exception as e:
+        logger.error(f"Error handling WhatsApp webhook: {e}")
+        return jsonify({"status": "error"}), 500
+
+
 @outreach_bp.route("/track/open/<int:log_id>", methods=["GET"])
 @limiter.limit("30 per minute")
 def track_open(log_id):
@@ -674,4 +967,37 @@ def update_whatsapp_status(lead_id):
         return jsonify({"error": "Lead not found or failed to update"}), 500
     except Exception as e:
         logger.error(f"Error updating WhatsApp status for lead {lead_id}: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@outreach_bp.route("/outreach/generate-whatsapp", methods=["POST"])
+@limiter.limit("30 per minute")
+def generate_whatsapp_standalone():
+    gemini_key = request.headers.get("X-Gemini-API-Key")
+    if not gemini_key:
+        return jsonify({"error": "Gemini API key is missing."}), 401
+        
+    data = request.get_json() or {}
+    lead_data = data.get("lead", {})
+    tone = data.get("tone", "elite")
+    service = data.get("service", "web_design")
+    sender = data.get("sender", {})
+    language = data.get("language", "hinglish")
+    
+    if not lead_data:
+        return jsonify({"error": "Lead data is required"}), 400
+        
+    try:
+        from utils.ai_writer import AIOutreachWriter
+        message = AIOutreachWriter.generate_whatsapp_direct(
+            lead_data=lead_data,
+            api_key=gemini_key,
+            tone=tone,
+            service=service,
+            sender_info=sender,
+            language=language
+        )
+        return jsonify({"success": True, "message": message})
+    except Exception as e:
+        logger.error(f"Error generating WhatsApp message: {e}")
         return jsonify({"error": str(e)}), 500

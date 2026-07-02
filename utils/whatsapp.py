@@ -183,3 +183,113 @@ class WhatsAppMessenger:
             })
         
         return results
+
+    @staticmethod
+    def send_business_api_message(api_token: str, phone_id: str, to_number: str, message: str) -> dict:
+        """
+        Send a WhatsApp message directly via the Meta Graph API.
+        
+        Args:
+            api_token: Meta Developer Temporary or Permanent Access Token
+            phone_id: The Phone Number ID from the Meta Developer Dashboard
+            to_number: Target phone number with country code (e.g. '15551234567')
+            message: The text content of the message
+            
+        Returns:
+            Dictionary containing success status and API response data
+        """
+        import requests
+        
+        if not api_token or not phone_id:
+            return {"success": False, "error": "Missing WhatsApp API credentials"}
+            
+        if not to_number:
+            return {"success": False, "error": "Missing target phone number"}
+            
+        # Clean phone number - digits only
+        clean_number = ''.join(filter(str.isdigit, to_number))
+        
+        url = f"https://graph.facebook.com/v19.0/{phone_id}/messages"
+        headers = {
+            "Authorization": f"Bearer {api_token}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": clean_number,
+            "type": "text",
+            "text": {
+                "preview_url": False,
+                "body": message
+            }
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response_data = response.json()
+            
+            if response.status_code in (200, 201):
+                return {"success": True, "data": response_data}
+            else:
+                return {"success": False, "error": f"Meta API Error: {response_data.get('error', {}).get('message', 'Unknown error')}"}
+                
+        except Exception as e:
+            import logging
+            logging.error(f"WhatsApp API Exception: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def send_business_api_template(api_token: str, phone_id: str, to_number: str, template_name: str, language_code: str = "en_US") -> dict:
+        """
+        Send a WhatsApp template message directly via the Meta Graph API.
+        
+        Args:
+            api_token: Meta Developer Temporary or Permanent Access Token
+            phone_id: The Phone Number ID from the Meta Developer Dashboard
+            to_number: Target phone number with country code (e.g. '15551234567')
+            template_name: The name of the approved template (e.g. 'hello_world')
+            language_code: Language code (default 'en_US')
+        """
+        import requests
+        
+        if not api_token or not phone_id:
+            return {"success": False, "error": "Missing WhatsApp API credentials"}
+            
+        if not to_number:
+            return {"success": False, "error": "Missing target phone number"}
+            
+        clean_number = ''.join(filter(str.isdigit, to_number))
+        
+        url = f"https://graph.facebook.com/v19.0/{phone_id}/messages"
+        headers = {
+            "Authorization": f"Bearer {api_token}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": clean_number,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {
+                    "code": language_code
+                }
+            }
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response_data = response.json()
+            
+            if response.status_code in (200, 201):
+                return {"success": True, "data": response_data}
+            else:
+                return {"success": False, "error": f"Meta API Error: {response_data.get('error', {}).get('message', 'Unknown error')}"}
+                
+        except Exception as e:
+            import logging
+            logging.error(f"WhatsApp API Template Exception: {str(e)}")
+            return {"success": False, "error": str(e)}

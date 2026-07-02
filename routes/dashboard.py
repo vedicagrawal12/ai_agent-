@@ -208,6 +208,9 @@ def admin_dashboard():
         
         # System Configuration info
         master_key = db.get_system_setting("serpapi_key")
+        wa_token = db.get_system_setting("whatsapp_api_token")
+        wa_phone_id = db.get_system_setting("whatsapp_phone_id")
+        
         using_env = False
         if not master_key:
             import os
@@ -217,6 +220,11 @@ def admin_dashboard():
         status_info["master_serpapi_key_configured"] = bool(master_key)
         status_info["master_serpapi_key_masked"] = f"{master_key[:8]}...{master_key[-4:]}" if master_key and len(master_key) > 12 else ("***" if master_key else "")
         status_info["master_serpapi_key_source"] = "Environment Variable" if using_env else ("Database" if master_key else "Not Configured")
+        
+        status_info["whatsapp_api_token_configured"] = bool(wa_token)
+        status_info["whatsapp_phone_id_configured"] = bool(wa_phone_id)
+        status_info["whatsapp_api_token_masked"] = f"{wa_token[:8]}...{wa_token[-4:]}" if wa_token and len(wa_token) > 12 else ("***" if wa_token else "")
+        status_info["whatsapp_phone_id_masked"] = f"{wa_phone_id[:4]}...{wa_phone_id[-2:]}" if wa_phone_id and len(wa_phone_id) > 6 else ("***" if wa_phone_id else "")
         
     except Exception as e:
         logger.error(f"Error loading admin dashboard: {e}")

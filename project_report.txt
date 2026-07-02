@@ -1,0 +1,74 @@
+================================================================================
+                           LEADHUNTER AI - PROJECT REPORT
+================================================================================
+
+1. PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+LeadHunter AI is an advanced automated lead generation, enrichment, and cold 
+outreach engine. It enables agencies and B2B professionals to discover high-value 
+local business prospects (e.g., gyms, medical clinics, beauty salons, restaurants) 
+who lack a strong digital presence.
+
+Instead of generic web scraping, the agent:
+- Discovers businesses via Google Maps.
+- Filters out companies with established websites.
+- Identifies premium targets (no website or broken/offline site).
+- Enriches lead profiles by crawling their sites and extracting email addresses.
+- Audits websites for Speed, SEO, Mobile Responsiveness, SSL, and Image Alt properties.
+- Scores & Prioritizes prospects using Google review counts and audit metrics.
+- Drafts Hyper-Personalized pitches using the Gemini LLM.
+- Automates Outreach & Follow-up via WhatsApp links, SMTP cold emails, and auto-drip follow-ups.
+- Tracks Engagement via 1x1 tracking pixels, link redirects, and inbound IMAP reply synchronization.
+
+2. CORE FEATURES
+--------------------------------------------------------------------------------
+- Smart Local Search: Google Maps powered search for businesses.
+- Parallel Website Health Checker: Verifies broken sites concurrently.
+- High-Accuracy Phone Validator Engine: Uses Google libphonenumber for line classification (mobile/landline).
+- Intelligent Lead Filtering & Priority Scoring: High, Medium, Low priority scoring based on website status and reviews.
+- Multi-Language AI Outreach Copywriter: Generates pitches in Hinglish, English, and Hindi using Gemini AI.
+- Centralized Admin Dashboard: Role-based control grid.
+- Instagram & Facebook Social Scanner: Discovers social profiles.
+- Automated Follow-up Drip Campaigns: Dispatches follow-ups using SMTP credentials.
+- Inbound Reply Tracking: IMAP reader to monitor incoming replies and update pipeline.
+- Interactive Telemetry Dashboard: Funnel conversions, engagement ratios, and dispatch timeline tracking.
+
+3. TECH STACK & APPROACH
+--------------------------------------------------------------------------------
+Frontend UI: HTML5, JavaScript (ES6+), Vanilla CSS (Flexbox/Grid, Custom CSS Variables). Premium glassmorphism design.
+Backend Core: Python, Flask Web Framework.
+Database: PostgreSQL, SQLAlchemy ORM, Alembic (migration).
+Task Queue: Celery + Redis (Production) / Python `threading` (Development).
+Scraping Engine: SerpApi (Google Maps & Web Search), `requests` + HTML Parser.
+AI Orchestration: Google Gemini API with dynamic YAML prompts.
+Email Infrastructure: Standard Python `smtplib`, `imaplib`.
+Caching & Rate Limiting: Flask-Caching, Flask-Limiter.
+
+4. SYSTEM ARCHITECTURE & WORKFLOW
+--------------------------------------------------------------------------------
+The system execution flow is entirely asynchronous:
+
+Stage 1: Search & Discover (SerpApi Google Maps).
+Stage 2: Clean, Standardize & Dedup (phonenumbers validation, parallel website checks).
+Stage 3: Scoring & Priority Allocation (High, Medium, Low based on website/reviews).
+Stage 4: Enrichment & Auditing (Email crawling, SEO auditing).
+Stage 5: Personalized AI Writing (Gemini drafts pitches based on audit data & persona).
+Stage 6: Outreach & Telemetry (SMTP outbound emails, link redirect tracking, 1x1 GIF tracking, IMAP reply sync).
+
+5. PIPELINES
+--------------------------------------------------------------------------------
+- Lead Pipeline: Discovery -> Sanitizer -> Crawler -> Auditor -> Evaluator
+- Outreach Pipeline: Parameters -> Prompts -> Gemini LLM -> Deliverer -> Scheduler
+- Analytics Pipeline: Telemetry -> Redirect -> Database -> Pipeline State -> Funnel
+
+6. SCALABILITY, SECURITY, & DEPLOYMENT
+--------------------------------------------------------------------------------
+- Decoupled Task Queues: Celery workers manage API calls and scraping.
+- Database Connection Pooling: `pool_size=10`, `max_overflow=20` to prevent connection exhaustion.
+- SSRF Filtering Agent: Intercepts crawler socket requests to block intranet attacks (RFC 1918).
+- Multi-Stage Docker Setup: Docker Compose configures Flask web app, Celery worker, Redis, and Postgres in isolated containers.
+- CI/CD Deployment: GitHub Actions for tests and pushes to Amazon ECR and AWS ECS Fargate.
+
+================================================================================
+                         REPORT GENERATED SUCCESSFULLY
+================================================================================
