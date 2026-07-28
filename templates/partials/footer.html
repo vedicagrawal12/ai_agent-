@@ -1,5 +1,5 @@
 <!-- ======== Footer System ======== -->
-<footer class="app-footer-bar" style="margin-top: 48px; padding: 40px 24px 24px; border-top: 1px solid var(--border-color); background: rgba(11, 12, 22, 0.6); border-radius: var(--radius-lg) var(--radius-lg) 0 0; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: relative; overflow: hidden;">
+<footer class="app-footer-bar" style="margin-top: 48px; padding: 40px 24px 24px; border-top: 1px solid var(--border-color); background: var(--bg-card); border-radius: var(--radius-lg) var(--radius-lg) 0 0; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); position: relative; overflow: hidden;">
     <!-- Decorative Glow Element -->
     <div style="position: absolute; bottom: 0; right: 10%; width: 250px; height: 100px; background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, transparent 70%); pointer-events: none; z-index: 1;"></div>
     <div style="position: absolute; top: 0; left: 10%; width: 200px; height: 80px; background: radial-gradient(circle, rgba(189, 0, 255, 0.05) 0%, transparent 70%); pointer-events: none; z-index: 1;"></div>
@@ -64,7 +64,7 @@
         .footer-bottom {
             margin-top: 40px;
             padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            border-top: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -123,15 +123,15 @@
         .guide-tabs {
             display: flex;
             gap: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid var(--border-color);
             padding-bottom: 12px;
             margin-bottom: 20px;
             overflow-x: auto;
             scrollbar-width: thin;
         }
         .guide-tab-btn {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             color: var(--text-secondary);
             padding: 8px 16px;
             border-radius: var(--radius-sm);
@@ -147,8 +147,8 @@
         }
         .guide-tab-btn:hover {
             color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.1);
+            background: var(--bg-secondary);
+            border-color: var(--border-hover);
         }
         .guide-tab-btn.active {
             color: var(--accent-cyan);
@@ -169,8 +169,8 @@
         }
         
         .guide-section-box {
-            background: rgba(255, 255, 255, 0.01);
-            border: 1px solid rgba(255, 255, 255, 0.03);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             padding: 20px;
             margin-bottom: 20px;
@@ -228,7 +228,7 @@
             border: 1px solid rgba(0, 240, 255, 0.2);
         }
         code.guide-code {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--bg-secondary);
             color: var(--accent-amber);
             padding: 2px 6px;
             border-radius: 4px;
@@ -302,7 +302,7 @@
 <!-- ======== Detailed User Guide Modal ======== -->
 <div id="userGuideModal" class="modal-overlay">
     <div class="modal" style="max-width: 900px; width: 95%; background: var(--bg-card); border: 1px solid rgba(0, 240, 255, 0.15); box-shadow: var(--shadow-lg), var(--shadow-glow-cyan);">
-        <div class="modal-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 16px;">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
             <h3 class="modal-title" style="font-size: 1.25rem; font-family: var(--font-display); color: var(--text-primary); display: flex; align-items: center; gap: 10px;">
                 📖 LeadHunter AI User Guide & Operations Manual
             </h3>
