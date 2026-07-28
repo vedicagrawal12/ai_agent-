@@ -69,7 +69,42 @@
     --shadow-glow-amber:  0 4px 20px rgba(233, 196, 106, 0.30);
     --shadow-glow-blue:   0 4px 20px rgba(38, 70, 83, 0.25);
     --shadow-glow-coral:  0 4px 20px rgba(244, 162, 97, 0.30);
-  }
+  
+    /* ============ TYPOGRAPHY ============ */
+    --font-size-xs:   clamp(0.7rem, 0.62rem + 0.35vw, 0.8rem);
+    --font-size-sm:   clamp(0.8rem, 0.73rem + 0.3vw, 0.9rem);
+    --font-size-base: clamp(0.9rem, 0.83rem + 0.3vw, 1rem);
+    --font-size-md:   clamp(1rem, 0.92rem + 0.4vw, 1.15rem);
+    --font-size-lg:   clamp(1.15rem, 1.05rem + 0.5vw, 1.3rem);
+    --font-size-xl:   clamp(1.3rem, 1.15rem + 0.75vw, 1.6rem);
+    --font-size-2xl:  clamp(1.6rem, 1.4rem + 1vw, 2.1rem);
+    --font-size-3xl:  clamp(2.1rem, 1.8rem + 1.5vw, 3rem);
+
+    --font-primary: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: 'Sora', sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+
+    /* ============ BORDERS & RADIUS ============ */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-full: 50%;
+
+    /* ============ TRANSITIONS ============ */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ============ SPACING ============ */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    --space-3xl: 64px;
+}
 
 /* ---- Reset & Base ---- */
 *,
