@@ -14,105 +14,62 @@
 
 /* ---- CSS Variables (Design Tokens) ---- */
 :root {
-    /* ============ BACKGROUND LAYERS ============ */
-    /* Warm ivory/cream base — not sterile white */
-    --bg-primary:    #faf9f7;   /* warm ivory page background */
-    --bg-secondary:  #f4f2ee;   /* slightly darker cream — sections */
-    --bg-card:       #ffffff;   /* pure white cards for pop */
-    --bg-card-hover: #fdfcfb;   /* subtle hover lift */
-    --bg-input:      #ffffff;
-    --bg-input-focus:#f5f3ff;   /* soft lavender tint on focus */
+    /* ============ SUNSET BOULEVARD THEME ============ */
+    --bg-primary:    #2d4a5a;
+    --bg-secondary:  #243d4d;
+    --bg-card:       #354f60;
+    --bg-card-hover: #3d5a6d;
+    --bg-input:      #2a4455;
+    --bg-input-focus:#324d5e;
 
-    /* ============ TEXT COLORS ============ */
-    --text-primary:   #1e1b4b;  /* deep indigo — sophisticated not black */
-    --text-secondary: #4c4980;  /* mid indigo — comfortable reading */
-    --text-muted:     #7c7aaa;  /* muted violet-gray */
-    --text-accent:    #4f46e5;  /* indigo accent */
+    --text-primary:   #f5ede0;
+    --text-secondary: #e8c9a0;
+    --text-muted:     #a89070;
+    --text-accent:    #e8793a;
     --text-on-dark:   #ffffff;
 
-    /* ============ ACCENT PALETTE ============ */
-    /* Primary: Deep Indigo */
-    --accent-cyan:   #06b6d4;   /* vivid cyan/teal */
-    --accent-violet: #7c3aed;   /* violet */
-    --accent-purple: #9333ea;   /* purple */
-    --accent-green:  #059669;   /* emerald */
-    --accent-amber:  #d97706;   /* warm amber */
-    --accent-orange: #ea580c;   /* deep orange */
-    --accent-red:    #dc2626;   /* true red */
-    --accent-blue:   #4f46e5;   /* indigo — primary brand */
-    --accent-coral:  #f43f5e;   /* coral rose — CTA pop */
-    --accent-teal:   #0d9488;   /* teal — success tones */
-    --accent-sky:    #0284c7;   /* sky blue */
+    --accent-cyan:   #5dc8c0;
+    --accent-violet: #c46b9a;
+    --accent-purple: #a05a8a;
+    --accent-green:  #5ab87a;
+    --accent-amber:  #e8b84b;
+    --accent-orange: #e8793a;
+    --accent-red:    #d4544a;
+    --accent-blue:   #e8793a;
+    --accent-coral:  #f09261;
+    --accent-teal:   #5dc8c0;
+    --accent-sky:    #7ab8d0;
 
-    /* ============ BORDER SYSTEM ============ */
-    --border-color: rgba(79, 70, 229, 0.12);   /* soft indigo border */
-    --border-hover: rgba(79, 70, 229, 0.30);   /* stronger on hover */
-    --border-card:  rgba(30, 27, 75, 0.08);    /* card outline */
+    --border-color: rgba(232, 121, 58, 0.20);
+    --border-hover: rgba(232, 121, 58, 0.45);
+    --border-card:  rgba(245, 237, 224, 0.10);
 
-    /* ============ PREMIUM GRADIENTS ============ */
-    --gradient-primary:   linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
-    --gradient-coral:     linear-gradient(135deg, #f43f5e 0%, #fb923c 100%);
-    --gradient-teal:      linear-gradient(135deg, #0d9488 0%, #06b6d4 100%);
-    --gradient-warm:      linear-gradient(180deg, #faf9f7 0%, #f4f2ee 100%);
-    --gradient-card:      linear-gradient(145deg, #ffffff 0%, #fdfcfb 100%);
-    --gradient-indigo:    linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-    --gradient-hero:      linear-gradient(135deg, #eef2ff 0%, #fce7f3 100%);
-    --gradient-header:    linear-gradient(90deg, #f5f3ff 0%, #fdf2f8 100%);
-    --gradient-sidebar:   linear-gradient(180deg, #f5f3ff 0%, #ede9fe 100%);
-    --gradient-glow:      linear-gradient(135deg, rgba(79,70,229,0.08) 0%, rgba(124,58,237,0.06) 100%);
+    --gradient-primary:   linear-gradient(135deg, #e8793a 0%, #f09261 50%, #e8b84b 100%);
+    --gradient-coral:     linear-gradient(135deg, #f09261 0%, #e8793a 100%);
+    --gradient-teal:      linear-gradient(135deg, #5dc8c0 0%, #3a9e95 100%);
+    --gradient-warm:      linear-gradient(180deg, #2d4a5a 0%, #243d4d 100%);
+    --gradient-card:      linear-gradient(145deg, #354f60 0%, #3d5a6d 100%);
+    --gradient-indigo:    linear-gradient(135deg, #e8793a 0%, #f09261 100%);
+    --gradient-hero:      linear-gradient(135deg, #2d4a5a 0%, #243d4d 100%);
+    --gradient-header:    linear-gradient(90deg, #243d4d 0%, #2d4a5a 100%);
+    --gradient-sidebar:   linear-gradient(180deg, #243d4d 0%, #1e3340 100%);
+    --gradient-glow:      linear-gradient(135deg, rgba(232,121,58,0.12) 0%, rgba(240,146,97,0.08) 100%);
 
-    /* ============ SHADOWS — Layered & Warm-Tinted ============ */
-    --shadow-xs:  0 1px 2px rgba(30, 27, 75, 0.04);
-    --shadow-sm:  0 2px 8px rgba(30, 27, 75, 0.06), 0 1px 3px rgba(30, 27, 75, 0.04);
-    --shadow-md:  0 4px 16px rgba(30, 27, 75, 0.08), 0 2px 6px rgba(30, 27, 75, 0.05);
-    --shadow-lg:  0 12px 36px rgba(30, 27, 75, 0.12), 0 4px 12px rgba(30, 27, 75, 0.07);
-    --shadow-xl:  0 24px 64px rgba(30, 27, 75, 0.15), 0 8px 20px rgba(30, 27, 75, 0.08);
+    --shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.20);
+    --shadow-sm:  0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15);
+    --shadow-md:  0 4px 16px rgba(0, 0, 0, 0.30), 0 2px 6px rgba(0, 0, 0, 0.18);
+    --shadow-lg:  0 12px 36px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.20);
+    --shadow-xl:  0 24px 64px rgba(0, 0, 0, 0.40), 0 8px 20px rgba(0, 0, 0, 0.25);
 
-    /* Colored accent shadows */
-    --shadow-glow-cyan:   0 4px 20px rgba(6, 182, 212, 0.30);
-    --shadow-glow-violet: 0 4px 20px rgba(124, 58, 237, 0.28);
-    --shadow-glow-green:  0 4px 20px rgba(5, 150, 105, 0.28);
-    --shadow-glow-orange: 0 4px 20px rgba(234, 88, 12, 0.28);
-    --shadow-glow-red:    0 4px 20px rgba(220, 38, 38, 0.25);
-    --shadow-glow-amber:  0 4px 20px rgba(217, 119, 6, 0.28);
-    --shadow-glow-blue:   0 4px 20px rgba(79, 70, 229, 0.30);
-    --shadow-glow-coral:  0 4px 20px rgba(244, 63, 94, 0.30);
-
-    /* ============ TYPOGRAPHY ============ */
-    --font-size-xs:   clamp(0.7rem, 0.62rem + 0.35vw, 0.8rem);
-    --font-size-sm:   clamp(0.8rem, 0.73rem + 0.3vw, 0.9rem);
-    --font-size-base: clamp(0.9rem, 0.83rem + 0.3vw, 1rem);
-    --font-size-md:   clamp(1rem, 0.92rem + 0.4vw, 1.15rem);
-    --font-size-lg:   clamp(1.15rem, 1.05rem + 0.5vw, 1.3rem);
-    --font-size-xl:   clamp(1.3rem, 1.15rem + 0.75vw, 1.6rem);
-    --font-size-2xl:  clamp(1.6rem, 1.4rem + 1vw, 2.1rem);
-    --font-size-3xl:  clamp(2.1rem, 1.8rem + 1.5vw, 3rem);
-
-    --font-primary: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-display: 'Sora', sans-serif;
-    --font-mono:    'JetBrains Mono', monospace;
-
-    /* ============ BORDERS & RADIUS ============ */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 18px;
-    --radius-xl: 24px;
-    --radius-full: 50%;
-
-    /* ============ TRANSITIONS ============ */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
-
-    /* ============ SPACING ============ */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 48px;
-    --space-3xl: 64px;
-}
+    --shadow-glow-cyan:   0 4px 20px rgba(93, 200, 192, 0.35);
+    --shadow-glow-violet: 0 4px 20px rgba(196, 107, 154, 0.30);
+    --shadow-glow-green:  0 4px 20px rgba(90, 184, 122, 0.30);
+    --shadow-glow-orange: 0 4px 20px rgba(232, 121, 58, 0.40);
+    --shadow-glow-red:    0 4px 20px rgba(212, 84, 74, 0.30);
+    --shadow-glow-amber:  0 4px 20px rgba(232, 184, 75, 0.35);
+    --shadow-glow-blue:   0 4px 20px rgba(232, 121, 58, 0.40);
+    --shadow-glow-coral:  0 4px 20px rgba(240, 146, 97, 0.40);
+  }
 
 /* ---- Reset & Base ---- */
 *,
