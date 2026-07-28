@@ -14,61 +14,61 @@
 
 /* ---- CSS Variables (Design Tokens) ---- */
 :root {
-    /* ============ SUNSET BOULEVARD THEME ============ */
-    --bg-primary:    #2d4a5a;
-    --bg-secondary:  #243d4d;
-    --bg-card:       #354f60;
-    --bg-card-hover: #3d5a6d;
-    --bg-input:      #2a4455;
-    --bg-input-focus:#324d5e;
+    /* ============ SUNSET BOULEVARD LIGHT THEME ============ */
+    --bg-primary:    #fcf8f2;   /* very light warm sand */
+    --bg-secondary:  #f5eadc;   /* slightly darker sand */
+    --bg-card:       #ffffff;   /* white cards for contrast */
+    --bg-card-hover: #fffdfa;
+    --bg-input:      #ffffff;
+    --bg-input-focus:#fcf8f2;
 
-    --text-primary:   #f5ede0;
-    --text-secondary: #e8c9a0;
-    --text-muted:     #a89070;
-    --text-accent:    #e8793a;
+    --text-primary:   #264653;  /* deep teal/slate */
+    --text-secondary: #3d6a7c;  /* softer teal */
+    --text-muted:     #6b8a99;  /* muted slate */
+    --text-accent:    #e76f51;  /* burnt orange accent */
     --text-on-dark:   #ffffff;
 
-    --accent-cyan:   #5dc8c0;
-    --accent-violet: #c46b9a;
-    --accent-purple: #a05a8a;
-    --accent-green:  #5ab87a;
-    --accent-amber:  #e8b84b;
-    --accent-orange: #e8793a;
-    --accent-red:    #d4544a;
-    --accent-blue:   #e8793a;
-    --accent-coral:  #f09261;
-    --accent-teal:   #5dc8c0;
-    --accent-sky:    #7ab8d0;
+    --accent-cyan:   #2a9d8f;   /* deeper teal */
+    --accent-violet: #a05a8a;   
+    --accent-purple: #c46b9a;   
+    --accent-green:  #2a9d8f;   /* ocean depth green */
+    --accent-amber:  #e9c46a;   /* warm sand */
+    --accent-orange: #e76f51;   /* burnt orange */
+    --accent-red:    #d4544a;   
+    --accent-blue:   #264653;   /* deep slate */
+    --accent-coral:  #f4a261;   /* coral */
+    --accent-teal:   #2a9d8f;   
+    --accent-sky:    #457b9d;   
 
-    --border-color: rgba(232, 121, 58, 0.20);
-    --border-hover: rgba(232, 121, 58, 0.45);
-    --border-card:  rgba(245, 237, 224, 0.10);
+    --border-color: rgba(38, 70, 83, 0.15);
+    --border-hover: rgba(231, 111, 81, 0.35);
+    --border-card:  rgba(38, 70, 83, 0.08);
 
-    --gradient-primary:   linear-gradient(135deg, #e8793a 0%, #f09261 50%, #e8b84b 100%);
-    --gradient-coral:     linear-gradient(135deg, #f09261 0%, #e8793a 100%);
-    --gradient-teal:      linear-gradient(135deg, #5dc8c0 0%, #3a9e95 100%);
-    --gradient-warm:      linear-gradient(180deg, #2d4a5a 0%, #243d4d 100%);
-    --gradient-card:      linear-gradient(145deg, #354f60 0%, #3d5a6d 100%);
-    --gradient-indigo:    linear-gradient(135deg, #e8793a 0%, #f09261 100%);
-    --gradient-hero:      linear-gradient(135deg, #2d4a5a 0%, #243d4d 100%);
-    --gradient-header:    linear-gradient(90deg, #243d4d 0%, #2d4a5a 100%);
-    --gradient-sidebar:   linear-gradient(180deg, #243d4d 0%, #1e3340 100%);
-    --gradient-glow:      linear-gradient(135deg, rgba(232,121,58,0.12) 0%, rgba(240,146,97,0.08) 100%);
+    --gradient-primary:   linear-gradient(135deg, #e76f51 0%, #f4a261 100%);
+    --gradient-coral:     linear-gradient(135deg, #f4a261 0%, #e9c46a 100%);
+    --gradient-teal:      linear-gradient(135deg, #2a9d8f 0%, #264653 100%);
+    --gradient-warm:      linear-gradient(180deg, #fcf8f2 0%, #f5eadc 100%);
+    --gradient-card:      linear-gradient(145deg, #ffffff 0%, #fffdfa 100%);
+    --gradient-indigo:    linear-gradient(135deg, #264653 0%, #3d6a7c 100%);
+    --gradient-hero:      linear-gradient(135deg, #f5eadc 0%, #fcf8f2 100%);
+    --gradient-header:    linear-gradient(90deg, #fcf8f2 0%, #f5eadc 100%);
+    --gradient-sidebar:   linear-gradient(180deg, #f5eadc 0%, #ebd7be 100%);
+    --gradient-glow:      linear-gradient(135deg, rgba(231,111,81,0.12) 0%, rgba(244,162,97,0.08) 100%);
 
-    --shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.20);
-    --shadow-sm:  0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15);
-    --shadow-md:  0 4px 16px rgba(0, 0, 0, 0.30), 0 2px 6px rgba(0, 0, 0, 0.18);
-    --shadow-lg:  0 12px 36px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.20);
-    --shadow-xl:  0 24px 64px rgba(0, 0, 0, 0.40), 0 8px 20px rgba(0, 0, 0, 0.25);
+    --shadow-xs:  0 1px 2px rgba(38, 70, 83, 0.05);
+    --shadow-sm:  0 2px 8px rgba(38, 70, 83, 0.08), 0 1px 3px rgba(38, 70, 83, 0.04);
+    --shadow-md:  0 4px 16px rgba(38, 70, 83, 0.12), 0 2px 6px rgba(38, 70, 83, 0.06);
+    --shadow-lg:  0 12px 36px rgba(38, 70, 83, 0.16), 0 4px 12px rgba(38, 70, 83, 0.08);
+    --shadow-xl:  0 24px 64px rgba(38, 70, 83, 0.20), 0 8px 20px rgba(38, 70, 83, 0.10);
 
-    --shadow-glow-cyan:   0 4px 20px rgba(93, 200, 192, 0.35);
-    --shadow-glow-violet: 0 4px 20px rgba(196, 107, 154, 0.30);
-    --shadow-glow-green:  0 4px 20px rgba(90, 184, 122, 0.30);
-    --shadow-glow-orange: 0 4px 20px rgba(232, 121, 58, 0.40);
-    --shadow-glow-red:    0 4px 20px rgba(212, 84, 74, 0.30);
-    --shadow-glow-amber:  0 4px 20px rgba(232, 184, 75, 0.35);
-    --shadow-glow-blue:   0 4px 20px rgba(232, 121, 58, 0.40);
-    --shadow-glow-coral:  0 4px 20px rgba(240, 146, 97, 0.40);
+    --shadow-glow-cyan:   0 4px 20px rgba(42, 157, 143, 0.25);
+    --shadow-glow-violet: 0 4px 20px rgba(160, 90, 138, 0.25);
+    --shadow-glow-green:  0 4px 20px rgba(42, 157, 143, 0.25);
+    --shadow-glow-orange: 0 4px 20px rgba(231, 111, 81, 0.30);
+    --shadow-glow-red:    0 4px 20px rgba(212, 84, 74, 0.25);
+    --shadow-glow-amber:  0 4px 20px rgba(233, 196, 106, 0.30);
+    --shadow-glow-blue:   0 4px 20px rgba(38, 70, 83, 0.25);
+    --shadow-glow-coral:  0 4px 20px rgba(244, 162, 97, 0.30);
   }
 
 /* ---- Reset & Base ---- */
